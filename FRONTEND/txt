@@ -1,0 +1,52 @@
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Database Configuration
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=smm_panel
+
+# JWT Configuration
+JWT_SECRET=44003b556364153b91f46b1ffe2c8fdf0ee9d3b8c8b6443930306208733066d1b150f2a598f0697d6a19d32eec8a09d6f5d0b54af0c95831819fdfe5d6cb107a
+SESSION_SECRET=c1a69ef8b7076692b6cb56c23845e2825118a6e0bf2527848189d7c47dafd3b8fbafc5e3f444f9ec5632552d7740149fecbb70a60d48e51ea4ab5632d9c5dfe9
+ENCRYPTION_KEY=a89056cab43bfca844b5f36a5bb0498f
+
+# Security
+BCRYPT_ROUNDS=12
+JWT_EXPIRE=7d
+JWT_REMEMBER_EXPIRE=7d
+MAX_LOGIN_ATTEMPTS=1000
+LOCKOUT_TIME=15
+
+# Frontend URL
+FRONTEND_URL=http://localhost:3000
+
+GOOGLE_CLIENT_ID=791107081981-vj9hst32ih64sd0tdnteaildvh979d3h.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+SESSION_SECRET=anepakopalynkoynnhuttigeputahihiugufjkghghyff224yjffjy
+
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=makemetrendweb@gmail.com
+EMAIL_PASS=fpvfcsjnugxvaajf
+EMAIL_FROM="Make Me Trend <makemetrendweb@gmail.com>"
+
+# Child Panel
+ADMIN_EMAIL=educatelux1@gmail.com
+NS1=dns1.hostbylk.store 
+NS2=dns2.hostbylk.store 
+CHILD_PANEL_PRICE=100.00
+
+# Frontend URLs
+VERIFY_EMAIL_URL=http://localhost:3000/verify-email
+
+
+ADMIN_EMAIL=educatelux1@gmail.com
+ADMIN_URL=http://localhost:3000/admin
+
+
+d94ac061e8e68106f1927eb94460ceed
