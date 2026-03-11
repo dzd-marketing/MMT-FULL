@@ -25,7 +25,6 @@ const GlobalAlert: React.FC = () => {
     message: ''
   });
   const [isVisible, setIsVisible] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(100);
 
@@ -62,18 +61,26 @@ const GlobalAlert: React.FC = () => {
         const config = response.data.config;
         const enabled = config.alert_enabled === '1';
         
-        setAlert({
+        const newAlert = {
           enabled: enabled,
           type: config.alert_type || 'info',
           heading: config.alert_heading || '',
           description: config.alert_description || '',
           message: config.alert_message || ''
-        });
+        };
+        
+        setAlert(newAlert);
 
-        // Auto show if enabled and has content
-        if (enabled && (config.alert_heading || config.alert_description || config.alert_message)) {
+        // Check if this alert has been shown before
+        const alertKey = `alert_${newAlert.heading}_${newAlert.description}`;
+        const hasBeenShown = localStorage.getItem(alertKey);
+
+        // Auto show if enabled, has content, and hasn't been shown before
+        if (enabled && !hasBeenShown && (newAlert.heading || newAlert.description || newAlert.message)) {
           setTimeout(() => {
             setIsVisible(true);
+            // Mark as shown in local storage
+            localStorage.setItem(alertKey, 'true');
           }, 1500);
         }
       }
@@ -86,7 +93,6 @@ const GlobalAlert: React.FC = () => {
 
   const handleClose = () => {
     setIsVisible(false);
-    setIsDismissed(true);
   };
 
   const getAlertIcon = () => {
@@ -145,9 +151,9 @@ const GlobalAlert: React.FC = () => {
     return colors[alert.type] || colors.info;
   };
 
-  // Don't render if no content or not enabled or dismissed
+  // Don't render if no content or not enabled
   const hasContent = alert.heading || alert.description || alert.message;
-  if (!hasContent || !alert.enabled || isDismissed || loading) {
+  if (!hasContent || !alert.enabled || loading) {
     return null;
   }
 
@@ -166,7 +172,7 @@ const GlobalAlert: React.FC = () => {
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
           />
 
-          {/* Alert Popup - Same for both mobile and desktop */}
+          {/* Alert Popup */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
