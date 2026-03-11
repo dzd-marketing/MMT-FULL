@@ -16,7 +16,9 @@ import CompleteProfile from './pages/CompleteProfile';
 import ServicesPage from './pages/services';
 import MaintenancePage from './components/Maintains';
 import GlobalAlert from './components/GlobalAlert';
-import SocialChat from './components/SocialChat'; // Import SocialChat
+import SocialChat from './components/SocialChat';
+import SnowEffect from './components/SnowEffect';
+import FestivalEffect from './components/FestivalEffect';
 import axios from 'axios';
 
 // Dashboard Components
@@ -37,17 +39,21 @@ import BlogsView from './pages/dashboard/BlogsView';
 import ContactsPage from './components/ContactsPage';
 import BlogView from './components/BlogView';
 
-
 function AppContent() {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [checkingMaintenance, setCheckingMaintenance] = useState(true);
+  const [effects, setEffects] = useState({
+    snow_effect: false,
+    festival_effect: false
+  });
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
   useEffect(() => {
     checkMaintenanceMode();
+    fetchEffects();
   }, []);
 
   const checkMaintenanceMode = async () => {
@@ -60,6 +66,17 @@ function AppContent() {
       console.error('Error checking maintenance mode:', error);
     } finally {
       setCheckingMaintenance(false);
+    }
+  };
+
+  const fetchEffects = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/config/effects`);
+      if (response.data.success) {
+        setEffects(response.data.effects);
+      }
+    } catch (error) {
+      console.error('Error fetching effects:', error);
     }
   };
 
@@ -96,8 +113,13 @@ function AppContent() {
         <LoadingScreen key="loading" />
       ) : (
         <>
+          {/* Effects */}
+          <SnowEffect enabled={effects.snow_effect} intensity="medium" />
+          <FestivalEffect enabled={effects.festival_effect} type="default" />
+          
+          
           <GlobalAlert />
-          <SocialChat /> {/* Add SocialChat here */}
+          <SocialChat />
           <Toaster 
             position="top-right"
             toastOptions={{
