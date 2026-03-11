@@ -58,76 +58,75 @@ module.exports = (pool) => {
         }
     };
 
-// Configure Google Strategy
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL,
-    passReqToCallback: true
-},
-    async (req, accessToken, refreshToken, profile, done) => {
-        try {
-            const email = profile.emails[0].value;
-            const fullName = profile.displayName;
-            const googleId = profile.id;
-            const profilePicture = profile.photos[0]?.value;
+    // Configure Google Strategy
+    passport.use(new GoogleStrategy({
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: process.env.GOOGLE_CALLBACK_URL,
+        passReqToCallback: true
+    },
+        async (req, accessToken, refreshToken, profile, done) => {
+            try {
+                const email = profile.emails[0].value;
+                const fullName = profile.displayName;
+                const googleId = profile.id;
+                const profilePicture = profile.photos[0]?.value;
 
-            const [existingUsers] = await pool.execute(
-                'SELECT * FROM users WHERE email = ? OR google_id = ?',
-                [email, googleId]
-            );
+                const [existingUsers] = await pool.execute(
+                    'SELECT * FROM users WHERE email = ? OR google_id = ?',
+                    [email, googleId]
+                );
 
-            if (existingUsers.length > 0) {
-                const user = existingUsers[0];
+                if (existingUsers.length > 0) {
+                    const user = existingUsers[0];
 
-                if (!user.google_id) {
-                    await pool.execute(
-                        'UPDATE users SET google_id = ?, profile_picture = ? WHERE id = ?',
-                        [googleId, profilePicture, user.id]
+                    if (!user.google_id) {
+                        await pool.execute(
+                            'UPDATE users SET google_id = ?, profile_picture = ? WHERE id = ?',
+                            [googleId, profilePicture, user.id]
+                        );
+                    }
+
+                    const token = jwt.sign(
+                        { userId: user.id, email: user.email, name: user.full_name },
+                        process.env.JWT_SECRET,
+                        { expiresIn: process.env.JWT_EXPIRE }
                     );
+
+                    await logLoginAttempt(email, req, true);
+
+                    return done(null, { ...user, token, email_verified: user.email_verified });
+                } else {
+                    const [result] = await pool.execute(
+                        `INSERT INTO users (full_name, email, google_id, profile_picture, email_verified, password, auth_provider) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                        [fullName, email, googleId, profilePicture, false, await bcrypt.hash(googleId + process.env.JWT_SECRET, 10), 'google']
+                    );
+
+                    const token = jwt.sign(
+                        { userId: result.insertId, email: email, name: fullName },
+                        process.env.JWT_SECRET,
+                        { expiresIn: process.env.JWT_EXPIRE }
+                    );
+
+                    const newUser = {
+                        id: result.insertId,
+                        full_name: fullName,
+                        email: email,
+                        profile_picture: profilePicture,
+                        token,
+                        email_verified: false
+                    };
+
+                    await logSignupAttempt(email, req, true, 'google_signup');
+
+                    return done(null, newUser);
                 }
-
-                // Create token for existing user
-                const token = jwt.sign(
-                    { userId: user.id, email: user.email, name: user.full_name },
-                    process.env.JWT_SECRET,
-                    { expiresIn: process.env.JWT_EXPIRE }
-                );
-
-                await logLoginAttempt(email, req, true);
-
-                return done(null, { ...user, token, email_verified: user.email_verified });
-            } else {
-                const [result] = await pool.execute(
-                    `INSERT INTO users (full_name, email, google_id, profile_picture, email_verified, password, auth_provider) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [fullName, email, googleId, profilePicture, false, await bcrypt.hash(googleId + process.env.JWT_SECRET, 10), 'google']
-                );
-
-                const token = jwt.sign(
-                    { userId: result.insertId, email: email, name: fullName },
-                    process.env.JWT_SECRET,
-                    { expiresIn: process.env.JWT_EXPIRE }
-                );
-
-                const newUser = {
-                    id: result.insertId,
-                    full_name: fullName,
-                    email: email,
-                    profile_picture: profilePicture,
-                    token,
-                    email_verified: false
-                };
-
-                await logSignupAttempt(email, req, true, 'google_signup');
-
-                return done(null, newUser);
+            } catch (error) {
+                console.error('Google OAuth error:', error);
+                return done(error, null);
             }
-        } catch (error) {
-            console.error('Google OAuth error:', error);
-            return done(error, null);
-        }
-    }));
+        }));
 
     // Test route
     router.get('/test', (req, res) => {
@@ -170,8 +169,8 @@ passport.use(new GoogleStrategy({
             }
 
             const [existingUsers] = await pool.execute(
-                'SELECT id, email, full_name FROM users WHERE email = ? OR phone = ? OR full_name = ?',
-                [email, phone, name] // Add name to the check
+                'SELECT id, email, full_name, phone, whatsapp FROM users WHERE email = ? OR phone = ? OR whatsapp = ? OR full_name = ?',
+                [email, phone, whatsapp, name]
             );
 
             if (existingUsers.length > 0) {
@@ -190,7 +189,13 @@ passport.use(new GoogleStrategy({
                         errors: { phone: 'Phone number already registered' }
                     });
                 }
-
+                if (existing.whatsapp === whatsapp) {
+                    await logSignupAttempt(email, req, false, 'whatsapp_exists');
+                    return res.status(400).json({
+                        success: false,
+                        errors: { whatsapp: 'WhatsApp number already registered' }
+                    });
+                }
                 if (existing.full_name === name) {
                     await logSignupAttempt(email, req, false, 'name_exists');
                     return res.status(400).json({
@@ -208,13 +213,11 @@ passport.use(new GoogleStrategy({
                 [name, email, phone, whatsapp, hashedPassword, 'local', false]
             );
 
-
-            // --- WALLET CREATION START ---
+            // --- WALLET CREATION ---
             await pool.execute(
                 'INSERT INTO wallets (user_id, email, available_balance, spent_balance, total_history_balance) VALUES (?, ?, ?, ?, ?)',
                 [result.insertId, email, 0.00, 0.00, 0.00]
             );
-            // --- WALLET CREATION END ---
 
             const token = jwt.sign(
                 { userId: result.insertId, email: email, name: name },
@@ -222,7 +225,6 @@ passport.use(new GoogleStrategy({
                 { expiresIn: process.env.JWT_EXPIRE }
             );
 
-            // Create user session
             const expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -238,7 +240,6 @@ passport.use(new GoogleStrategy({
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
-            // Generate verification token
             const tempToken = crypto.randomBytes(32).toString('hex');
             const tokenExpiresAt = new Date();
             tokenExpiresAt.setMinutes(tokenExpiresAt.getMinutes() + 10);
@@ -302,6 +303,23 @@ passport.use(new GoogleStrategy({
 
             const { email, password, rememberMe } = req.body;
 
+            // ── Rate limit: max 5 failed attempts per email in 15 minutes ──
+            const lockoutWindow = new Date(Date.now() - 15 * 60 * 1000); // 15 min ago
+            const [recentFailures] = await pool.execute(
+                `SELECT COUNT(*) as count FROM login_attempts
+                 WHERE email = ? AND success = 0 AND attempted_at >= ?`,
+                [email, lockoutWindow]
+            );
+
+            if (recentFailures[0].count >= 5) {
+                await logLoginAttempt(email, req, false);
+                return res.status(429).json({
+                    success: false,
+                    tooManyAttempts: true,
+                    message: 'Too many failed login attempts. Please wait 15 minutes and try again.'
+                });
+            }
+
             const [users] = await pool.execute(
                 'SELECT id, full_name, email, phone, whatsapp, password, is_active, email_verified FROM users WHERE email = ?',
                 [email]
@@ -356,6 +374,12 @@ passport.use(new GoogleStrategy({
                 [user.id]
             );
 
+            // ── Clear failed attempts on successful login ──
+            await pool.execute(
+                `DELETE FROM login_attempts WHERE email = ? AND success = 0`,
+                [email]
+            );
+
             const tokenExpiry = rememberMe ? process.env.JWT_REMEMBER_EXPIRE : process.env.JWT_EXPIRE;
             const token = jwt.sign(
                 { userId: user.id, email: user.email, name: user.full_name },
@@ -389,12 +413,12 @@ passport.use(new GoogleStrategy({
                 maxAge: (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000
             });
 
+            // Check if email is verified
             if (!user.email_verified) {
                 const tempToken = crypto.randomBytes(32).toString('hex');
-                const expiresAt = new Date();
-                expiresAt.setMinutes(expiresAt.getMinutes() + 30); // Increase to 30 minutes
+                const verifyExpiresAt = new Date();
+                verifyExpiresAt.setMinutes(verifyExpiresAt.getMinutes() + 30);
 
-                // Check if there's an existing token and update it
                 await pool.execute(
                     'DELETE FROM verification_tokens WHERE email = ? AND used = false',
                     [user.email]
@@ -402,25 +426,57 @@ passport.use(new GoogleStrategy({
 
                 await pool.execute(
                     'INSERT INTO verification_tokens (email, token, expires_at) VALUES (?, ?, ?)',
-                    [email, tempToken, expiresAt]
+                    [email, tempToken, verifyExpiresAt]
                 );
 
                 const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-                    await pool.execute(
-        'DELETE FROM email_verification_codes WHERE email = ? AND used = false',
-        [user.email]
-    );
-    
-    await pool.execute(
-        'INSERT INTO email_verification_codes (email, code, expires_at) VALUES (?, ?, ?)',
-        [user.email, verificationCode, expiresAt]
-    );
+                await pool.execute(
+                    'DELETE FROM email_verification_codes WHERE email = ? AND used = false',
+                    [user.email]
+                );
+
+                await pool.execute(
+                    'INSERT INTO email_verification_codes (email, code, expires_at) VALUES (?, ?, ?)',
+                    [user.email, verificationCode, verifyExpiresAt]
+                );
+
                 return res.json({
                     success: true,
                     requiresVerification: true,
                     token: tempToken,
                     message: 'Please verify your email first',
+                    user: {
+                        id: user.id,
+                        name: user.full_name,
+                        email: user.email,
+                        email_verified: user.email_verified
+                    }
+                });
+            }
+
+            // ✅ NEW: Check if phone/whatsapp is missing — prompt profile completion
+            const needsProfileCompletion = !user.phone || !user.whatsapp;
+            if (needsProfileCompletion) {
+                const profileToken = crypto.randomBytes(32).toString('hex');
+                const profileExpiresAt = new Date();
+                profileExpiresAt.setMinutes(profileExpiresAt.getMinutes() + 60);
+
+                await pool.execute(
+                    'DELETE FROM temp_user_sessions WHERE email = ? AND used = false',
+                    [user.email]
+                );
+
+                await pool.execute(
+                    'INSERT INTO temp_user_sessions (email, name, token, expires_at) VALUES (?, ?, ?, ?)',
+                    [user.email, user.full_name, profileToken, profileExpiresAt]
+                );
+
+                return res.json({
+                    success: true,
+                    requiresProfileCompletion: true,
+                    profileToken,
+                    message: 'Please complete your profile',
                     user: {
                         id: user.id,
                         name: user.full_name,
@@ -463,21 +519,21 @@ passport.use(new GoogleStrategy({
         })(req, res, next);
     });
 
-router.get('/google/callback', (req, res, next) => {
-    console.log('📌 Google callback route accessed');
-    passport.authenticate('google', {
-        failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_auth_failed`,
-        session: false
-    }, async (err, user, info) => {
-        if (err) {
-            console.error('Google auth error:', err);
-            return res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
-        }
-        if (!user) {
-            return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_user`);
-        }
+    router.get('/google/callback', (req, res, next) => {
+        console.log('📌 Google callback route accessed');
+        passport.authenticate('google', {
+            failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_auth_failed`,
+            session: false
+        }, async (err, user, info) => {
+            if (err) {
+                console.error('Google auth error:', err);
+                return res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
+            }
+            if (!user) {
+                return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_user`);
+            }
 
-                    // --- WALLET CHECK/CREATE FOR GOOGLE USER ---
+            // --- WALLET CHECK/CREATE FOR GOOGLE USER ---
             const [wallets] = await pool.execute('SELECT id FROM wallets WHERE user_id = ?', [user.id]);
             if (wallets.length === 0) {
                 await pool.execute(
@@ -485,220 +541,214 @@ router.get('/google/callback', (req, res, next) => {
                     [user.id, user.email, 0.00, 0.00, 0.00]
                 );
             }
-            // -------------------------------------------
 
-        // 🔥 OPTIONAL: Invalidate all previous sessions for this user (security)
-        await pool.execute(
-            'UPDATE user_sessions SET is_valid = false WHERE user_id = ?',
-            [user.id]
-        );
-
-        // 🔥 CREATE NEW SESSION FOR THIS LOGIN
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 7);
-
-        await pool.execute(
-            'INSERT INTO user_sessions (user_id, token, ip_address, user_agent, expires_at) VALUES (?, ?, ?, ?, ?)',
-            [user.id, user.token, getRealIp(req), getUserAgent(req), expiresAt]
-        );
-
-        res.cookie('token', user.token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
-
-        res.cookie('user', JSON.stringify({
-            id: user.id,
-            name: user.full_name,
-            email: user.email
-        }), {
-            httpOnly: false,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
-
-        // Check if email needs verification
-        if (!user.email_verified) {
-            // Clean up any existing unused tokens for this email
+            // Invalidate previous sessions
             await pool.execute(
-                'DELETE FROM verification_tokens WHERE email = ? AND used = false',
-                [user.email]
-            );
-            
-            await pool.execute(
-                'DELETE FROM email_verification_codes WHERE email = ? AND used = false',
-                [user.email]
+                'UPDATE user_sessions SET is_valid = false WHERE user_id = ?',
+                [user.id]
             );
 
-            const tempToken = crypto.randomBytes(32).toString('hex');
-            const expiresAt = new Date();
-            expiresAt.setMinutes(expiresAt.getMinutes() + 30); // Increased to 30 minutes
-
-            await pool.execute(
-                'INSERT INTO verification_tokens (email, token, expires_at) VALUES (?, ?, ?)',
-                [user.email, tempToken, expiresAt]
-            );
-
-            const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-            await pool.execute(
-                'INSERT INTO email_verification_codes (email, code, expires_at) VALUES (?, ?, ?)',
-                [user.email, verificationCode, expiresAt]
-            );
-
-            await emailService.sendVerificationCode(user.email, verificationCode);
-
-            // Pass email in URL for recovery
-            return res.redirect(`${process.env.FRONTEND_URL}/verify-email?token=${tempToken}`);
-        }
-
-        // Check if user needs to complete profile (first time Google users)
-        const [userDetails] = await pool.execute(
-            'SELECT phone, whatsapp, full_name FROM users WHERE id = ?',
-            [user.id]
-        );
-
-        const needsProfileCompletion = !userDetails[0].phone || !userDetails[0].whatsapp || !userDetails[0].full_name;
-
-        if (needsProfileCompletion) {
-            // Clean up any existing temp sessions
-            await pool.execute(
-                'DELETE FROM temp_user_sessions WHERE email = ? AND used = false',
-                [user.email]
-            );
-
-            const profileToken = crypto.randomBytes(32).toString('hex');
-            const expiresAt = new Date();
-            expiresAt.setMinutes(expiresAt.getMinutes() + 60); // Increased to 60 minutes
-
-            await pool.execute(
-                'INSERT INTO temp_user_sessions (email, name, token, expires_at) VALUES (?, ?, ?, ?)',
-                [user.email, user.full_name || '', profileToken, expiresAt]
-            );
-
-            // Pass email and name in URL for recovery
-            return res.redirect(`${process.env.FRONTEND_URL}/complete-profile?token=${profileToken}`);
-        }
-
-        // User exists with complete profile - redirect to homepage with token
-        res.redirect(`${process.env.FRONTEND_URL}/?token=${user.token}`);
-    })(req, res, next);
-});
-
-router.post('/logout', async (req, res) => {
-    try {
-        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
-        
-        if (token) {
-            // Get user ID from token before invalidating
-            const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
-            
-            // Clear user's cache
-            cache.del(CACHE_KEYS.USER_PROFILE(decoded.userId));
-            cache.del(CACHE_KEYS.USER_WALLET(decoded.userId));
-            cache.del(CACHE_KEYS.USER_DATA(decoded.userId));
-            
-            await pool.execute(
-                'UPDATE user_sessions SET is_valid = false WHERE token = ?',
-                [token]
-            );
-        }
-
-        res.clearCookie('token');
-        res.clearCookie('user');
-        res.json({
-            success: true,
-            message: 'Logged out successfully'
-        });
-    } catch (error) {
-        console.error('Logout error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error during logout'
-        });
-    }
-});
-
-// Verify Token Route - FIXED VERSION
-router.get('/verify', async (req, res) => {
-    try {
-        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
-
-        if (!token) {
-            return res.status(401).json({
-                success: false,
-                message: 'No token provided'
-            });
-        }
-
-        // Step 1: Verify JWT token
-        let decoded;
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
-        } catch (jwtError) {
-            // Token invalid - clear it from frontend
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid or expired token'
-            });
-        }
-
-        // Step 2: Check if user exists and is active (MOST IMPORTANT)
-        const [users] = await pool.execute(
-            'SELECT id, full_name, email, phone, whatsapp, email_verified FROM users WHERE id = ? AND is_active = 1',
-            [decoded.userId]
-        );
-
-        if (users.length === 0) {
-            return res.status(401).json({
-                success: false,
-                message: 'User not found or inactive'
-            });
-        }
-
-        // Step 3: Check session but DON'T fail if missing - recreate it
-        const [sessions] = await pool.execute(
-            'SELECT user_id, is_valid FROM user_sessions WHERE token = ? AND expires_at > NOW()',
-            [token]
-        );
-
-        // If session missing or invalid, create a new one automatically
-        if (sessions.length === 0 || !sessions[0].is_valid) {
-            console.log('🔄 Session missing but user valid - creating new session for user:', decoded.userId);
-            
+            // Create new session
             const expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + 7);
-            
+
             await pool.execute(
                 'INSERT INTO user_sessions (user_id, token, ip_address, user_agent, expires_at) VALUES (?, ?, ?, ?, ?)',
-                [decoded.userId, token, getRealIp(req), getUserAgent(req), expiresAt]
+                [user.id, user.token, getRealIp(req), getUserAgent(req), expiresAt]
             );
-        }
 
-        // Always return user data if JWT and user are valid
-        res.json({
-            success: true,
-            user: {
-                id: users[0].id,
-                name: users[0].full_name,
-                email: users[0].email,
-                phone: users[0].phone,
-                whatsapp: users[0].whatsapp,
-                email_verified: users[0].email_verified
+            res.cookie('token', user.token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000
+            });
+
+            res.cookie('user', JSON.stringify({
+                id: user.id,
+                name: user.full_name,
+                email: user.email
+            }), {
+                httpOnly: false,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000
+            });
+
+            // Check email verification
+            if (!user.email_verified) {
+                await pool.execute(
+                    'DELETE FROM verification_tokens WHERE email = ? AND used = false',
+                    [user.email]
+                );
+                await pool.execute(
+                    'DELETE FROM email_verification_codes WHERE email = ? AND used = false',
+                    [user.email]
+                );
+
+                const tempToken = crypto.randomBytes(32).toString('hex');
+                const verifyExpiresAt = new Date();
+                verifyExpiresAt.setMinutes(verifyExpiresAt.getMinutes() + 30);
+
+                await pool.execute(
+                    'INSERT INTO verification_tokens (email, token, expires_at) VALUES (?, ?, ?)',
+                    [user.email, tempToken, verifyExpiresAt]
+                );
+
+                const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+                await pool.execute(
+                    'INSERT INTO email_verification_codes (email, code, expires_at) VALUES (?, ?, ?)',
+                    [user.email, verificationCode, verifyExpiresAt]
+                );
+
+                await emailService.sendVerificationCode(user.email, verificationCode);
+
+                return res.redirect(`${process.env.FRONTEND_URL}/verify-email?token=${tempToken}`);
             }
-        });
 
-    } catch (error) {
-        console.error('Token verification error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error'
-        });
-    }
-});
+            // ✅ Check if phone/whatsapp is missing
+            const [userDetails] = await pool.execute(
+                'SELECT phone, whatsapp, full_name FROM users WHERE id = ?',
+                [user.id]
+            );
+
+            const needsProfileCompletion = !userDetails[0].phone || !userDetails[0].whatsapp || !userDetails[0].full_name;
+
+            if (needsProfileCompletion) {
+                await pool.execute(
+                    'DELETE FROM temp_user_sessions WHERE email = ? AND used = false',
+                    [user.email]
+                );
+
+                const profileToken = crypto.randomBytes(32).toString('hex');
+                const profileExpiresAt = new Date();
+                profileExpiresAt.setMinutes(profileExpiresAt.getMinutes() + 60);
+
+                await pool.execute(
+                    'INSERT INTO temp_user_sessions (email, name, token, expires_at) VALUES (?, ?, ?, ?)',
+                    [user.email, user.full_name || '', profileToken, profileExpiresAt]
+                );
+
+                return res.redirect(`${process.env.FRONTEND_URL}/complete-profile?token=${profileToken}`);
+            }
+
+            // All good — redirect to homepage
+            res.redirect(`${process.env.FRONTEND_URL}/?token=${user.token}`);
+        })(req, res, next);
+    });
+
+    // Logout Route
+    router.post('/logout', async (req, res) => {
+        try {
+            const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+
+            if (token) {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
+
+                cache.del(CACHE_KEYS.USER_PROFILE(decoded.userId));
+                cache.del(CACHE_KEYS.USER_WALLET(decoded.userId));
+                cache.del(CACHE_KEYS.USER_DATA(decoded.userId));
+
+                await pool.execute(
+                    'UPDATE user_sessions SET is_valid = false WHERE token = ?',
+                    [token]
+                );
+            }
+
+            res.clearCookie('token');
+            res.clearCookie('user');
+            res.json({
+                success: true,
+                message: 'Logged out successfully'
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error during logout'
+            });
+        }
+    });
+
+    // Verify Token Route
+    router.get('/verify', async (req, res) => {
+        try {
+            const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+
+            if (!token) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'No token provided'
+                });
+            }
+
+            let decoded;
+            try {
+                decoded = jwt.verify(token, process.env.JWT_SECRET);
+            } catch (jwtError) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid or expired token'
+                });
+            }
+
+            const [users] = await pool.execute(
+                'SELECT id, full_name, email, phone, whatsapp, email_verified FROM users WHERE id = ? AND is_active = 1',
+                [decoded.userId]
+            );
+
+            if (users.length === 0) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'User not found or inactive'
+                });
+            }
+
+            const [sessions] = await pool.execute(
+                'SELECT user_id, is_valid FROM user_sessions WHERE token = ? AND expires_at > NOW()',
+                [token]
+            );
+
+            // Auto-recreate missing/invalid session
+            if (sessions.length === 0 || !sessions[0].is_valid) {
+                console.log('🔄 Session missing but user valid - creating new session for user:', decoded.userId);
+
+                const expiresAt = new Date();
+                expiresAt.setDate(expiresAt.getDate() + 7);
+
+                await pool.execute(
+                    'INSERT INTO user_sessions (user_id, token, ip_address, user_agent, expires_at) VALUES (?, ?, ?, ?, ?)',
+                    [decoded.userId, token, getRealIp(req), getUserAgent(req), expiresAt]
+                );
+            }
+
+            const u = users[0];
+
+            // ✅ NEW: Flag missing phone/whatsapp so frontend can redirect
+            const needsProfileCompletion = !u.phone || !u.whatsapp;
+
+            res.json({
+                success: true,
+                needsProfileCompletion,
+                user: {
+                    id: u.id,
+                    name: u.full_name,
+                    email: u.email,
+                    phone: u.phone,
+                    whatsapp: u.whatsapp,
+                    email_verified: u.email_verified
+                }
+            });
+
+        } catch (error) {
+            console.error('Token verification error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error'
+            });
+        }
+    });
 
     // Send verification code
     router.post('/send-verification-code', async (req, res) => {
@@ -820,6 +870,8 @@ router.get('/verify', async (req, res) => {
             }
 
             const user = users[0];
+
+            // ✅ Check phone/whatsapp after email verification too
             const needsProfileCompletion = !user.phone || !user.whatsapp || !user.full_name || user.full_name === '';
 
             if (needsProfileCompletion) {
@@ -850,94 +902,91 @@ router.get('/verify', async (req, res) => {
         }
     });
 
-// Forgot Password
-router.post('/forgot-password', async (req, res) => {
-    try {
-        const { email } = req.body;
+    // Forgot Password
+    router.post('/forgot-password', async (req, res) => {
+        try {
+            const { email } = req.body;
 
-        if (!email) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email is required'
-            });
-        }
+            if (!email) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Email is required'
+                });
+            }
 
-        // Check daily attempt limit
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Start of today
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1); // Start of tomorrow
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
 
-        const [attempts] = await pool.execute(
-            'SELECT COUNT(*) as count FROM password_reset_attempts WHERE email = ? AND attempted_at >= ? AND attempted_at < ?',
-            [email, today, tomorrow]
-        );
+            const [attempts] = await pool.execute(
+                'SELECT COUNT(*) as count FROM password_reset_attempts WHERE email = ? AND attempted_at >= ? AND attempted_at < ?',
+                [email, today, tomorrow]
+            );
 
-        if (attempts[0].count >= 3) {
-            return res.status(429).json({
-                success: false,
-                message: 'Too many password reset attempts today. Please try again tomorrow.'
-            });
-        }
+            if (attempts[0].count >= 3) {
+                return res.status(429).json({
+                    success: false,
+                    message: 'Too many password reset attempts today. Please try again tomorrow.'
+                });
+            }
 
-        // Log this attempt
-        await pool.execute(
-            'INSERT INTO password_reset_attempts (email, ip_address, user_agent) VALUES (?, ?, ?)',
-            [email, getRealIp(req), getUserAgent(req)]
-        );
+            await pool.execute(
+                'INSERT INTO password_reset_attempts (email, ip_address, user_agent) VALUES (?, ?, ?)',
+                [email, getRealIp(req), getUserAgent(req)]
+            );
 
-        // Check if user exists
-        const [users] = await pool.execute(
-            'SELECT id, full_name FROM users WHERE email = ?',
-            [email]
-        );
+            const [users] = await pool.execute(
+                'SELECT id, full_name FROM users WHERE email = ?',
+                [email]
+            );
 
-        if (users.length === 0) {
-            return res.json({
+            if (users.length === 0) {
+                return res.json({
+                    success: true,
+                    message: 'If your email is registered, you will receive a reset code'
+                });
+            }
+
+            const user = users[0];
+
+            const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const resetToken = crypto.randomBytes(32).toString('hex');
+            const expiresAt = new Date();
+            expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+            await pool.execute(
+                'DELETE FROM password_resets WHERE email = ? AND used = false',
+                [email]
+            );
+
+            await pool.execute(
+                'INSERT INTO password_resets (email, code, token, expires_at) VALUES (?, ?, ?, ?)',
+                [email, resetCode, resetToken, expiresAt]
+            );
+
+            await emailService.sendPasswordResetCode(email, user.full_name, resetCode);
+
+            await pool.execute(
+                'INSERT INTO login_attempts (email, ip_address, user_agent, success) VALUES (?, ?, ?, ?)',
+                [`PASSWORD_RESET_REQUEST: ${email}`, getRealIp(req), getUserAgent(req), true]
+            );
+
+            res.json({
                 success: true,
-                message: 'If your email is registered, you will receive a reset code'
+                message: 'Reset code sent to your email',
+                token: resetToken,
+                attemptsRemaining: 2 - attempts[0].count
+            });
+
+        } catch (error) {
+            console.error('Forgot password error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to process request'
             });
         }
-
-        const user = users[0];
-
-        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const resetToken = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date();
-        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
-
-        await pool.execute(
-            'DELETE FROM password_resets WHERE email = ? AND used = false',
-            [email]
-        );
-
-        await pool.execute(
-            'INSERT INTO password_resets (email, code, token, expires_at) VALUES (?, ?, ?, ?)',
-            [email, resetCode, resetToken, expiresAt]
-        );
-
-        await emailService.sendPasswordResetCode(email, user.full_name, resetCode);
-
-        await pool.execute(
-            'INSERT INTO login_attempts (email, ip_address, user_agent, success) VALUES (?, ?, ?, ?)',
-            [`PASSWORD_RESET_REQUEST: ${email}`, getRealIp(req), getUserAgent(req), true]
-        );
-
-        res.json({
-            success: true,
-            message: 'Reset code sent to your email',
-            token: resetToken,
-            attemptsRemaining: 2 - attempts[0].count // Send remaining attempts to frontend
-        });
-
-    } catch (error) {
-        console.error('Forgot password error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to process request'
-        });
-    }
-});
+    });
 
     // Verify reset code
     router.post('/verify-reset-code', async (req, res) => {
@@ -1099,7 +1148,7 @@ router.post('/forgot-password', async (req, res) => {
         }
     });
 
-    // Complete profile for Google users
+    // Complete profile (for Google users or users missing phone/whatsapp)
     router.post('/complete-profile', [
         body('name').trim().notEmpty().withMessage('Full name is required'),
         body('phone').notEmpty().withMessage('Phone number is required'),
@@ -1107,11 +1156,8 @@ router.post('/forgot-password', async (req, res) => {
         body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
     ], async (req, res) => {
         try {
-            console.log('📝 Complete profile request received:', req.body);
-
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                console.log('Validation errors:', errors.array());
                 return res.status(400).json({
                     success: false,
                     errors: errors.array().reduce((acc, err) => {
@@ -1144,7 +1190,29 @@ router.post('/forgot-password', async (req, res) => {
             }
 
             const user = users[0];
-            console.log('User found:', user);
+
+            // ✅ Check phone and whatsapp are not already taken by another user
+            const [phoneCheck] = await pool.execute(
+                'SELECT id FROM users WHERE phone = ? AND email != ?',
+                [phone, email]
+            );
+            if (phoneCheck.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    errors: { phone: 'Phone number already registered to another account' }
+                });
+            }
+
+            const [whatsappCheck] = await pool.execute(
+                'SELECT id FROM users WHERE whatsapp = ? AND email != ?',
+                [whatsapp, email]
+            );
+            if (whatsappCheck.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    errors: { whatsapp: 'WhatsApp number already registered to another account' }
+                });
+            }
 
             const hashedPassword = await bcrypt.hash(password, parseInt(process.env.BCRYPT_ROUNDS));
 
@@ -1154,8 +1222,6 @@ router.post('/forgot-password', async (req, res) => {
                  WHERE email = ?`,
                 [name, phone, whatsapp, hashedPassword, email]
             );
-
-            console.log('Update result:', updateResult);
 
             const [updatedUsers] = await pool.execute(
                 'SELECT id, full_name, email, phone, whatsapp FROM users WHERE email = ?',
@@ -1168,7 +1234,6 @@ router.post('/forgot-password', async (req, res) => {
                 { expiresIn: process.env.JWT_EXPIRE }
             );
 
-            // Create user session
             const expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -1208,8 +1273,6 @@ router.post('/forgot-password', async (req, res) => {
                 [`PROFILE_COMPLETED: ${email}`, getRealIp(req), getUserAgent(req), true]
             );
 
-            console.log('Profile completed successfully for:', email);
-
             res.json({
                 success: true,
                 message: 'Profile completed successfully',
@@ -1218,11 +1281,10 @@ router.post('/forgot-password', async (req, res) => {
             });
 
         } catch (error) {
-            console.error('❌ Complete profile error:', error);
-            console.error('Error stack:', error.stack);
+            console.error('Complete profile error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to complete profile: ' + error.message
+                message: 'Failed to complete profile. Please try again.'
             });
         }
     });
