@@ -11,7 +11,7 @@ import {
   Key, Lock, Unlock, Link, 
   Info, AlertCircle, CheckCircle2, X,
   Share2, Send,
-  Database
+  Database, Snowflake, PartyPopper
 } from 'lucide-react';
 import axios from 'axios';
 import Sidebar from './Sidebar';
@@ -61,6 +61,10 @@ interface Config {
   // Features
   registration_enabled: string;
   email_verification_required: string;
+  
+  // Effects
+  snow_effect: string;
+  festival_effect: string;
   
   // Integrations
   google_analytics_id: string;
@@ -124,6 +128,10 @@ const AdminConfigPage: React.FC = () => {
     // Features
     registration_enabled: '1',
     email_verification_required: '1',
+    
+    // Effects
+    snow_effect: '0',
+    festival_effect: '0',
     
     // Integrations
     google_analytics_id: '',
@@ -207,6 +215,8 @@ const AdminConfigPage: React.FC = () => {
         time_format: config.time_format,
         registration_enabled: config.registration_enabled,
         email_verification_required: config.email_verification_required,
+        snow_effect: config.snow_effect,
+        festival_effect: config.festival_effect,
         google_analytics_id: config.google_analytics_id,
         facebook_pixel_id: config.facebook_pixel_id,
         recaptcha_site_key: config.recaptcha_site_key,
@@ -252,6 +262,50 @@ const AdminConfigPage: React.FC = () => {
     }
   };
 
+  const handleToggleSnowEffect = async () => {
+    const newValue = config.snow_effect === '1' ? '0' : '1';
+    
+    setSaving(true);
+    try {
+      const response = await axios.post(`${API_URL}/admin/config/toggle-snow`, {
+        enabled: newValue === '1'
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      if (response.data.success) {
+        setConfig(prev => ({ ...prev, snow_effect: newValue }));
+        setSaveSuccess(true);
+      }
+    } catch (error) {
+      console.error('Error toggling snow effect:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleFestivalEffect = async () => {
+    const newValue = config.festival_effect === '1' ? '0' : '1';
+    
+    setSaving(true);
+    try {
+      const response = await axios.post(`${API_URL}/admin/config/toggle-festival`, {
+        enabled: newValue === '1'
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      if (response.data.success) {
+        setConfig(prev => ({ ...prev, festival_effect: newValue }));
+        setSaveSuccess(true);
+      }
+    } catch (error) {
+      console.error('Error toggling festival effect:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -269,9 +323,7 @@ const AdminConfigPage: React.FC = () => {
       });
 
       if (response.data.success) {
-        // Update config with new logo path
         setConfig(prev => ({ ...prev, site_logo: response.data.path }));
-        // Update preview
         setImagePreview(URL.createObjectURL(file));
         setSaveSuccess(true);
       }
@@ -301,6 +353,7 @@ const AdminConfigPage: React.FC = () => {
     { id: 'general', label: 'General', icon: Globe },
     { id: 'social', label: 'Social Links', icon: Share2 },
     { id: 'contact', label: 'Contact', icon: Mail },
+    { id: 'effects', label: 'Site Effects', icon: Sparkles },
   ];
 
   if (loading) {
@@ -727,6 +780,135 @@ const AdminConfigPage: React.FC = () => {
                 </div>
               )}
 
+              {/* EFFECTS TAB - NEW */}
+              {activeTab === 'effects' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Snow Effect Card */}
+                  <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                      <Snowflake className="w-5 h-5 text-blue-400" />
+                      Snow Effect
+                    </h2>
+                    
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-4 bg-black/30 rounded-xl border border-white/10">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${config.snow_effect === '1' ? 'bg-blue-500/20' : 'bg-white/5'}`}>
+                            <Snowflake className={`w-5 h-5 ${config.snow_effect === '1' ? 'text-blue-400' : 'text-gray-500'}`} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white">Enable Snow Effect</p>
+                            <p className="text-xs text-gray-400">Falling snow animation across the site</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleToggleSnowEffect}
+                          disabled={saving}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            config.snow_effect === '1' ? 'bg-blue-500' : 'bg-white/20'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              config.snow_effect === '1' ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Preview */}
+                      <div className="relative h-32 rounded-xl bg-gradient-to-b from-blue-900/20 to-transparent border border-white/10 overflow-hidden">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Snowflake className="w-6 h-6 text-blue-400 animate-bounce" />
+                          <Snowflake className="w-4 h-4 text-blue-300 animate-pulse ml-2" />
+                          <Snowflake className="w-5 h-5 text-blue-500 animate-spin ml-2" />
+                        </div>
+                        <p className="absolute bottom-2 left-2 text-[10px] text-gray-500">Preview animation</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Festival Effect Card */}
+                  <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                      <PartyPopper className="w-5 h-5 text-pink-400" />
+                      Festival Effect
+                    </h2>
+                    
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-4 bg-black/30 rounded-xl border border-white/10">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${config.festival_effect === '1' ? 'bg-pink-500/20' : 'bg-white/5'}`}>
+                            <PartyPopper className={`w-5 h-5 ${config.festival_effect === '1' ? 'text-pink-400' : 'text-gray-500'}`} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white">Enable Festival Effect</p>
+                            <p className="text-xs text-gray-400">Colorful festival animations across the site</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleToggleFestivalEffect}
+                          disabled={saving}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            config.festival_effect === '1' ? 'bg-pink-500' : 'bg-white/20'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              config.festival_effect === '1' ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Festival Type Selector */}
+                      {config.festival_effect === '1' && (
+                        <div className="space-y-2">
+                          <label className="text-xs text-gray-400">Festival Type</label>
+                          <select
+                            value="default"
+                            onChange={(e) => handleSave('festival_type', e.target.value)}
+                            className="w-full px-4 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
+                          >
+                            <option value="diwali">Diwali</option>
+                            <option value="christmas">Christmas</option>
+                            <option value="newyear">New Year</option>
+                            <option value="sinhala">Sinhala New Year</option>
+                            <option value="vesak">Vesak</option>
+                            <option value="poson">Poson</option>
+                            <option value="ramadan">Ramadan</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Preview */}
+                      <div className="relative h-32 rounded-xl bg-gradient-to-b from-pink-900/20 to-transparent border border-white/10 overflow-hidden">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <PartyPopper className="w-6 h-6 text-pink-400 animate-bounce" />
+                          <PartyPopper className="w-4 h-4 text-yellow-400 animate-pulse ml-2" />
+                          <PartyPopper className="w-5 h-5 text-green-400 animate-spin ml-2" />
+                        </div>
+                        <p className="absolute bottom-2 left-2 text-[10px] text-gray-500">Preview animation</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Info Card */}
+                  <div className="lg:col-span-2 bg-gradient-to-br from-blue-500/10 to-pink-500/10 border border-white/10 rounded-2xl p-6">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-5 h-5 text-brand shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="text-sm font-bold text-white mb-1">About Site Effects</h3>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                          Snow effect and festival effect are visual animations that appear across all pages of your site. 
+                          Enable them to enhance user experience during special occasions. Festival effect supports multiple 
+                          festival types with different color schemes and animations.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>
@@ -740,7 +922,7 @@ const AdminConfigPage: React.FC = () => {
   );
 };
 
-// Helper Components
+// Helper Components (unchanged)
 const InputField = ({ label, value, onChange, icon, type = 'text', placeholder }: any) => (
   <div>
     <label className="block text-xs text-gray-400 mb-1">{label}</label>
@@ -778,24 +960,6 @@ const ToggleField = ({ label, value, onChange }: any) => (
     >
       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
-  </div>
-);
-
-const PasswordField = ({ label, value, onChange, showPassword, onTogglePassword }: any) => (
-  <div>
-    <label className="block text-xs text-gray-400 mb-1">{label}</label>
-    <div className="relative">
-      <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-      <input
-        type={showPassword ? 'text' : 'password'}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full pl-10 pr-12 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
-      />
-      <button onClick={onTogglePassword} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-400">
-        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-      </button>
-    </div>
   </div>
 );
 
