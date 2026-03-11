@@ -64,3 +64,5 @@ VITE_ADMIN_NAME=Iflaj
 
 password generate code
 node -e "const b=require('bcryptjs'); console.log(b.hashSync('YourNewPassword123',12))"
+
+node -e "const s=require('speakeasy'); const k=s.generateSecret({name:'SMM Admin'}); console.log('SECRET:',k.base32); console.log('URL:',k.otpauth_url)"
