@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import Sidebar from './Sidebar';
-import AdminHeader from './AdminHeader';
 
 interface Config {
   // Maintenance
@@ -153,7 +152,7 @@ const AdminConfigPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/admin/config/all`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
 
       if (response.data.success) {
@@ -217,7 +216,7 @@ const AdminConfigPage: React.FC = () => {
       const response = await axios.post(`${API_URL}/admin/config/update-multiple`, {
         configs: configsToSave
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
 
       if (response.data.success) {
@@ -239,7 +238,7 @@ const AdminConfigPage: React.FC = () => {
         enabled: newValue === '1',
         message: config.maintenance_message
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
 
       if (response.data.success) {
@@ -264,7 +263,7 @@ const AdminConfigPage: React.FC = () => {
     try {
       const response = await axios.post(`${API_URL}/admin/config/upload-image`, formData, {
         headers: { 
-          Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -327,12 +326,63 @@ const AdminConfigPage: React.FC = () => {
 
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-80' : 'md:ml-0'} ml-0 min-h-screen flex flex-col`}>
         {/* Header */}
-<AdminHeader
-  title="Settings Management"
-  onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-  onMobileMenuClick={() => setMobileSidebarOpen(true)}
-  activeTickets={0} 
-/>
+        <header className="sticky top-0 z-40 bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/10">
+          <div className="flex items-center justify-between px-4 py-3 md:px-8 md:py-4">
+            <div className="flex items-center gap-2 md:gap-4">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="hidden md:block p-2 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <Menu className="w-5 h-5 text-gray-400" />
+              </button>
+              <button
+                onClick={() => setMobileSidebarOpen(true)}
+                className="md:hidden p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <Menu className="w-5 h-5 text-gray-400" />
+              </button>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-black text-white md:text-2xl">Site Configuration</h1>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 md:gap-4">
+              <button
+                onClick={handleSaveAll}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand/90 text-white rounded-xl text-sm font-bold transition-colors"
+              >
+                {saving ? <Loader className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /><span className="hidden sm:inline">Save Changes</span></>}
+              </button>
+
+              {saveSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="flex items-center gap-2 px-3 py-2 bg-green-500/20 border border-green-500/30 rounded-lg"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                  <span className="text-xs text-green-400">Saved!</span>
+                </motion.div>
+              )}
+
+              <button className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+                <Bell className="w-5 h-5 text-gray-400" />
+              </button>
+              
+              <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+                <div className="hidden text-right sm:block">
+                  <p className="text-sm font-medium text-white">Admin</p>
+                  <p className="text-xs text-gray-500">Super Admin</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand to-purple-600 flex items-center justify-center">
+                  <span className="text-sm font-black text-white">AD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
 
         {/* Main Content */}
         <div className="flex-1 p-4 md:p-8">
@@ -668,7 +718,12 @@ const AdminConfigPage: React.FC = () => {
                     <TextAreaField value={config.address} onChange={(v) => handleSave('address', v)} rows={4} />
                   </div>
 
-                  
+                  <div className="lg:col-span-2 bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                      <Edit3 className="w-5 h-5 text-brand" />
+                      Footer
+                    </h2>
+                  </div>
                 </div>
               )}
 
