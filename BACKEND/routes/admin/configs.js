@@ -81,6 +81,82 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
+    // Get snow effect status
+    router.get('/snow-effect', async (req, res) => {
+        try {
+            const [configs] = await pool.execute(
+                'SELECT config_value FROM config WHERE config_key = "snow_effect"'
+            );
+
+            const snow_effect = configs.length > 0 ? configs[0].config_value === '1' : false;
+
+            res.json({
+                success: true,
+                snow_effect: snow_effect
+            });
+
+        } catch (error) {
+            console.error('Get snow effect error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get snow effect status'
+            });
+        }
+    });
+
+    // Get festival effect status
+    router.get('/festival-effect', async (req, res) => {
+        try {
+            const [configs] = await pool.execute(
+                'SELECT config_value FROM config WHERE config_key = "festival_effect"'
+            );
+
+            const festival_effect = configs.length > 0 ? configs[0].config_value === '1' : false;
+
+            res.json({
+                success: true,
+                festival_effect: festival_effect
+            });
+
+        } catch (error) {
+            console.error('Get festival effect error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get festival effect status'
+            });
+        }
+    });
+
+    // Get all effect statuses at once
+    router.get('/effects', async (req, res) => {
+        try {
+            const [configs] = await pool.execute(
+                'SELECT config_key, config_value FROM config WHERE config_key IN ("snow_effect", "festival_effect")'
+            );
+
+            const effects = {
+                snow_effect: false,
+                festival_effect: false
+            };
+
+            configs.forEach(config => {
+                effects[config.config_key] = config.config_value === '1';
+            });
+
+            res.json({
+                success: true,
+                effects: effects
+            });
+
+        } catch (error) {
+            console.error('Get effects error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get effects status'
+            });
+        }
+    });
+
     // Get public config values (safe ones only)
     router.get('/public', async (req, res) => {
         try {
@@ -96,7 +172,8 @@ const adminAuth = require('../admin-auth')(pool);
                      'alert_message', 'alert_enabled', 'alert_type',
                      'alert_heading', 'alert_description',
                      'currency', 'timezone', 'date_format', 'time_format',
-                     'theme_color', 'dark_mode_enabled'
+                     'theme_color', 'dark_mode_enabled',
+                     'snow_effect', 'festival_effect'
                  )`
             );
             
@@ -224,6 +301,78 @@ const adminAuth = require('../admin-auth')(pool);
             res.status(500).json({
                 success: false,
                 message: 'Failed to update config'
+            });
+        }
+    });
+
+    // Toggle snow effect (admin only)
+    router.post('/toggle-snow', adminAuth.adminAuthMiddleware, async (req, res) => {
+        try {
+            const { enabled } = req.body;
+
+            // Check if config exists
+            const [existing] = await pool.execute(
+                'SELECT id FROM config WHERE config_key = "snow_effect"'
+            );
+
+            if (existing.length > 0) {
+                await pool.execute(
+                    'UPDATE config SET config_value = ? WHERE config_key = "snow_effect"',
+                    [enabled ? '1' : '0']
+                );
+            } else {
+                await pool.execute(
+                    'INSERT INTO config (config_key, config_value) VALUES ("snow_effect", ?)',
+                    [enabled ? '1' : '0']
+                );
+            }
+
+            res.json({
+                success: true,
+                message: `Snow effect ${enabled ? 'enabled' : 'disabled'} successfully`
+            });
+
+        } catch (error) {
+            console.error('Toggle snow effect error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to toggle snow effect'
+            });
+        }
+    });
+
+    // Toggle festival effect (admin only)
+    router.post('/toggle-festival', adminAuth.adminAuthMiddleware, async (req, res) => {
+        try {
+            const { enabled } = req.body;
+
+            // Check if config exists
+            const [existing] = await pool.execute(
+                'SELECT id FROM config WHERE config_key = "festival_effect"'
+            );
+
+            if (existing.length > 0) {
+                await pool.execute(
+                    'UPDATE config SET config_value = ? WHERE config_key = "festival_effect"',
+                    [enabled ? '1' : '0']
+                );
+            } else {
+                await pool.execute(
+                    'INSERT INTO config (config_key, config_value) VALUES ("festival_effect", ?)',
+                    [enabled ? '1' : '0']
+                );
+            }
+
+            res.json({
+                success: true,
+                message: `Festival effect ${enabled ? 'enabled' : 'disabled'} successfully`
+            });
+
+        } catch (error) {
+            console.error('Toggle festival effect error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to toggle festival effect'
             });
         }
     });
