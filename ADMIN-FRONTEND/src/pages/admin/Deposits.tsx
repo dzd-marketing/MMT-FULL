@@ -57,6 +57,28 @@ const AdminDepositsPage: React.FC = () => {
   const API_URL = 'https://admin.mmtsmmpanel.cyberservice.online';
   const UPLOADS_URL = 'https://mmtsmmpanel.cyberservice.online';
 
+  // ============= IMAGE URL HELPER FUNCTION =============
+  const getImageUrl = (imagePath: string | null) => {
+    if (!imagePath) return '';
+    
+    // If it's already a full URL
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    // Remove any '/api' prefix if present
+    const cleanPath = imagePath.replace(/^\/api/, '');
+    
+    // Ensure path starts with '/uploads'
+    if (!cleanPath.startsWith('/uploads')) {
+      // If it's just a filename, assume it's in receipts
+      if (!cleanPath.includes('/')) {
+        return `${UPLOADS_URL}/uploads/receipts/${cleanPath}`;
+      }
+      return `${UPLOADS_URL}${cleanPath}`;
+    }
+    
+    // Return full URL with base
+    return `${UPLOADS_URL}${cleanPath}`;
+  };
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const icons = {
@@ -234,12 +256,12 @@ const AdminDepositsPage: React.FC = () => {
       />
 
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-80' : 'md:ml-0'} ml-0 h-screen flex flex-col overflow-hidden`}>
-<AdminHeader
-  title="Deposits Management"
-  onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-  onMobileMenuClick={() => setMobileSidebarOpen(true)}
-  activeTickets={0} 
-/>
+        <AdminHeader
+          title="Deposits Management"
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          onMobileMenuClick={() => setMobileSidebarOpen(true)}
+          activeTickets={0} 
+        />
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
@@ -415,6 +437,7 @@ const AdminDepositsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Receipt Modal with Fixed Image URL */}
       <AnimatePresence>
         {showReceiptModal && selectedDeposit && (
           <>
@@ -446,8 +469,9 @@ const AdminDepositsPage: React.FC = () => {
                 </button>
               </div>
               <div className="p-6 max-h-[80vh] overflow-y-auto">
+                {/* Fixed: Using getImageUrl function */}
                 <img
-                  src={`${UPLOADS_URL}${selectedDeposit.receipt_url}`}
+                  src={getImageUrl(selectedDeposit.receipt_url)}
                   alt="Receipt"
                   className="w-full h-auto rounded-xl"
                   onError={(e) => {
@@ -456,7 +480,7 @@ const AdminDepositsPage: React.FC = () => {
                 />
                 <div className="mt-4 flex justify-end gap-3">
                   <a
-                    href={`${UPLOADS_URL}${selectedDeposit.receipt_url}`}
+                    href={getImageUrl(selectedDeposit.receipt_url)}
                     download={selectedDeposit.receipt_filename}
                     className="flex items-center gap-2 px-4 py-2 bg-brand/20 text-brand rounded-xl hover:bg-brand/30 transition-colors"
                   >
@@ -470,7 +494,7 @@ const AdminDepositsPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ========== APPROVE MODAL ========== */}
+      {/* Approve Modal (unchanged) */}
       <AnimatePresence>
         {showApproveModal && selectedDeposit && (
           <>
@@ -563,7 +587,7 @@ const AdminDepositsPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ========== REJECT MODAL ========== */}
+      {/* Reject Modal (unchanged) */}
       <AnimatePresence>
         {showRejectModal && selectedDeposit && (
           <>
@@ -632,6 +656,3 @@ const AdminDepositsPage: React.FC = () => {
 };
 
 export default AdminDepositsPage;
-
-
-
