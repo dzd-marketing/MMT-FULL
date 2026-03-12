@@ -12,7 +12,6 @@ import { format } from 'date-fns';
 import Sidebar from './Sidebar';
 import AdminHeader from './AdminHeader';
 
-
 interface User {
   id: number;
   full_name: string;
@@ -65,9 +64,7 @@ const AdminUsersPage: React.FC = () => {
     pages: 1
   });
 
- 
   const [searchQuery, setSearchQuery] = useState('');
-
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -75,8 +72,23 @@ const AdminUsersPage: React.FC = () => {
   const [newBalance, setNewBalance] = useState<number>(0);
   const [updatingBalance, setUpdatingBalance] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  // ============= FIXED: API URLs =============
+  const API_URL = import.meta.env.VITE_API_URL;  // https://admin.mmtsmmpanel.cyberservice.online/api
+  const IMAGE_URL = 'https://mmtsmmpanel.cyberservice.online';  // Main domain for images
 
+  // ============= IMAGE URL HELPER FUNCTION =============
+  const getImageUrl = (imagePath: string | null) => {
+    if (!imagePath) return '';
+    
+    // If it's already a full URL
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    // Remove any '/api' prefix if present
+    const cleanPath = imagePath.replace(/^\/api/, '');
+    
+    // Return full URL with IMAGE_URL base
+    return `${IMAGE_URL}${cleanPath}`;
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -102,7 +114,6 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-
   const fetchStats = async () => {
     try {
       const response = await axios.get(`${API_URL}/admin/users/stats/summary`, {
@@ -125,7 +136,6 @@ const AdminUsersPage: React.FC = () => {
     fetchStats();
   }, [pagination.page, searchQuery]);
 
-
   const fetchUserDetails = async (id: number) => {
     try {
       const response = await axios.get(`${API_URL}/admin/users/${id}`, {
@@ -142,7 +152,6 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
- 
   const handleUpdateBalance = async () => {
     if (!selectedUser) return;
 
@@ -167,7 +176,6 @@ const AdminUsersPage: React.FC = () => {
       setUpdatingBalance(false);
     }
   };
-
 
   const downloadAllUsersData = async () => {
     setDownloading('all');
@@ -215,54 +223,54 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-const downloadUsersWithBalance = async () => {
-  setDownloading('balance');
-  try {
-    const response = await axios.get(`${API_URL}/admin/users/all?limit=1000`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
-    });
-
-    if (response.data.success) {
-      const allUsers = response.data.users;
-      
-      const headers = ['Full Name', 'Email', 'Balance (LKR)', 'User ID', 'Joined Date'];
-      const csvRows = [];
-      
-      csvRows.push(headers.join(','));
-      
-      allUsers.forEach((user: User) => {
-        const balanceValue = typeof user.balance === 'number' 
-          ? user.balance 
-          : parseFloat(user.balance as any) || 0;
-        
-        const row = [
-          `"${user.full_name || ''}"`,
-          `"${user.email || ''}"`,
-          balanceValue.toFixed(2),
-          user.id,
-          `"${format(new Date(user.created_at), 'yyyy-MM-dd')}"`
-        ];
-        csvRows.push(row.join(','));
+  const downloadUsersWithBalance = async () => {
+    setDownloading('balance');
+    try {
+      const response = await axios.get(`${API_URL}/admin/users/all?limit=1000`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
       });
 
-      const csvString = csvRows.join('\n');
-      const blob = new Blob([csvString], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `users_balance_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      if (response.data.success) {
+        const allUsers = response.data.users;
+        
+        const headers = ['Full Name', 'Email', 'Balance (LKR)', 'User ID', 'Joined Date'];
+        const csvRows = [];
+        
+        csvRows.push(headers.join(','));
+        
+        allUsers.forEach((user: User) => {
+          const balanceValue = typeof user.balance === 'number' 
+            ? user.balance 
+            : parseFloat(user.balance as any) || 0;
+          
+          const row = [
+            `"${user.full_name || ''}"`,
+            `"${user.email || ''}"`,
+            balanceValue.toFixed(2),
+            user.id,
+            `"${format(new Date(user.created_at), 'yyyy-MM-dd')}"`
+          ];
+          csvRows.push(row.join(','));
+        });
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `users_balance_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Error downloading users balance:', error);
+      alert('Failed to download users balance');
+    } finally {
+      setDownloading(null);
     }
-  } catch (error) {
-    console.error('Error downloading users balance:', error);
-    alert('Failed to download users balance');
-  } finally {
-    setDownloading(null);
-  }
-};
+  };
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('en-US', {
@@ -303,15 +311,13 @@ const downloadUsersWithBalance = async () => {
 
       {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-80' : 'md:ml-0'} ml-0 min-h-screen flex flex-col`}>
-        {/* Header */}
-<AdminHeader
-  title="Users Management"
-  onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-  onMobileMenuClick={() => setMobileSidebarOpen(true)}
-  activeTickets={0} 
-/>
+        <AdminHeader
+          title="Users Management"
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          onMobileMenuClick={() => setMobileSidebarOpen(true)}
+          activeTickets={0} 
+        />
 
-        {/* Main Content */}
         <div className="flex-1 p-4 md:p-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-2 gap-3 md:gap-4 mb-6">
@@ -373,11 +379,11 @@ const downloadUsersWithBalance = async () => {
                   className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-xl p-3 md:p-4 hover:border-brand/30 transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    {/* Avatar */}
+                    {/* Avatar - FIXED: Using getImageUrl */}
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-brand to-purple-600 flex items-center justify-center shrink-0">
                       {user.profile_picture ? (
                         <img 
-                          src={user.profile_picture.startsWith('http') ? user.profile_picture : `${API_URL}${user.profile_picture}`}
+                          src={getImageUrl(user.profile_picture)}
                           alt={user.full_name}
                           className="w-full h-full rounded-full object-cover"
                           onError={(e) => {
@@ -496,13 +502,13 @@ const downloadUsersWithBalance = async () => {
               exit={{ opacity: 0, scale: 0.95 }}
               className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] sm:w-[90%] max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-[#1F1F1F] to-[#141414] border border-white/10 rounded-2xl shadow-2xl z-[51]"
             >
-              {/* ... modal content (unchanged) ... */}
               <div className="sticky top-0 bg-gradient-to-b from-[#1F1F1F] to-[#141414] border-b border-white/10 p-3 sm:p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-3">
+                  {/* Avatar in Modal - FIXED */}
                   <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-brand to-purple-600 flex items-center justify-center shrink-0">
                     {selectedUser.profile_picture ? (
                       <img 
-                        src={selectedUser.profile_picture.startsWith('http') ? selectedUser.profile_picture : `${API_URL}${selectedUser.profile_picture}`}
+                        src={getImageUrl(selectedUser.profile_picture)}
                         alt={selectedUser.full_name}
                         className="w-full h-full rounded-full object-cover"
                         onError={(e) => {
@@ -661,4 +667,3 @@ const downloadUsersWithBalance = async () => {
 };
 
 export default AdminUsersPage;
-
