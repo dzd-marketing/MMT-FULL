@@ -18,6 +18,7 @@ const EmailVerification: React.FC = () => {
     const [initialCodeSent, setInitialCodeSent] = useState(false);
     
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const API_URL = import.meta.env.VITE_API_URL;
 
 useEffect(() => {
     const fetchUserDetails = async () => {
@@ -30,7 +31,7 @@ useEffect(() => {
             
             // Fetch user email from backend using token
             try {
-                const response = await fetch(`http://localhost:5000/api/auth/get-user-from-token?token=${urlToken}`);
+                const response = await fetch(`${API_URL}/auth/get-user-from-token?token=${urlToken}`);
                 const data = await response.json();
                 
                 if (data.success) {
@@ -135,7 +136,7 @@ const handleVerify = async () => {
     const startTime = Date.now();
 
     try {
-        const response = await fetch(`http://localhost:5000/api/auth/verify-code`, {
+        const response = await fetch(`${API_URL}/auth/verify-code`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: verificationToken, code })
