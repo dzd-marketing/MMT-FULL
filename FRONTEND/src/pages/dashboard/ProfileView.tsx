@@ -32,6 +32,9 @@ export default function ProfileView() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [copied, setCopied] = useState(false);
   const [generatingKey, setGeneratingKey] = useState(false);
+
+    const API_URL = import.meta.env.VITE_API_URL;
+
   
   // Currency state - number to string mapping
   const currencyMap = {
@@ -95,7 +98,7 @@ export default function ProfileView() {
 
   const loadProfileData = async () => {
     try {
-      const response = await axios.get('/api/user/profiles', { withCredentials: true });
+      const response = await axios.get(`${API_URL}/user/profiles`, { withCredentials: true });
       console.log('📋 [FRONTEND] Profile data loaded:', response.data);
       
       if (response.data.success) {
@@ -136,7 +139,7 @@ export default function ProfileView() {
 
   const loadApiKey = async () => {
     try {
-      const response = await axios.get('/api/user/api-key', { withCredentials: true });
+      const response = await axios.get(`${API_URL}/user/api-key`, { withCredentials: true });
       if (response.data.success) {
         setApiKey(response.data.api_key);
       }
@@ -151,7 +154,7 @@ export default function ProfileView() {
   const loadStats = async () => {
     setLoadingStats(true);
     try {
-      const response = await axios.get('/api/user/stats', { withCredentials: true });
+      const response = await axios.get(`${API_URL}/user/stats`, { withCredentials: true });
       if (response.data.success) {
         const stats = response.data.stats;
         setStats({
@@ -196,7 +199,7 @@ export default function ProfileView() {
       const currencyNumber = reverseCurrencyMap[newCurrency];
       console.log('💰 [FRONTEND] Step 2: Sending to backend:', currencyNumber);
       
-      const response = await axios.post('/api/user/update-currency', 
+      const response = await axios.post(`${API_URL}/user/update-currency`, 
         { currency: currencyNumber }, 
         { withCredentials: true }
       );
@@ -226,7 +229,7 @@ const generateNewApiKey = async () => {
     const token = localStorage.getItem('token');
     
     // USE FULL URL INSTEAD OF PROXY
-    const response = await axios.post('http://localhost:5000/api/user/generate-api-key', {}, { 
+    const response = await axios.post(`${API_URL}/user/generate-api-key`, {}, { 
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
@@ -302,7 +305,7 @@ const generateNewApiKey = async () => {
         hasFile: !!selectedFile
       });
 
-      const response = await axios.post('/api/user/update-profiles', formData, {
+      const response = await axios.post(`${API_URL}/user/update-profiles`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         withCredentials: true
       });
