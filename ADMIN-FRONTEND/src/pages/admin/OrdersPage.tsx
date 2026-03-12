@@ -1,4 +1,3 @@
-// pages/admin/OrdersPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactDOM from 'react-dom';
@@ -17,7 +16,6 @@ import { format } from 'date-fns';
 import Sidebar from './Sidebar';
 import AdminHeader from './AdminHeader';
 
-// Custom Dropdown Components
 interface DropdownOption {
   value: string;
   label: string;
@@ -98,7 +96,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   );
 };
 
-// Date Range Picker Component
 interface DateRangePickerProps {
   startDate: string;
   endDate: string;
@@ -179,8 +176,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
     </div>
   );
 };
-
-// Profit Range Component
 interface ProfitRangeProps {
   min: string;
   max: string;
@@ -365,7 +360,6 @@ const AdminOrdersPage: React.FC = () => {
   const [bulkAction, setBulkAction] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
   
-  // Filter states
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [profitMin, setProfitMin] = useState('');
@@ -379,7 +373,6 @@ const AdminOrdersPage: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // Parse URL parameters on load
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get('status');
@@ -410,7 +403,6 @@ const AdminOrdersPage: React.FC = () => {
     filterOrders();
   }, [orders, searchQuery, searchField]);
 
-  // Update URL when filters change
   useEffect(() => {
     const params = new URLSearchParams();
     if (selectedStatus !== 'all') params.set('status', selectedStatus);
@@ -423,7 +415,6 @@ const AdminOrdersPage: React.FC = () => {
     navigate({ search: params.toString() }, { replace: true });
   }, [selectedStatus, orderType, currentPage, dateFrom, dateTo, profitMin, profitMax]);
 
-  // Handle select all
   useEffect(() => {
     if (selectAll) {
       setSelectedOrders(filteredOrders.map(o => o.order_id));
@@ -432,7 +423,6 @@ const AdminOrdersPage: React.FC = () => {
     }
   }, [selectAll, filteredOrders]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -673,11 +663,9 @@ const AdminOrdersPage: React.FC = () => {
       );
 
       if (response.data.success) {
-        // Show success message
         setResendSuccess(orderId);
         setTimeout(() => setResendSuccess(null), 3000);
         
-        // Refresh orders to show updated status
         fetchOrders();
         fetchOrderStats();
       }
