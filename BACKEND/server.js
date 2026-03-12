@@ -231,6 +231,7 @@ const blogsUpdateRoute     = require('./routes/admin/blogs');
 const configRoutes         = require('./routes/admin/configs');
 const adminAuthRouter      = require('./routes/admin-auth');
 const adminTicketsRoutes   = require('./routes/admin.tickets');
+const translateRoutes = require('./routes/translate');
 
 // ============= REGISTER ROUTES =============
 app.use('/api/auth',            authRoutes(promisePool));
@@ -254,6 +255,7 @@ app.use('/api/admin/blogs',     blogsUpdateRoute(promisePool));
 app.use('/api/admin/config',    configRoutes(promisePool));
 app.use('/api/admin/auth',      adminAuthRouter(promisePool));
 app.use('/api/admin/tickets',   adminTicketsRoutes(promisePool));
+app.use('/api/translate', translateRoutes);
 
 // ============= HEALTH CHECK =============
 app.get('/api/health', (req, res) => {
