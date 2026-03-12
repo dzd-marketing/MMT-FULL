@@ -6,7 +6,6 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const emailService = require('../services/email.service'); 
 
-// Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = path.join(__dirname, '../uploads/receipts');
@@ -24,7 +23,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: function (req, file, cb) {
         const filetypes = /jpeg|jpg|png|gif/;
         const mimetype = filetypes.test(file.mimetype);
@@ -38,7 +37,7 @@ const upload = multer({
 });
 
 module.exports = (pool) => {
-    // Middleware to verify token
+   
     const verifyToken = async (req, res, next) => {
         try {
             const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -66,9 +65,8 @@ module.exports = (pool) => {
         }
     };
 
-    // Create new deposit request
     router.post('/create', verifyToken, upload.single('receipt'), async (req, res) => {
-        const connection = await pool.getConnection(); // Transaction එකට connection එකක් ගන්න
+        const connection = await pool.getConnection();
         
         try {
             await connection.beginTransaction();
@@ -84,7 +82,6 @@ module.exports = (pool) => {
                 });
             }
 
-            // Get user full name
             const [users] = await connection.execute(
                 'SELECT full_name FROM users WHERE id = ?',
                 [userId]
@@ -101,7 +98,6 @@ module.exports = (pool) => {
             const receiptPath = `/uploads/receipts/${req.file.filename}`;
             const receiptFilename = req.file.originalname;
 
-            // Insert deposit record
             const [result] = await connection.execute(
                 `INSERT INTO deposits 
                     (user_id, full_name, email, amount, receipt_url, receipt_filename, status) 
@@ -111,9 +107,6 @@ module.exports = (pool) => {
 
             await connection.commit();
 
-            // ===========================================
-            // EMAIL NOTIFICATIONS - එකතු කළ කොටස
-            // ===========================================
             try {
                 const depositData = {
                     id: result.insertId,
@@ -128,18 +121,15 @@ module.exports = (pool) => {
                     id: userId
                 };
 
-                // Admin ට email එක
                 await emailService.sendDepositNotification(depositData, userData);
-                
-                // User ට confirmation email එක
+           
                 await emailService.sendDepositConfirmationToUser(depositData, userData);
 
                 console.log(`✅ Deposit emails sent for deposit #${result.insertId}`);
             } catch (emailError) {
-                // Email fails උනාට deposit එක fail වෙන්නේ නැහැ
+             ැ
                 console.error('❌ Error sending deposit emails:', emailError.message);
             }
-            // ===========================================
 
             res.json({
                 success: true,
@@ -159,7 +149,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Get user's deposit history
     router.get('/history', verifyToken, async (req, res) => {
         try {
             const [deposits] = await pool.execute(
