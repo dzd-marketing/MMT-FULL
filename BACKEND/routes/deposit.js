@@ -127,7 +127,6 @@ module.exports = (pool) => {
 
                 console.log(`✅ Deposit emails sent for deposit #${result.insertId}`);
             } catch (emailError) {
-             ැ
                 console.error('❌ Error sending deposit emails:', emailError.message);
             }
 
