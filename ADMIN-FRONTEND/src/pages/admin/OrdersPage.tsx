@@ -377,7 +377,7 @@ const AdminOrdersPage: React.FC = () => {
   const [resendSuccess, setResendSuccess] = useState<number | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   // Parse URL parameters on load
   useEffect(() => {
@@ -703,29 +703,24 @@ const AdminOrdersPage: React.FC = () => {
     const rect = button.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     
-    // Check if device is mobile
     const isMobile = window.innerWidth < 768;
     
-    // Calculate position
     let top = rect.bottom + window.scrollY;
-    const dropdownHeight = 320; // Approximate dropdown height
+    const dropdownHeight = 320; 
     
-    // If dropdown would go off screen, position it above the button
     if (top + dropdownHeight > viewportHeight + window.scrollY) {
       top = rect.top + window.scrollY - dropdownHeight;
     }
     
     if (isMobile) {
-      // On mobile, center horizontally
       setDropdownPosition({
-        top: Math.max(10, top), // Ensure it's not too close to top
-        left: window.innerWidth / 2 - 112, // 112px is half of 224px (dropdown width)
+        top: Math.max(10, top), 
+        left: window.innerWidth / 2 - 112,
       });
     } else {
-      // On desktop, position near the button
       setDropdownPosition({
         top: top,
-        left: rect.right - 200, // 200px is dropdown width
+        left: rect.right - 200, 
       });
     }
     
