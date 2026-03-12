@@ -29,7 +29,7 @@ const GlobalAlert: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(100);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     fetchAlertConfig();
@@ -267,5 +267,6 @@ const GlobalAlert: React.FC = () => {
     </AnimatePresence>
   );
 };
+
 
 export default GlobalAlert;
