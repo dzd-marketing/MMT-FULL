@@ -10,14 +10,14 @@ import {
 } from 'lucide-react';
 import authService from '../../services/auth';
 
-// Currency symbols
+
 const currencySymbols = {
   USD: '$ ',
   LKR: 'LKR ',
   INR: '₹ '
 };
 
-// Helper function to map backend currency to frontend
+
 const mapBackendCurrency = (backendCurrency: string): 'USD' | 'LKR' | 'INR' => {
   if (backendCurrency === 'USD' || backendCurrency === 'LKR' || backendCurrency === 'INR') {
     return backendCurrency;
@@ -67,7 +67,7 @@ export default function DashboardLayout() {
   const API_URL = import.meta.env.VITE_API_URL;
   const BASE_URL = API_URL.replace('/api', '');
 
-  // Fetch site logo from database
+  
   useEffect(() => {
     const fetchSiteLogo = async () => {
       try {
@@ -86,7 +86,6 @@ export default function DashboardLayout() {
     fetchSiteLogo();
   }, [API_URL]);
 
-  // Get image URL helper
   const getImageUrl = (path: string) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
@@ -94,7 +93,6 @@ export default function DashboardLayout() {
     return `${BASE_URL}${path}`;
   };
 
-  // Fetch conversion rates
   useEffect(() => {
     const fetchConversionRates = async () => {
       setRatesLoading(true);
@@ -128,7 +126,6 @@ export default function DashboardLayout() {
     fetchConversionRates();
   }, []);
 
-  // Memoized fetch function
   const fetchUserData = useCallback(async (forceRefresh = false) => {
     try {
       const now = Date.now();
@@ -209,7 +206,7 @@ export default function DashboardLayout() {
     }
   }, [navigate]);
 
-  // Listen for currency updates
+
   useEffect(() => {
     const handleCurrencyUpdate = (event: CustomEvent) => {
       const { currency } = event.detail;
@@ -224,7 +221,7 @@ export default function DashboardLayout() {
     };
   }, []);
 
-  // Initial load
+
   useEffect(() => {
     if (initialLoadRef.current) {
       initialLoadRef.current = false;
@@ -232,7 +229,7 @@ export default function DashboardLayout() {
     }
   }, [fetchUserData]);
 
-  // Refresh data on window focus
+ 
   useEffect(() => {
     const handleFocus = () => {
       const fiveMinutes = 5 * 60 * 1000;
@@ -343,7 +340,7 @@ export default function DashboardLayout() {
       <div className="flex-none z-[100] px-4 md:px-8 py-4">
         <header className="max-w-[1600px] mx-auto glass border border-white/10 rounded-[2rem] px-6 py-3 flex justify-between items-center shadow-2xl backdrop-blur-xl">
           <div className="flex items-center space-x-4">
-            {/* Dynamic Logo from Database */}
+        
             <img 
               src={siteLogo ? getImageUrl(siteLogo) : "https://res.cloudinary.com/dgb5a5fmm/image/upload/v1772526888/Adobe_Express_-_file_fftjzj.png"}
               className="h-9 md:h-11 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity" 
@@ -358,7 +355,7 @@ export default function DashboardLayout() {
           </div>
           
           <div className="flex items-center space-x-3">
-            {/* Balance Display */}
+           
             <div 
               onClick={() => navigate('/dashboard/add-funds')} 
               className="hidden sm:flex glass border border-brand/20 px-4 py-2 rounded-2xl items-center space-x-3 group hover:border-brand/50 transition-all cursor-pointer"
@@ -455,7 +452,7 @@ export default function DashboardLayout() {
         </header>
       </div>
 
-      {/* --- MOBILE NAV (same as before) --- */}
+    
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -479,7 +476,7 @@ export default function DashboardLayout() {
                 </button>
               </div>
 
-              {/* Mobile Logo */}
+             
               <div className="mb-4 flex justify-center">
                 <img 
                   src={siteLogo ? getImageUrl(siteLogo) : "https://res.cloudinary.com/dgb5a5fmm/image/upload/v1772526888/Adobe_Express_-_file_fftjzj.png"}
@@ -518,7 +515,7 @@ export default function DashboardLayout() {
                 </div>
               </div>
 
-              {/* Mobile User Info */}
+         
               <div 
                 onClick={() => {
                   navigate('/dashboard/profile');
@@ -589,7 +586,7 @@ export default function DashboardLayout() {
         )}
       </AnimatePresence>
 
-      {/* --- MAIN CONTENT LAYOUT (same as before) --- */}
+  
       <div className="flex flex-1 overflow-hidden max-w-[1600px] mx-auto w-full px-4 md:px-8 gap-10">
         
         <aside className="hidden lg:block w-72 h-full py-4 overflow-y-auto scrollbar-hide flex-none">
@@ -626,5 +623,6 @@ export default function DashboardLayout() {
     </div>
   );
 }
+
 
 
