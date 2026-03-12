@@ -82,7 +82,7 @@ const API_URL = import.meta.env.VITE_API_URL;
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-24 md:pt-32 pb-16 md:pb-24 space-y-6 md:space-y-8">
-        {/* Back Button */}
+  
         <button
           onClick={() => navigate('/dashboard/blogs')}
           className="flex items-center space-x-2 text-gray-400 hover:text-brand transition-colors group"
@@ -91,7 +91,7 @@ const API_URL = import.meta.env.VITE_API_URL;
           <span className="text-sm font-bold">Back to Blogs</span>
         </button>
 
-        {/* Blog Header */}
+   
         <div className="relative overflow-hidden glass border border-white/10 p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] bg-gradient-to-br from-brand/20 to-transparent">
           <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 rounded-full blur-[120px] -mr-40 -mt-40" />
           
@@ -112,7 +112,7 @@ const API_URL = import.meta.env.VITE_API_URL;
           </div>
         </div>
 
-        {/* Featured Image - Inside glass box with content */}
+    
         <div className="glass p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 space-y-6">
           <img
             src={getImageUrl(blog.featured_image)}
@@ -124,13 +124,13 @@ const API_URL = import.meta.env.VITE_API_URL;
             }}
           />
 
-          {/* Blog Content */}
+    
           <div 
             className="prose prose-invert max-w-none text-gray-300 text-sm md:text-base leading-relaxed"
             dangerouslySetInnerHTML={{ __html: blog.full_description }}
           />
 
-          {/* Share Section - Inside same box */}
+   
           <div className="pt-6 mt-6 border-t border-white/10">
             <h3 className="text-base md:text-lg font-black mb-4 flex items-center gap-2">
               <Share2 className="w-4 h-4 md:w-5 md:h-5 text-brand" />
@@ -167,7 +167,7 @@ const API_URL = import.meta.env.VITE_API_URL;
           </div>
         </div>
 
-        {/* Footer Badges */}
+      
         <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 pt-6 md:pt-8">
           <div className="flex items-center gap-1 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-white/5 border border-white/10">
             <Globe className="w-3 h-3 md:w-4 md:h-4 text-brand" />
