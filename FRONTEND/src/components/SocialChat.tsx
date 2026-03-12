@@ -31,7 +31,7 @@ const SocialChat: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     fetchSocialLinks();
@@ -313,5 +313,6 @@ const SocialChat: React.FC = () => {
     </div>
   );
 };
+
 
 export default SocialChat;
