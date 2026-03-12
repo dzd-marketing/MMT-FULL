@@ -32,7 +32,7 @@ export default function BlogsView() {
 const API_URL = import.meta.env.VITE_API_URL;
   const BASE_URL = API_URL.replace('/api', '');
 
-  // Helper function for image URLs
+ 
   const getImageUrl = (imagePath: string | null) => {
     if (!imagePath) return 'https://placehold.co/800x400/2a2a2a/ffffff?text=No+Image';
     if (imagePath.startsWith('http')) return imagePath;
@@ -60,29 +60,28 @@ const API_URL = import.meta.env.VITE_API_URL;
   };
 
   const handleBlogClick = (blog: Blog) => {
-    // Navigate to blog page using slug (opens in same tab)
+ 
     navigate(`/blogs/${blog.slug}`);
   };
 
   const handleOpenInNewTab = (e: React.MouseEvent, blog: Blog) => {
-    e.stopPropagation(); // Prevent triggering the parent onClick
+    e.stopPropagation();
     window.open(`/blogs/${blog.slug}`, '_blank');
   };
 
-  // Filter blogs based on search
+
   const filteredBlogs = blogs.filter(blog =>
     blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     blog.short_description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Pagination
+  
   const indexOfLastBlog = currentPage * blogsPerPage;
   const indexOfFirstBlog = indexOfLastBlog - blogsPerPage;
   const currentBlogs = filteredBlogs.slice(indexOfFirstBlog, indexOfLastBlog);
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 md:space-y-8">
-      {/* Header */}
       <div className="relative overflow-hidden glass border border-white/10 p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] bg-gradient-to-br from-brand/20 to-transparent">
         <div className="absolute top-0 right-0 w-96 h-96 bg-brand/5 rounded-full blur-[120px] -mr-40 -mt-40" />
         
