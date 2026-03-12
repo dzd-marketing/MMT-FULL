@@ -1,4 +1,3 @@
-// routes/tickets.js
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -6,11 +5,11 @@ const path = require('path');
 const fs = require('fs');
 const emailService = require('../services/email.service');
 
-// Configure multer for file uploads
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = path.join(__dirname, '../uploads/tickets');
-        // Create directory if it doesn't exist
+       
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
@@ -26,7 +25,7 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: 5 * 1024 * 1024 
     },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif|pdf|zip|rar|doc|docx/;
@@ -80,14 +79,14 @@ module.exports = (pool) => {
         }
     };
 
-    // Generate unique ticket number
+
     const generateTicketNumber = async () => {
         const date = new Date();
         const year = date.getFullYear().toString().slice(-2);
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const day = date.getDate().toString().padStart(2, '0');
         
-        // Get count of tickets created today
+       
         const [result] = await pool.execute(
             'SELECT COUNT(*) as count FROM tickets WHERE DATE(created_at) = CURDATE()'
         );
@@ -97,7 +96,7 @@ module.exports = (pool) => {
         return `TKT-${year}${month}${day}-${count}`;
     };
 
-    // Create new ticket
+
     router.post('/', authMiddleware, upload.array('attachments', 5), async (req, res) => {
         const connection = await pool.getConnection();
         
@@ -107,7 +106,7 @@ module.exports = (pool) => {
             const { subject, department, priority, message } = req.body;
             const user_id = req.user.id;
 
-            // Validate required fields
+      
             if (!subject || !department || !priority || !message) {
                 return res.status(400).json({
                     success: false,
@@ -115,10 +114,9 @@ module.exports = (pool) => {
                 });
             }
 
-            // Generate ticket number
+        
             const ticketNumber = await generateTicketNumber();
 
-            // Process attachments
             let attachments = [];
             if (req.files && req.files.length > 0) {
                 attachments = req.files.map(file => ({
@@ -129,7 +127,6 @@ module.exports = (pool) => {
                 }));
             }
 
-            // Insert ticket
             const [ticketResult] = await connection.execute(
                 `INSERT INTO tickets (
                     user_id, ticket_number, subject, department, priority, 
@@ -146,7 +143,7 @@ module.exports = (pool) => {
                 ]
             );
 
-            // Insert attachments into ticket_attachments table
+           
             if (attachments.length > 0) {
                 for (const attachment of attachments) {
                     await connection.execute(
@@ -167,9 +164,9 @@ module.exports = (pool) => {
 
             await connection.commit();
 
-            // Send email notifications
+    
             try {
-                // Send email to admin
+                
                 await emailService.sendTicketNotification({
                     ticket_number: ticketNumber,
                     subject,
@@ -178,7 +175,7 @@ module.exports = (pool) => {
                     message
                 }, req.user);
 
-                // Send confirmation to user
+            
                 await emailService.sendTicketConfirmationToUser({
                     ticket_number: ticketNumber,
                     subject,
@@ -190,7 +187,7 @@ module.exports = (pool) => {
                 console.log('Ticket emails sent successfully');
             } catch (emailError) {
                 console.error('Error sending ticket emails:', emailError);
-                // Don't fail the request if email fails
+            
             }
 
             res.json({
@@ -218,7 +215,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Get user's tickets
+  
     router.get('/my-tickets', authMiddleware, async (req, res) => {
         try {
             const user_id = req.user.id;
@@ -257,7 +254,7 @@ module.exports = (pool) => {
 
             const [tickets] = await pool.execute(query, params);
 
-            // Get total count
+         
             const [countResult] = await pool.execute(
                 'SELECT COUNT(*) as total FROM tickets WHERE user_id = ?',
                 [user_id]
@@ -283,7 +280,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Get single ticket details with replies
+ 
     router.get('/:ticketNumber', authMiddleware, async (req, res) => {
         try {
             const { ticketNumber } = req.params;
@@ -309,7 +306,7 @@ module.exports = (pool) => {
 
             const ticket = tickets[0];
 
-            // Get replies
+         
             const [replies] = await pool.execute(
                 `SELECT 
                     r.*,
@@ -322,7 +319,6 @@ module.exports = (pool) => {
                 [ticket.id]
             );
 
-            // Get attachments
             const [attachments] = await pool.execute(
                 'SELECT * FROM ticket_attachments WHERE ticket_id = ?',
                 [ticket.id]
@@ -346,7 +342,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Reply to ticket
+
     router.post('/:ticketNumber/reply', authMiddleware, upload.array('attachments', 5), async (req, res) => {
         const connection = await pool.getConnection();
         
@@ -364,7 +360,7 @@ module.exports = (pool) => {
                 });
             }
 
-            // Get ticket
+         
             const [tickets] = await connection.execute(
                 'SELECT id, status FROM tickets WHERE ticket_number = ? AND user_id = ?',
                 [ticketNumber, user_id]
@@ -379,7 +375,7 @@ module.exports = (pool) => {
 
             const ticket = tickets[0];
 
-            // Insert reply
+          
             const [replyResult] = await connection.execute(
                 `INSERT INTO ticket_replies (
                     ticket_id, user_id, message, is_staff
@@ -387,7 +383,7 @@ module.exports = (pool) => {
                 [ticket.id, user_id, message, false]
             );
 
-            // Process attachments for reply
+  
             if (req.files && req.files.length > 0) {
                 for (const file of req.files) {
                     await connection.execute(
@@ -408,7 +404,7 @@ module.exports = (pool) => {
                 }
             }
 
-            // Update ticket status and last_reply
+         
             await connection.execute(
                 `UPDATE tickets 
                  SET status = 'waiting', 
