@@ -6,7 +6,6 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
 
-// Configure multer for profile picture uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = path.join(__dirname, '../uploads/profiles');
@@ -24,7 +23,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    limits: { fileSize: 5 * 1024 * 1024 }, 
     fileFilter: function (req, file, cb) {
         const filetypes = /jpeg|jpg|png|gif/;
         const mimetype = filetypes.test(file.mimetype);
@@ -38,7 +37,7 @@ const upload = multer({
 });
 
 module.exports = (pool) => {
-    // Middleware to verify token
+
     const verifyToken = async (req, res, next) => {
         try {
             const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -73,8 +72,6 @@ module.exports = (pool) => {
         }
     };
 
-    // Get user profile data
-   // Get user profile data
 router.get('/profiles', verifyToken, async (req, res) => {
     try {
         const userId = req.userId;
@@ -107,7 +104,6 @@ router.get('/profiles', verifyToken, async (req, res) => {
 
         const user = users[0];
 
-        // Format currency (1=USD, 2=LKR, 3=INR)
         const currencyMap = {
             '1': 'USD',
             '2': 'LKR',
@@ -148,7 +144,7 @@ router.get('/profiles', verifyToken, async (req, res) => {
 });
 
 
-    // Update user profile
+   
 router.post('/update-profiles', verifyToken, upload.single('profile_picture'), async (req, res) => {
     const connection = await pool.getConnection();
     try {
@@ -159,10 +155,10 @@ router.post('/update-profiles', verifyToken, upload.single('profile_picture'), a
 
         console.log('Received update request:', { full_name, phone, whatsapp, currency, file: req.file });
 
-        // Currency mapping - අපිට currency එනවා string එකක් විදියට ('1', '2', '3')
+      
         let currencyValue = currency;
         
-        // Build update query dynamically
+     
         let updateFields = [];
         let queryParams = [];
 
@@ -186,17 +182,17 @@ router.post('/update-profiles', verifyToken, upload.single('profile_picture'), a
             queryParams.push(currencyValue);
         }
 
-        // Handle profile picture upload
+
         if (req.file) {
             console.log('Processing profile picture upload:', req.file.filename);
             
-            // Get old profile picture to delete
+    
             const [oldPic] = await connection.execute(
                 'SELECT profile_picture FROM users WHERE id = ?',
                 [userId]
             );
 
-            // Delete old profile picture if exists and not a Google photo
+        
             if (oldPic[0]?.profile_picture && 
                 !oldPic[0].profile_picture.includes('googleusercontent.com') &&
                 !oldPic[0].profile_picture.includes('graph.facebook.com')) {
@@ -222,10 +218,10 @@ router.post('/update-profiles', verifyToken, upload.single('profile_picture'), a
             });
         }
 
-        // Add userId to query params
+   
         queryParams.push(userId);
 
-        // Execute update query
+    
         const updateQuery = `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`;
         console.log('Update query:', updateQuery);
         console.log('Query params:', queryParams);
@@ -234,7 +230,7 @@ router.post('/update-profiles', verifyToken, upload.single('profile_picture'), a
 
         await connection.commit();
 
-        // Get updated user data
+
         const [updatedUser] = await connection.execute(
             `SELECT 
                 id, 
@@ -287,7 +283,7 @@ router.post('/update-profiles', verifyToken, upload.single('profile_picture'), a
     }
 });
 
-    // Get API key
+   
     router.get('/api-key', verifyToken, async (req, res) => {
         try {
             const userId = req.userId;
@@ -304,7 +300,6 @@ router.post('/update-profiles', verifyToken, upload.single('profile_picture'), a
                 });
             }
 
-            // Generate API key if not exists
             let apiKey = users[0].apikey;
             
             if (!apiKey) {
@@ -332,12 +327,12 @@ router.post('/update-profiles', verifyToken, upload.single('profile_picture'), a
         }
     });
 
-    // Generate new API key
+    
 router.post('/generate-api-key', verifyToken, async (req, res) => {
     try {
         const userId = req.userId;
         
-        // Get user email and username from database
+     
         const [users] = await pool.execute(
             'SELECT email, full_name as username FROM users WHERE id = ?',
             [userId]
@@ -345,17 +340,15 @@ router.post('/generate-api-key', verifyToken, async (req, res) => {
         
         const user = users[0];
         
-        // 👇 MATCH PHP LOGIC - CreateApiKey equivalent
+   
         const stringToHash = user.email + user.username + Date.now() + Math.floor(Math.random() * 9000 + 1000);
         
-        // Create MD5 hash and format it like PHP would
+       
         const crypto = require('crypto');
         const md5Hash = crypto.createHash('md5').update(stringToHash).digest('hex').toUpperCase();
         
-        // Take first 20 chars (or whatever length your API expects)
+      
         const newApiKey = md5Hash.substring(0, 20);
-        
-        // Update database
         await pool.execute(
             'UPDATE users SET apikey = ? WHERE id = ?',
             [newApiKey, userId]
@@ -373,7 +366,7 @@ router.post('/generate-api-key', verifyToken, async (req, res) => {
     }
 });
 
-  // Update currency only
+
 router.post('/update-currency', verifyToken, async (req, res) => {
     try {
         const userId = req.userId;
@@ -393,7 +386,7 @@ router.post('/update-currency', verifyToken, async (req, res) => {
             [currency, userId]
         );
 
-        // Verify the update
+   
         const [result] = await pool.execute(
             'SELECT currency FROM users WHERE id = ?',
             [userId]
@@ -415,12 +408,12 @@ router.post('/update-currency', verifyToken, async (req, res) => {
     }
 });
 
-    // Get account statistics
+
     router.get('/stats', verifyToken, async (req, res) => {
         try {
             const userId = req.userId;
 
-            // Get user data
+     
             const [users] = await pool.execute(
                 `SELECT 
                     created_at,
@@ -432,7 +425,6 @@ router.post('/update-currency', verifyToken, async (req, res) => {
                 [userId]
             );
 
-            // Get total orders count (if orders table exists)
             let totalOrders = 0;
             try {
                 const [orders] = await pool.execute(
@@ -442,7 +434,7 @@ router.post('/update-currency', verifyToken, async (req, res) => {
                 totalOrders = orders[0]?.total || 0;
             } catch (error) {
                 console.log('Orders table not found, using default value');
-                totalOrders = 24; // Default demo value
+                totalOrders = 24; 
             }
 
             const user = users[0];
