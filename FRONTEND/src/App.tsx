@@ -19,6 +19,7 @@ import GlobalAlert from './components/GlobalAlert';
 import SocialChat from './components/SocialChat';
 import SnowEffect from './components/SnowEffect';
 import FestivalEffect from './components/FestivalEffect';
+import SEOHead from './components/SEOHead';
 import axios from 'axios';
 
 // Dashboard Components
@@ -194,6 +195,7 @@ function AppContent() {
 
 export default function App() {
   return (
+    <SEOHead />
     <ThemeProvider>
       <LanguageProvider>
         <Router>
