@@ -1,10 +1,8 @@
-// utils/cache.js
 const NodeCache = require('node-cache');
 
-// Cache with 5 minute TTL (time to live)
 const cache = new NodeCache({ 
-  stdTTL: 300, // 5 minutes default
-  checkperiod: 60 // Check for expired keys every 60 seconds
+  stdTTL: 300, 
+  checkperiod: 60 
 });
 
 const CACHE_KEYS = {
