@@ -492,30 +492,7 @@ router.post('/update-multiple', adminAuth.adminAuthMiddleware, async (req, res) 
         }
     });
 
-    router.delete('/:key', adminAuth.adminAuthMiddleware, async (req, res) => {
-        try {
-            const { key } = req.params;
-
-            await pool.execute(
-                'DELETE FROM config WHERE config_key = ?',
-                [key]
-            );
-
-            res.json({
-                success: true,
-                message: 'Config deleted successfully'
-            });
-
-        } catch (error) {
-            console.error('Delete config error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to delete config'
-            });
-        }
-    });
-
-router.get('/seo-data', async (req, res) => {
+    router.get('/seo-data', async (req, res) => {
     try {
         const [configs] = await pool.execute(
             `SELECT config_key, config_value FROM config 
@@ -541,6 +518,31 @@ router.get('/seo-data', async (req, res) => {
     }
 });
 
+    router.delete('/:key', adminAuth.adminAuthMiddleware, async (req, res) => {
+        try {
+            const { key } = req.params;
+
+            await pool.execute(
+                'DELETE FROM config WHERE config_key = ?',
+                [key]
+            );
+
+            res.json({
+                success: true,
+                message: 'Config deleted successfully'
+            });
+
+        } catch (error) {
+            console.error('Delete config error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to delete config'
+            });
+        }
+    });
+
+
     return router;
 };
+
 
