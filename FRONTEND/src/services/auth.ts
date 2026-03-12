@@ -26,10 +26,10 @@ interface GoogleUser {
 }
 
 class AuthService {
-  // Sanitize input to prevent XSS
+
   private sanitizeInput(input: string): string {
     if (!input) return input;
-    // Remove any HTML tags and trim
+  
     return input.replace(/<[^>]*>?/gm, '').trim();
   }
 
@@ -37,8 +37,8 @@ class AuthService {
     return {
       name: this.sanitizeInput(data.name),
       email: this.sanitizeInput(data.email).toLowerCase(),
-      password: data.password, // Don't sanitize password
-      confirmPassword: data.confirmPassword, // Don't sanitize password
+      password: data.password, 
+      confirmPassword: data.confirmPassword,
       phone: this.sanitizeInput(data.phone),
       whatsapp: this.sanitizeInput(data.whatsapp)
     };
@@ -47,7 +47,7 @@ class AuthService {
   private sanitizeLoginData(data: LoginData): LoginData {
     return {
       email: this.sanitizeInput(data.email).toLowerCase(),
-      password: data.password, // Don't sanitize password
+      password: data.password, 
       rememberMe: data.rememberMe
     };
   }
@@ -69,13 +69,13 @@ async signup(data: SignupData) {
             throw result;
         }
 
-        // 🔥 ONLY store verification token in sessionStorage, NOT in localStorage
+      
         if (result.requiresVerification && result.token) {
             sessionStorage.setItem('verificationToken', result.token);
-            // DO NOT store in localStorage!
+           
         }
 
-        // Remove sensitive data from result before returning
+       
         if (result.user) {
             result.user = {
                 id: result.user.id,
@@ -92,7 +92,7 @@ async signup(data: SignupData) {
 
   async login(data: LoginData) {
     try {
-      // Sanitize input before sending
+      
       const sanitizedData = this.sanitizeLoginData(data);
       
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -110,12 +110,12 @@ async signup(data: SignupData) {
         throw result;
       }
 
-      // Only store essential token
+      
       if (result.token) {
         localStorage.setItem('token', result.token);
       }
 
-      // Remove sensitive data from result
+     
       if (result.user) {
         result.user = {
           id: result.user.id,
@@ -132,7 +132,7 @@ async signup(data: SignupData) {
 
   async googleLogin() {
     try {
-      // Don't store preAuthPath in localStorage, use sessionStorage instead
+      
       const currentPath = window.location.pathname;
       sessionStorage.setItem('preAuthPath', currentPath);
       
@@ -145,7 +145,7 @@ async signup(data: SignupData) {
 
   async handleGoogleCallback(token: string): Promise<{ success: boolean; user?: GoogleUser; requiresVerification?: boolean }> {
     try {
-      // Store token
+    
       localStorage.setItem('token', token);
       
       const response = await fetch(`${API_URL}/auth/verify`, {
@@ -163,11 +163,10 @@ async signup(data: SignupData) {
         throw new Error(result.message || 'Failed to verify token');
       }
 
-      // Get redirect path from sessionStorage (more secure)
       const redirectPath = sessionStorage.getItem('preAuthPath') || '/dashboard';
       sessionStorage.removeItem('preAuthPath');
 
-      // Don't store full user data in localStorage
+    
       const requiresVerification = result.user && !result.user.email_verified;
 
       return {
@@ -203,7 +202,7 @@ async signup(data: SignupData) {
       const result = await response.json();
       
       if (result.success && result.user) {
-        // Return minimal user data
+
         return {
           id: result.user.id,
           name: result.user.name,
@@ -229,7 +228,7 @@ async signup(data: SignupData) {
         }
       });
     } finally {
-      // Clear all storage
+
       localStorage.removeItem('token');
       sessionStorage.clear();
     }
@@ -250,7 +249,7 @@ async signup(data: SignupData) {
         throw result;
       }
 
-      // Sanitize response
+
       if (result.user) {
         result.user = {
           id: result.user.id,
@@ -266,7 +265,6 @@ async signup(data: SignupData) {
     }
   }
 
-  // Updated to use token instead of email in URL
   async checkVerificationStatus(verificationToken: string) {
     try {
       const response = await fetch(`${API_URL}/auth/verification-status/${encodeURIComponent(verificationToken)}`);
@@ -277,13 +275,13 @@ async signup(data: SignupData) {
     }
   }
 
-  // Updated to not send email in request body
+
   async resendVerification(verificationToken: string) {
     try {
       const response = await fetch(`${API_URL}/auth/send-verification-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: verificationToken }) // Send token instead of email
+        body: JSON.stringify({ token: verificationToken }) 
       });
       return await response.json();
     } catch (error) {
@@ -292,7 +290,7 @@ async signup(data: SignupData) {
     }
   }
 
-  // New method for verifying with code
+  
   async verifyWithCode(verificationToken: string, code: string) {
     try {
       const response = await fetch(`${API_URL}/auth/verify-code`, {
@@ -331,7 +329,6 @@ async completeProfile(data: any) {
     
     if (result.success && result.token) {
       localStorage.setItem('token', result.token);
-      // 🔥 Dispatch event to notify navbar
       window.dispatchEvent(new Event('auth-change'));
     }
     
