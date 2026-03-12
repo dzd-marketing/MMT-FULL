@@ -74,7 +74,6 @@ uploadDirs.forEach(dir => {
 
 
 
-
 app.use('/uploads', (req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
@@ -143,8 +142,23 @@ const pool = mysql.createPool({
 });
 
 const promisePool = pool.promise();
-const seoMiddleware = require('./middleware/seo-middleware')(promisePool);
-app.use(seoMiddleware);
+
+app.get('/api/public/seo-data', async (req, res) => {
+    try {
+        const [configs] = await promisePool.execute(
+            `SELECT config_key, config_value FROM config 
+             WHERE config_key LIKE 'seo_%' 
+             OR config_key IN ('site_name', 'site_title', 'site_description', 'site_keywords', 'site_logo')`
+        );
+        const seoData = {};
+        configs.forEach(config => {
+            seoData[config.config_key] = config.config_value;
+        });
+        res.json({ success: true, data: seoData });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to fetch SEO data' });
+    }
+});
 
 const testConnection = async () => {
     try {
@@ -187,6 +201,8 @@ const apiLimiter = rateLimit({
     max: 300,
     message: { success: false, message: 'Rate limit exceeded' }
 });
+
+
 
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/signup', authLimiter);
