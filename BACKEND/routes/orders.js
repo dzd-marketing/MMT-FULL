@@ -52,8 +52,8 @@ module.exports = (pool) => {
 
     router.get('/categories', async (req, res) => {
         try {
-            // Derive platforms directly from service names since category_id
-            // on services does not map to the local categories table
+       
+     
             const [services] = await pool.execute(`
                 SELECT DISTINCT service_name FROM services WHERE service_deleted = '0'
             `);
@@ -264,8 +264,6 @@ module.exports = (pool) => {
             const dripfeedRuns = parseInt(req.body.dripfeed_runs) || 1;
             const totalQuantity = isDripfeed ? quantity * dripfeedRuns : quantity;
 
-            // For dripfeed: validate total quantity against service min/max
-            // For normal: validate quantity directly
             if (totalQuantity < min || quantity > max) {
                 return res.status(400).json({
                     success: false,
@@ -648,9 +646,6 @@ module.exports = (pool) => {
 
             const order = orders[0];
 
-            // CRITICAL: Never overwrite a locally finalized status with provider data.
-            // canceled = cancelled by us, completed = fully done.
-            // Provider may still show old status after we cancel — never let it undo that.
             const lockedStatuses = ['canceled', 'completed'];
             if (lockedStatuses.includes(order.order_status)) {
                 return res.json({
@@ -684,8 +679,6 @@ module.exports = (pool) => {
                             else if (status.includes('cancel')) status = 'canceled';
                             else status = 'pending';
 
-                            // Double-check: never overwrite canceled/completed even if
-                            // provider somehow returns a different status mid-sync
                             if (!lockedStatuses.includes(order.order_status)) {
                                 updateData.push('order_status = ?');
                                 queryParams.push(status);
@@ -854,9 +847,7 @@ module.exports = (pool) => {
             const { id } = req.params;
             const user_id = req.user.id;
 
-            // Fetch order + API credentials
-            // Join directly on order_api (stored on order row itself) so it works
-            // even if the original service was deleted
+         
             const [orders] = await pool.execute(`
                 SELECT o.*, sa.api_key, sa.api_url
                 FROM orders o
@@ -870,17 +861,17 @@ module.exports = (pool) => {
 
             const order = orders[0];
 
-            // Must support refill
+  
             if (order.is_refill !== '1' && order.refill !== '1') {
                 return res.status(400).json({ success: false, message: 'Refill is not available for this service' });
             }
 
-            // Must be completed or partial
+     
             if (!['completed', 'partial'].includes(order.order_status)) {
                 return res.status(400).json({ success: false, message: 'Refill is only available for completed or partial orders' });
             }
 
-            // 24hr lock check
+     
             const orderDate = new Date(order.order_create).getTime();
             const hoursElapsed = (Date.now() - orderDate) / (1000 * 60 * 60);
             if (hoursElapsed < 24) {
@@ -891,7 +882,7 @@ module.exports = (pool) => {
                 });
             }
 
-            // Call provider API for refill
+        
             if (!order.api_orderid || !order.api_key || !order.api_url) {
                 return res.status(400).json({ success: false, message: 'No API order linked to this order' });
             }
@@ -928,7 +919,7 @@ module.exports = (pool) => {
 
             const refillId = apiResponse.data?.refill || 0;
 
-            // Update order in DB
+ 
             await pool.execute(`
                 UPDATE orders
                 SET refill_status = 'Refilling',
@@ -957,7 +948,7 @@ module.exports = (pool) => {
             const { id } = req.params;
             const user_id = req.user.id;
 
-            // Fetch order + API credentials via order_api (works even if service deleted)
+          
             const [orders] = await pool.execute(`
                 SELECT o.*, sa.api_key, sa.api_url
                 FROM orders o
@@ -989,9 +980,9 @@ module.exports = (pool) => {
                 });
             }
 
-            // Step 1: Call provider API to cancel on their side first
+          
             let providerCancelled = false;
-            let refundAmount = order.order_charge; // default: full refund
+            let refundAmount = order.order_charge;
 
             if (order.api_orderid && order.api_key && order.api_url) {
                 try {
@@ -1010,8 +1001,6 @@ module.exports = (pool) => {
                     if (apiResponse.data && !apiResponse.data.error) {
                         providerCancelled = true;
 
-                        // Some providers return a partial refund amount
-                        // Sync latest status to get accurate remains for partial refund calc
                         const statusData = new URLSearchParams();
                         statusData.append('key', order.api_key);
                         statusData.append('action', 'status');
@@ -1027,13 +1016,13 @@ module.exports = (pool) => {
                                 const remains = parseInt(statusResponse.data.remains) || 0;
                                 const quantity = parseInt(order.order_quantity) || 1;
                                 const pricePerUnit = parseFloat(order.order_charge) / quantity;
-                                // Refund only for undelivered quantity
+                            
                                 refundAmount = parseFloat((pricePerUnit * remains).toFixed(6));
                                 console.log(`Partial refund: ${remains} remains × ${pricePerUnit} = ${refundAmount}`);
                             }
                         } catch (statusErr) {
                             console.error('Status check after cancel failed:', statusErr.message);
-                            // Fall back to full refund
+                         
                         }
                     } else {
                         const providerError = apiResponse.data?.error || 'Unknown provider error';
@@ -1045,12 +1034,12 @@ module.exports = (pool) => {
                     }
                 } catch (apiError) {
                     console.error('Provider cancel API call failed:', apiError.message);
-                    // If provider is unreachable, still cancel locally with full refund
+             
                     providerCancelled = false;
                 }
             }
 
-            // Step 2: Update order status in DB
+     
             await pool.execute(`
                 UPDATE orders 
                 SET order_status = 'canceled',
@@ -1058,7 +1047,6 @@ module.exports = (pool) => {
                 WHERE order_id = ?
             `, [id]);
 
-            // Step 3: Refund wallet — partial if provider told us remains, full otherwise
             if (refundAmount > 0) {
                 await pool.execute(`
                     UPDATE wallets 
