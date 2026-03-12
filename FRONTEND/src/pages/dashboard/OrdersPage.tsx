@@ -1,4 +1,3 @@
-// pages/dashboard/OrdersPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
@@ -42,7 +41,7 @@ interface Order {
   dripfeed: '1' | '2' | '3';
   subscriptions_type: '1' | '2';
   refill_status: 'Pending' | 'Refilling' | 'Completed' | 'Rejected' | 'Error';
-  // From API sync — these are the source of truth for buttons
+  
   is_refill: '0' | '1';
   refill: '0' | '1';
   cancelbutton: '0' | '1';
@@ -59,7 +58,6 @@ interface Pagination {
   pages: number;
 }
 
-// Helper: hours since order was created
 const hoursSinceOrder = (orderDate: string): number => {
   const created = new Date(orderDate).getTime();
   const now = Date.now();
@@ -316,11 +314,11 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
     return Number(amount).toFixed(2);
   };
 
-  // ── Refill button — based on is_refill/refill from API sync, 24hr lock ───
+  
   const getRefillButton = (order: Order) => {
-    // Service must support refill (from API sync)
+
     if (order.is_refill !== '1' && order.refill !== '1') return null;
-    // Only show on completed or partial orders
+    
     if (order.order_status !== 'completed' && order.order_status !== 'partial') return null;
 
     const hoursElapsed = hoursSinceOrder(order.order_date || order.order_create);
@@ -328,7 +326,7 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
     const hoursRemaining = Math.ceil(24 - hoursElapsed);
 
     if (!refillUnlocked) {
-      // Show disabled button with countdown
+     
       return (
         <button
           disabled
@@ -358,7 +356,7 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
     );
   };
 
-  // ── Cancel button — based on cancelbutton from API sync ──────────────────
+ 
   const getCancelButton = (order: Order) => {
     if (order.cancelbutton !== '1') return null;
     const cancelableStatuses = ['pending', 'processing', 'inprogress'];
@@ -492,7 +490,7 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
         </AnimatePresence>
       </div>
 
-      {/* Search Bar */}
+   
       <div className="mb-6">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -506,7 +504,7 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
         </div>
       </div>
 
-      {/* Orders Table */}
+    
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoaderIcon className="w-8 h-8 text-brand animate-spin" />
@@ -629,7 +627,7 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
             </div>
           </div>
 
-          {/* Mobile Card View */}
+       
           <div className="lg:hidden space-y-4">
             {orders.map((order) => (
               <motion.div 
