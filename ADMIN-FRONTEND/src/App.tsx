@@ -17,9 +17,6 @@ import BlogsUpdate from './pages/admin/BlogsPage';
 import ConfigView from './pages/admin/AdminConfigPage';
 import AdminTicketsPage from './pages/admin/TicketsPage';
 
-// ── Admin Guard ───────────────────────────────────────────────────────────
-// Wrap any admin page with this to block unauthenticated access.
-// If no adminToken in localStorage → redirects to /admin/login automatically.
 const AdminGuard = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
@@ -30,7 +27,6 @@ const AdminGuard = ({ children }: { children: React.ReactNode }) => {
     }
   }, [navigate]);
 
-  // Don't render children until token is confirmed
   const token = localStorage.getItem('adminToken');
   if (!token) return null;
 
@@ -55,11 +51,9 @@ function AppContent() {
       <>
         <Routes location={location} key={location.pathname}>
 
-          {/* ── Admin Auth (public — no guard) ── */}
           <Route path='/admin/login' element={<AdminAuthPage />} />
           <Route path='/admin/logout' element={<AdminLogoutPage />} />
 
-          {/* ── Admin Pages (all protected by AdminGuard) ── */}
           <Route path='/admin/dashboard' element={<AdminGuard><AdminDashboard /></AdminGuard>} />
           <Route path='/admin/orders'    element={<AdminGuard><AdminOrdersPage /></AdminGuard>} />
           <Route path='/admin/payments'  element={<AdminGuard><PaymentDetails /></AdminGuard>} />
