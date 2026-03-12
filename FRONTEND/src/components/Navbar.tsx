@@ -62,7 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
     return `${BASE_URL}${path}`;
   };
 
-  // Update user when prop changes
+
   useEffect(() => {
     if (propUser) {
       setUser(propUser);
@@ -391,7 +391,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
         </div>
       </nav>
 
-      {/* Mobile Sidebar */}
       <AnimatePresence>
         {isOpen && (
           <>
@@ -432,7 +431,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
                 </button>
               </div>
 
-              {/* Main Navigation */}
               <div className="flex-1 overflow-y-auto py-8 px-6 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-2">{t('Navigation')}</p>
@@ -449,7 +447,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
                       </a>
                     ))}
                     
-                    {/* Mobile-only navigation for logged-in users */}
+                   
                     {user && (
                       <>
                         <Link
@@ -535,7 +533,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
                       <ArrowRight className="w-4 h-4 text-gray-400" />
                     </Link>
                     
-                    {/* Small Logout Button */}
+              
                     <button
                       onClick={handleLogout}
                       className="w-full bg-red-500 hover:bg-red-600 text-white py-2.5 px-4 rounded-xl text-sm font-medium shadow-lg transition-all cursor-pointer flex items-center justify-center space-x-2"
