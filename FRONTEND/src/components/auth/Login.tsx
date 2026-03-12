@@ -304,7 +304,7 @@ const Login: React.FC = () => {
 
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-2xl">
               <img
-                src="https://picsum.photos/seed/dashboard/800/600"
+                src="https://res.cloudinary.com/dgb5a5fmm/image/upload/v1773329807/social-media-influencer-design-concept-illustration_7087-1334_baafod.avif"
                 alt="Dashboard Preview"
                 className="rounded-lg shadow-inner"
                 referrerPolicy="no-referrer"
