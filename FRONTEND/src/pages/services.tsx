@@ -135,7 +135,7 @@ const Services: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const SERVICES_PER_PAGE = 30;
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+ const API_URL = import.meta.env.VITE_API_URL;
   const CACHE_KEY = 'services_cache';
   const CACHE_TIMESTAMP_KEY = 'services_cache_timestamp';
   const RATE_CACHE_KEY = 'exchange_rate_cache';
