@@ -28,7 +28,7 @@ const SEOHead: React.FC = () => {
     useEffect(() => {
         const fetchSEOData = async () => {
             try {
-                const response = await axios.get(`${API_URL}/config/seo-data`);
+                const response = await axios.get(`${API_URL}/admin/config/seo-data`);
                 
                 if (response.data.success) {
                     const seo: SEOData = response.data.data;
