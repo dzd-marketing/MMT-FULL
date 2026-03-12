@@ -18,6 +18,7 @@ import Loader1 from '../components/LoadingScreen2';
 // ─── Country data ─────────────────────────────────────────────────────────────
 
 const COUNTRY_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface Country {
     code: CountryCode;
@@ -70,7 +71,6 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
     const dropdownRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
 
-        const API_URL = import.meta.env.VITE_API_URL;
 
     // Close on outside click
     useEffect(() => {
