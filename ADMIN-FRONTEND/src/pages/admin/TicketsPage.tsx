@@ -242,7 +242,7 @@ const AttachmentPreview: React.FC<{ attachment: TicketAttachment }> = ({ attachm
   const [imageError, setImageError] = useState(false);
   
   const API_URL = import.meta.env.VITE_API_URL;
-  const BASE_URL = API_URL?.replace('/api', '') || 'https://mmtsmmpanel.cyberservice.online';
+  const BASE_URL ='https://mmtsmmpanel.cyberservice.online';
 
   // Get attachment URL from file_path
   const getAttachmentUrl = () => {
