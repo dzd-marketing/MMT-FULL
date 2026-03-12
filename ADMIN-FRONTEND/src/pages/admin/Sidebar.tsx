@@ -1,4 +1,3 @@
-// components/admin/Sidebar.tsx
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -16,7 +15,6 @@ interface SidebarProps {
   activeTickets?: number;
 }
 
-// Decode admin name + email from JWT stored in localStorage
 const useAdminInfo = () => {
   return useMemo(() => {
     try {
@@ -26,7 +24,6 @@ const useAdminInfo = () => {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const email: string = payload.email || 'admin@panel.com';
 
-      // Use VITE_ADMIN_NAME env if set, otherwise derive from email
       const name: string = import.meta.env.VITE_ADMIN_NAME || email.split('@')[0];
       const initials = name.slice(0, 2).toUpperCase();
 
@@ -70,16 +67,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     navigate('/admin/logout');
   };
 
-  // ── Account section (shared between desktop + mobile) ──────────────────
   const AccountSection = () => (
     <div className="p-2 md:p-4 border-t border-white/10">
       <div className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg md:rounded-xl bg-white/5 border border-white/5">
-        {/* Avatar with initials */}
+      
         <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-brand to-purple-600 flex items-center justify-center shrink-0">
           <span className="text-xs md:text-sm font-black text-white">{initials}</span>
         </div>
 
-        {/* Name + role */}
+   
         <div className="flex-1 min-w-0">
           <p className="text-xs md:text-sm font-bold text-white truncate">{name}</p>
           <div className="flex items-center gap-1 mt-0.5">
@@ -88,7 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Logout button */}
+   
         <button
           onClick={handleLogout}
           title="Logout"
@@ -101,14 +97,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     </div>
   );
 
-  // ── Desktop Sidebar ─────────────────────────────────────────────────────
   const DesktopSidebar = () => (
     <motion.aside
       initial={{ x: -300 }}
       animate={{ x: isOpen ? 0 : -320 }}
       className="fixed top-0 left-0 bottom-0 w-64 md:w-80 bg-gradient-to-b from-[#0F0F0F] to-[#0A0A0A] border-r border-white/10 z-50 backdrop-blur-xl hidden md:flex md:flex-col"
     >
-      {/* Logo */}
+ 
       <div className="p-4 md:p-6 border-b border-white/10">
         <div className="flex items-center gap-2 md:gap-3">
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-gradient-to-br from-brand to-purple-600 flex items-center justify-center">
@@ -121,7 +116,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Nav */}
+   
       <nav className="p-2 md:p-4 space-y-1 md:space-y-2 flex-1 overflow-y-auto">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -148,10 +143,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         })}
       </nav>
 
-      {/* Account - pinned to bottom */}
+
       <AccountSection />
 
-      {/* Toggle button */}
+  
       <button
         onClick={onToggle}
         className="absolute -right-3 top-20 w-6 h-6 md:w-7 md:h-7 bg-brand rounded-full flex items-center justify-center shadow-lg hover:bg-brand/90 transition-colors"
@@ -161,7 +156,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     </motion.aside>
   );
 
-  // ── Mobile Sidebar ──────────────────────────────────────────────────────
   const MobileSidebar = () => (
     <AnimatePresence>
       {isMobileOpen && (
@@ -179,7 +173,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             exit={{ x: -300 }}
             className="fixed top-0 left-0 bottom-0 w-72 bg-gradient-to-b from-[#0F0F0F] to-[#0A0A0A] border-r border-white/10 z-50 backdrop-blur-xl md:hidden flex flex-col"
           >
-            {/* Logo */}
+
             <div className="p-6 border-b border-white/10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -200,7 +194,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            {/* Nav */}
+       
             <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
               {menuItems.map((item) => {
                 const isActive = location.pathname === item.path;
