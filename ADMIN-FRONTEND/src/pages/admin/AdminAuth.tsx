@@ -7,7 +7,6 @@ type AuthStep = 'login' | 'email-verify' | '2fa' | 'welcome';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// ── Particle background ───────────────────────────────────────────────────
 const ParticleBg = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -44,7 +43,6 @@ const ParticleBg = () => {
         ctx.fill();
       });
 
-      // Draw connections
       particles.forEach((a, i) => {
         particles.slice(i + 1).forEach(b => {
           const dist = Math.hypot(a.x - b.x, a.y - b.y);
@@ -72,7 +70,6 @@ const ParticleBg = () => {
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" />;
 };
 
-// ── OTP Input ─────────────────────────────────────────────────────────────
 const OtpInput = ({ length = 6, value, onChange }: { length?: number; value: string; onChange: (v: string) => void }) => {
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const digits = value.split('').concat(Array(length).fill('')).slice(0, length);
@@ -122,7 +119,6 @@ const OtpInput = ({ length = 6, value, onChange }: { length?: number; value: str
   );
 };
 
-// ── Step indicator ────────────────────────────────────────────────────────
 const StepDots = ({ current }: { current: AuthStep }) => {
   const steps: AuthStep[] = ['login', 'email-verify', '2fa'];
   const labels = ['Login', 'Verify Email', '2FA'];
@@ -147,7 +143,6 @@ const StepDots = ({ current }: { current: AuthStep }) => {
   );
 };
 
-// ── Login Step ────────────────────────────────────────────────────────────
 const LoginStep = ({ onNext }: { onNext: (email: string, token: string) => void }) => {
   const [form, setForm] = useState({ email: '', username: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -261,7 +256,6 @@ const LoginStep = ({ onNext }: { onNext: (email: string, token: string) => void 
   );
 };
 
-// ── Email Verify Step ─────────────────────────────────────────────────────
 const EmailVerifyStep = ({ email, tempToken, onNext, onBack }: { email: string; tempToken: string; onNext: (token: string) => void; onBack: () => void }) => {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -309,7 +303,6 @@ const EmailVerifyStep = ({ email, tempToken, onNext, onBack }: { email: string; 
     }
   };
 
-  // Auto-submit when 6 digits entered
   useEffect(() => {
     if (code.length === 6 && !loading) {
       handleSubmit(new Event('submit') as any);
@@ -365,7 +358,6 @@ const EmailVerifyStep = ({ email, tempToken, onNext, onBack }: { email: string; 
   );
 };
 
-// ── 2FA Step ──────────────────────────────────────────────────────────────
 const TwoFAStep = ({ tempToken, onSuccess, onBack }: { tempToken: string; onSuccess: (token: string) => void; onBack: () => void }) => {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -455,15 +447,11 @@ const TwoFAStep = ({ tempToken, onSuccess, onBack }: { tempToken: string; onSucc
   );
 };
 
-
-
-// ── Welcome Card ──────────────────────────────────────────────────────────
 const WelcomeStep = ({ onEnter }: { onEnter: () => void }) => {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
   const adminName = import.meta.env.VITE_ADMIN_NAME || 'Admin';
 
-  // Typewriter effect for the welcome message
   const fullText = `Welcome back, ${adminName}`;
   const [displayed, setDisplayed] = useState('');
   const [typeDone, setTypeDone] = useState(false);
@@ -489,14 +477,14 @@ const WelcomeStep = ({ onEnter }: { onEnter: () => void }) => {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="text-center py-4"
     >
-      {/* Success checkmark */}
+
       <motion.div
         initial={{ scale: 0, rotate: -180 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ delay: 0.1, duration: 0.6, type: 'spring', stiffness: 200 }}
         className="w-20 h-20 rounded-full bg-green-400/10 border-2 border-green-400/40 flex items-center justify-center mx-auto mb-6 relative"
       >
-        {/* Pulse ring */}
+
         <motion.div
           className="absolute inset-0 rounded-full border-2 border-green-400/20"
           animate={{ scale: [1, 1.4, 1], opacity: [0.6, 0, 0.6] }}
@@ -507,7 +495,7 @@ const WelcomeStep = ({ onEnter }: { onEnter: () => void }) => {
         </svg>
       </motion.div>
 
-      {/* Greeting */}
+
       <motion.p
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -517,13 +505,11 @@ const WelcomeStep = ({ onEnter }: { onEnter: () => void }) => {
         {greeting} ☀️
       </motion.p>
 
-      {/* Typewriter name */}
       <h2 className="text-white text-2xl font-black tracking-tight mb-1 min-h-[36px]">
         {displayed}
         {!typeDone && <span className="animate-pulse text-green-400">|</span>}
       </h2>
 
-      {/* Access granted badge */}
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -534,7 +520,7 @@ const WelcomeStep = ({ onEnter }: { onEnter: () => void }) => {
         <span className="text-green-400/80 text-xs font-semibold tracking-wider">ACCESS GRANTED</span>
       </motion.div>
 
-      {/* Info cards row */}
+
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -554,10 +540,7 @@ const WelcomeStep = ({ onEnter }: { onEnter: () => void }) => {
         ))}
       </motion.div>
 
-      {/* Divider */}
       <div className="h-px bg-gradient-to-r from-transparent via-white/8 to-transparent mb-8" />
-
-      {/* Let's Go button */}
       <motion.button
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -584,7 +567,6 @@ const WelcomeStep = ({ onEnter }: { onEnter: () => void }) => {
   );
 };
 
-// ── Background Audio ──────────────────────────────────────────────────────
 const MUSIC_URL = 'https://res.cloudinary.com/dgb5a5fmm/video/upload/v1773157837/Pufino_-_Lucifer_freetouse.com_u8fmd1.mp3';
 
 const useBackgroundAudio = () => {
@@ -595,10 +577,9 @@ const useBackgroundAudio = () => {
   useEffect(() => {
     const audio = new Audio(MUSIC_URL);
     audio.loop = true;
-    audio.volume = 0.25; // 25% volume - subtle background music
+    audio.volume = 0.25;
     audioRef.current = audio;
 
-    // Browsers block autoplay until first user interaction (click/keypress)
     const tryPlay = () => {
       if (audioRef.current) {
         audioRef.current.play().then(() => setStarted(true)).catch(() => {});
@@ -625,7 +606,6 @@ const useBackgroundAudio = () => {
   return { muted, toggleMute, started };
 };
 
-// ── Main Auth Page ────────────────────────────────────────────────────────
 export default function AdminAuthPage() {
   const navigate = useNavigate();
   const { muted, toggleMute, started } = useBackgroundAudio();
@@ -633,7 +613,6 @@ export default function AdminAuthPage() {
   const [email, setEmail] = useState('');
   const [tempToken, setTempToken] = useState('');
 
-  // Check if already authenticated
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
     if (token) navigate('/admin/dashboard');
@@ -655,7 +634,7 @@ export default function AdminAuthPage() {
   };
 
   const handleEnterDashboard = () => {
-    // Record session start time for duration display on logout page
+
     sessionStorage.setItem('adminSessionStart', Date.now().toString());
     navigate('/admin/dashboard');
   };
@@ -664,7 +643,6 @@ export default function AdminAuthPage() {
     <div className="min-h-screen bg-[#080808] flex items-center justify-center relative overflow-hidden">
       <ParticleBg />
 
-      {/* Music toggle button - fixed top right */}
       <button
         onClick={toggleMute}
         title={muted ? 'Unmute music' : 'Mute music'}
@@ -685,7 +663,6 @@ export default function AdminAuthPage() {
         )}
       </button>
 
-      {/* "Click anywhere to start music" hint - fades after interaction */}
       {!started && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full backdrop-blur-sm">
@@ -698,29 +675,27 @@ export default function AdminAuthPage() {
         </div>
       )}
 
-      {/* Background glows */}
+ 
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-green-500/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-green-500/3 rounded-full blur-3xl" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-500/2 rounded-full blur-3xl" />
       </div>
 
-      {/* Grid pattern */}
       <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03]"
         style={{ backgroundImage: 'linear-gradient(#4ade80 1px, transparent 1px), linear-gradient(90deg, #4ade80 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-      {/* Card */}
       <motion.div
         initial={{ opacity: 0, y: 24, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="relative z-10 w-full max-w-md mx-4"
       >
-        {/* Top accent line */}
+
         <div className="h-px w-full bg-gradient-to-r from-transparent via-green-400/60 to-transparent mb-px" />
 
         <div className="bg-[#0f0f0f]/90 backdrop-blur-2xl border border-white/8 rounded-2xl p-8 shadow-2xl shadow-black/50">
-          {/* Logo */}
+
           <div className="flex items-center justify-center gap-3 mb-8">
             <div className="w-9 h-9 rounded-xl bg-green-400/10 border border-green-400/20 flex items-center justify-center">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -763,7 +738,6 @@ export default function AdminAuthPage() {
           </AnimatePresence>
         </div>
 
-        {/* Bottom accent */}
         <div className="h-px w-full bg-gradient-to-r from-transparent via-white/5 to-transparent mt-px" />
 
         <p className="text-center text-[11px] text-gray-600 mt-6">
