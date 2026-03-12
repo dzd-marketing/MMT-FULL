@@ -35,8 +35,6 @@ const iconOptions = [
   { value: 'Bitcoin',    label: 'Crypto', icon: Bitcoin },
   { value: 'Wallet',     label: 'Wallet', icon: Wallet },
 ];
-
-// ── Real admin info from JWT ──────────────────────────────────────────────
 const useAdminInfo = () => {
   return useMemo(() => {
     try {
@@ -549,3 +547,4 @@ const PaymentsPage: React.FC = () => {
 
 
 export default PaymentsPage;
+
