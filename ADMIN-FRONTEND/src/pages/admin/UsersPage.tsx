@@ -65,19 +65,19 @@ const AdminUsersPage: React.FC = () => {
     pages: 1
   });
 
-  // Search state
+ 
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal states
+
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingBalance, setEditingBalance] = useState(false);
   const [newBalance, setNewBalance] = useState<number>(0);
   const [updatingBalance, setUpdatingBalance] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
-  // Fetch users
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -102,7 +102,7 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  // Fetch stats
+
   const fetchStats = async () => {
     try {
       const response = await axios.get(`${API_URL}/admin/users/stats/summary`, {
@@ -125,7 +125,7 @@ const AdminUsersPage: React.FC = () => {
     fetchStats();
   }, [pagination.page, searchQuery]);
 
-  // Fetch single user details
+
   const fetchUserDetails = async (id: number) => {
     try {
       const response = await axios.get(`${API_URL}/admin/users/${id}`, {
@@ -142,7 +142,7 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  // Update user balance
+ 
   const handleUpdateBalance = async () => {
     if (!selectedUser) return;
 
@@ -168,11 +168,10 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  // Download all users data (Name, Email, WhatsApp)
+
   const downloadAllUsersData = async () => {
     setDownloading('all');
     try {
-      // Fetch all users (without pagination)
       const response = await axios.get(`${API_URL}/admin/users/all?limit=1000`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
       });
@@ -180,14 +179,11 @@ const AdminUsersPage: React.FC = () => {
       if (response.data.success) {
         const allUsers = response.data.users;
         
-        // Prepare CSV data
         const headers = ['Full Name', 'Email', 'WhatsApp Number', 'Phone', 'User ID', 'Joined Date'];
         const csvRows = [];
         
-        // Add headers
         csvRows.push(headers.join(','));
         
-        // Add user data
         allUsers.forEach((user: User) => {
           const row = [
             `"${user.full_name || ''}"`,
@@ -200,7 +196,6 @@ const AdminUsersPage: React.FC = () => {
           csvRows.push(row.join(','));
         });
 
-        // Create and download CSV
         const csvString = csvRows.join('\n');
         const blob = new Blob([csvString], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
@@ -220,11 +215,9 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  // Download users with balance data
 const downloadUsersWithBalance = async () => {
   setDownloading('balance');
   try {
-    // Fetch all users (without pagination)
     const response = await axios.get(`${API_URL}/admin/users/all?limit=1000`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
     });
@@ -232,16 +225,12 @@ const downloadUsersWithBalance = async () => {
     if (response.data.success) {
       const allUsers = response.data.users;
       
-      // Prepare CSV data
       const headers = ['Full Name', 'Email', 'Balance (LKR)', 'User ID', 'Joined Date'];
       const csvRows = [];
       
-      // Add headers
       csvRows.push(headers.join(','));
       
-      // Add user data - FIXED: Convert balance to number first
       allUsers.forEach((user: User) => {
-        // Convert balance to number safely
         const balanceValue = typeof user.balance === 'number' 
           ? user.balance 
           : parseFloat(user.balance as any) || 0;
@@ -256,7 +245,6 @@ const downloadUsersWithBalance = async () => {
         csvRows.push(row.join(','));
       });
 
-      // Create and download CSV
       const csvString = csvRows.join('\n');
       const blob = new Blob([csvString], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
@@ -389,7 +377,7 @@ const downloadUsersWithBalance = async () => {
                     <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-brand to-purple-600 flex items-center justify-center shrink-0">
                       {user.profile_picture ? (
                         <img 
-                          src={user.profile_picture.startsWith('http') ? user.profile_picture : `http://localhost:5000${user.profile_picture}`}
+                          src={user.profile_picture.startsWith('http') ? user.profile_picture : `${API_URL}${user.profile_picture}`}
                           alt={user.full_name}
                           className="w-full h-full rounded-full object-cover"
                           onError={(e) => {
@@ -514,7 +502,7 @@ const downloadUsersWithBalance = async () => {
                   <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-brand to-purple-600 flex items-center justify-center shrink-0">
                     {selectedUser.profile_picture ? (
                       <img 
-                        src={selectedUser.profile_picture.startsWith('http') ? selectedUser.profile_picture : `http://localhost:5000${selectedUser.profile_picture}`}
+                        src={selectedUser.profile_picture.startsWith('http') ? selectedUser.profile_picture : `${API_URL}${selectedUser.profile_picture}`}
                         alt={selectedUser.full_name}
                         className="w-full h-full rounded-full object-cover"
                         onError={(e) => {
@@ -673,3 +661,4 @@ const downloadUsersWithBalance = async () => {
 };
 
 export default AdminUsersPage;
+
