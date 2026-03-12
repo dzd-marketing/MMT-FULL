@@ -35,7 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
   const API_URL = import.meta.env.VITE_API_URL;
   const BASE_URL = API_URL.replace('/api', '');
 
-  // Fetch site logo from database
+
   useEffect(() => {
     const fetchSiteLogo = async () => {
       try {
@@ -54,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
     fetchSiteLogo();
   }, [API_URL]);
 
-  // Get image URL helper
+
   const getImageUrl = (path: string) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
@@ -70,14 +70,14 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
     }
   }, [propUser]);
 
-  // Fetch user data with profile picture
+
   const fetchUserWithProfile = async () => {
     try {
-      // Get basic user data from auth service
+ 
       const userData = await authService.getCurrentUser();
       
       if (userData) {
-        // Try to get profile data with picture
+      
         try {
           const profileResponse = await axios.get('/api/user/profiles', { 
             withCredentials: true 
@@ -85,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
           
           if (profileResponse.data.success) {
             const profileUser = profileResponse.data.user;
-            // Merge profile data with auth data
+
             setUser({
               ...userData,
               profilePicture: profileUser.profile_picture || userData.profilePicture,
@@ -142,7 +142,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
     };
   }, [location.pathname]);
 
-  // Close dropdown when clicking outside
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -154,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Lock body scroll when mobile menu is open
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -171,11 +171,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
       setLoading(true);
       await authService.logout();
       
-      // Clear all storage
+  
       localStorage.removeItem('token');
       sessionStorage.clear();
       
-      // Full page refresh to homepage
+
       window.location.href = '/';
       
     } catch (error) {
@@ -193,7 +193,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
     { name: 'Contact', href: '/contact' },
   ];
 
-  // Get initials for avatar
+
   const getInitials = () => {
     if (!user?.name) return 'U';
     return user.name
@@ -204,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
       .slice(0, 2);
   };
 
-  // Generate avatar color based on user id
+
   const getAvatarColor = () => {
     const colors = [
       'bg-red-500',
@@ -270,17 +270,17 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
               <ThemeToggle />
             </div>
 
-            {/* Loading State */}
+        
             {loading ? (
               <div className="w-10 h-10 animate-pulse bg-gray-200 dark:bg-gray-800 rounded-full"></div>
             ) : user ? (
-              /* User Section - Show when logged in */
+       
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center space-x-1 md:space-x-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors p-1"
                 >
-                  {/* Avatar - Always visible */}
+          
                   {user.profilePicture ? (
                     <img
                       src={user.profilePicture.startsWith('http') 
@@ -304,11 +304,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
                     </div>
                   )}
                   
-                  {/* Chevron only on desktop */}
+               
                   <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform hidden md:block ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Dropdown Menu */}
+         
                 <AnimatePresence>
                   {isDropdownOpen && (
                     <motion.div
@@ -319,13 +319,13 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
                       transition={{ duration: 0.1 }}
                       className="absolute right-0 mt-2 w-64 bg-white dark:bg-zinc-900 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[70]"
                     >
-                      {/* User info */}
+                 
                       <div className="p-4 border-b border-black/5 dark:border-white/5">
                         <p className="font-semibold text-gray-900 dark:text-white">{user.name || 'User'}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
                       </div>
 
-                      {/* Menu items */}
+                  
                       <div className="p-2">
                         <Link
                           to="/dashboard"
@@ -362,7 +362,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
                 </AnimatePresence>
               </div>
             ) : (
-              /* Show login/signup buttons when not logged in */
+            
               <>
                 <Link to="/login" className="hidden lg:block text-sm font-semibold hover:text-brand transition-colors cursor-pointer break-words">
                   {t('Log in')}
@@ -379,7 +379,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
               </>
             )}
             
-            {/* Mobile Menu Toggle */}
+        
             <button 
               onClick={() => setIsOpen(true)}
               className="md:hidden p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors cursor-pointer flex items-center justify-center"
@@ -493,11 +493,10 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
                 </div>
               </div>
 
-              {/* Bottom Section - User Info & Logout */}
               <div className="p-6 border-t border-black/5 dark:border-white/5 space-y-4">
                 {user ? (
                   <>
-                    {/* User Info */}
+         
                     <Link
                       to="/dashboard/profile"
                       onClick={() => setIsOpen(false)}
