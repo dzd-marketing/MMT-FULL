@@ -1,4 +1,3 @@
-// routes/admin.tickets.js
 const express = require('express');
 const router = express.Router();
 const adminEmailService = require('../services/admin.email.service');
@@ -9,8 +8,6 @@ const jwt = require('jsonwebtoken');
 
 module.exports = (pool) => {
 
-    // ============= INLINE ADMIN AUTH MIDDLEWARE =============
-    // Uses JWT_ADMIN_SECRET (same secret used in admin-auth.js to SIGN the token)
     const adminAuth = async (req, res, next) => {
         try {
             const token = req.cookies?.adminToken
@@ -33,7 +30,7 @@ module.exports = (pool) => {
                 return res.status(403).json({ success: false, message: 'Authentication incomplete' });
             }
 
-            // Check token not revoked
+      
             try {
                 const [revoked] = await pool.execute(
                     'SELECT id FROM admin_revoked_tokens WHERE token_jti = ?',
@@ -47,15 +44,13 @@ module.exports = (pool) => {
             }
 
             req.adminEmail = decoded.email;
-            req.userId = null; // New admin tokens have no userId — explicitly null for mysql2
+            req.userId = null;
             next();
         } catch (error) {
             console.error('Admin auth error:', error);
             return res.status(401).json({ success: false, message: 'Authentication failed' });
         }
     };
-
-    // ============= MULTER CONFIG =============
     const storage = multer.diskStorage({
         destination: (req, file, cb) => {
             const uploadDir = './uploads/tickets';
@@ -85,14 +80,12 @@ module.exports = (pool) => {
         }
     });
 
-    // Helper: format profile picture URL
     const formatProfilePicture = (profilePicture, baseUrl) => {
         if (!profilePicture) return null;
         if (profilePicture.startsWith('http')) return profilePicture;
         return `${baseUrl}${profilePicture}`;
     };
 
-    // ============= TICKET STATS =============
     router.get('/stats', adminAuth, async (req, res) => {
         try {
             const [stats] = await pool.execute(`
@@ -129,7 +122,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= GET ALL TICKETS =============
     router.get('/', adminAuth, async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
@@ -198,7 +190,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= GET SINGLE TICKET WITH REPLIES =============
     router.get('/:id', adminAuth, async (req, res) => {
         try {
             const { id } = req.params;
@@ -230,7 +221,6 @@ module.exports = (pool) => {
 
             const formattedReplies = replies.map(reply => ({
                 ...reply,
-                // For staff replies with null user_id, show admin name from env
                 full_name: reply.full_name || (reply.is_staff ? (process.env.VITE_ADMIN_NAME || 'Admin') : 'User'),
                 profile_picture: formatProfilePicture(reply.profile_picture, baseUrl)
             }));
@@ -258,7 +248,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= REPLY TO TICKET =============
     router.post('/:id/reply', adminAuth, upload.array('attachments', 5), async (req, res) => {
         const connection = await pool.getConnection();
         try {
@@ -269,7 +258,6 @@ module.exports = (pool) => {
             const files = req.files || [];
             const baseUrl = process.env.API_URL || 'http://localhost:5000';
 
-            // Admin identity from token (no userId in new JWT)
             const adminName = process.env.VITE_ADMIN_NAME || 'Admin';
             const adminEmail = req.adminEmail || process.env.ADMIN_EMAIL || 'admin@panel.com';
 
@@ -284,13 +272,11 @@ module.exports = (pool) => {
 
             const ticket = tickets[0];
 
-            // Insert reply with NULL user_id (is_staff=1 marks it as admin reply)
             const [replyResult] = await connection.execute(`
                 INSERT INTO ticket_replies (ticket_id, user_id, message, is_staff, created_at)
                 VALUES (?, NULL, ?, 1, NOW())
             `, [id, message]);
 
-            // Handle file uploads
             const attachments = [];
             for (const file of files) {
                 const relativePath = `/uploads/tickets/${file.filename}`;
@@ -310,7 +296,6 @@ module.exports = (pool) => {
                 });
             }
 
-            // Update ticket status
             let newStatus = ticket.status;
             if (ticket.status === 'open') newStatus = 'in_progress';
 
@@ -322,7 +307,6 @@ module.exports = (pool) => {
 
             await connection.commit();
 
-            // Send email notification (non-blocking)
             try {
                 await adminEmailService.sendTicketReplyNotification(
                     { ticket_number: ticket.ticket_number, subject: ticket.subject, status: newStatus },
@@ -360,7 +344,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= UPDATE TICKET STATUS =============
     router.put('/:id/status', adminAuth, async (req, res) => {
         const connection = await pool.getConnection();
         try {
@@ -406,7 +389,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= UPDATE TICKET PRIORITY =============
     router.put('/:id/priority', adminAuth, async (req, res) => {
         try {
             const { id } = req.params;
@@ -419,7 +401,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= UPDATE TICKET DEPARTMENT =============
     router.put('/:id/department', adminAuth, async (req, res) => {
         try {
             const { id } = req.params;
@@ -432,12 +413,10 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= ASSIGN TICKET =============
     router.post('/:id/assign', adminAuth, async (req, res) => {
         try {
             const { id } = req.params;
             const { admin_id } = req.body;
-            // Use provided admin_id or null — never req.userId (undefined in new auth)
             await pool.execute(
                 `UPDATE tickets SET assigned_to = ?, updated_at = NOW() WHERE id = ?`,
                 [admin_id || null, id]
@@ -449,7 +428,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= DELETE TICKET =============
     router.delete('/:id', adminAuth, async (req, res) => {
         const connection = await pool.getConnection();
         try {
@@ -491,7 +469,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= BULK ACTIONS =============
     router.post('/bulk-action', adminAuth, async (req, res) => {
         const connection = await pool.getConnection();
         try {
@@ -554,7 +531,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= ANALYTICS =============
     router.get('/analytics/chart-data', adminAuth, async (req, res) => {
         try {
             const { range = '7d' } = req.query;
