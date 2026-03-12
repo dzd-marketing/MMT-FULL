@@ -1,4 +1,3 @@
-// pages/admin/TicketsPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactDOM from 'react-dom';
@@ -265,12 +264,8 @@ const AdminTicketsPage: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ Fixed: use VITE_ env var (Vite project)
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-  // ✅ Fixed: always use adminToken
+  const API_URL = import.meta.env.VITE_API_URL;
   const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('adminToken')}` });
-
-  // ============= useEffect Hooks =============
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -328,7 +323,6 @@ const AdminTicketsPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ============= API Functions =============
 
   const fetchTickets = async () => {
     setLoading(true);
@@ -377,7 +371,6 @@ const AdminTicketsPage: React.FC = () => {
     }
   };
 
-  // ============= Action Handlers =============
 
   const handleBulkAction = async () => {
     if (!bulkAction || selectedTickets.length === 0) return;
@@ -500,7 +493,6 @@ const AdminTicketsPage: React.FC = () => {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  // ============= Stat Card =============
 
   const StatCard = ({ label, count, icon: Icon, color, onClick, active }: any) => (
     <motion.div whileHover={{ y: -2, scale: 1.02 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -515,8 +507,6 @@ const AdminTicketsPage: React.FC = () => {
       <p className="text-xs text-gray-400">{label}</p>
     </motion.div>
   );
-
-  // ============= Options =============
 
   const statusOptions = [
     { value: 'all', label: 'All Status' }, { value: 'open', label: 'Open' },
