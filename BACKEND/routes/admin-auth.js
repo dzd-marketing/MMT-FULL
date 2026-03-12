@@ -1,26 +1,3 @@
-// routes/admin-auth.js
-// -----------------------------------------------------------------------------
-// Admin Authentication - 3-step flow:
-//   Step 1: POST /admin/auth/login           -> validates email+username+password
-//                                               -> sends OTP to email
-//                                               -> returns tempToken (step=email_verify)
-//
-//   Step 2: POST /admin/auth/verify-email    -> validates OTP
-//                                               -> returns tempToken (step=2fa)
-//         : POST /admin/auth/resend-email-code -> resends OTP
-//
-//   Step 3: POST /admin/auth/verify-2fa      -> validates Google Authenticator TOTP
-//                                               -> returns final adminToken
-//
-// Attempt limits (DB-tracked, survives server restarts):
-//   login        -> 5 failed attempts -> locked 30 minutes
-//   email_verify -> 5 failed attempts -> locked 30 minutes
-//   2fa          -> 3 failed attempts -> locked 60 minutes
-//
-// Required packages:
-//   npm install bcryptjs jsonwebtoken speakeasy nodemailer express-rate-limit
-// -----------------------------------------------------------------------------
-
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -32,10 +9,6 @@ const crypto = require('crypto');
 
 module.exports = (pool) => {
 
-    // -------------------------------------------------------------------------
-    // IP-based rate limiters (first line of defense - blocks floods/bots)
-    // Kept loose since real strict limiting is done by DB attempt tracker below
-    // -------------------------------------------------------------------------
     const loginLimiter = rateLimit({
         windowMs: 15 * 60 * 1000,
         max: 20,
@@ -64,11 +37,6 @@ module.exports = (pool) => {
         }
     });
 
-    // -------------------------------------------------------------------------
-    // DB-based attempt tracker
-    // Counts failed attempts per IP per step within the lock window
-    // Returns { allowed, attemptsLeft, retryAfter, lockMinutes }
-    // -------------------------------------------------------------------------
     const ATTEMPT_LIMITS = {
         login:        { max: 5, lockMinutes: 30 },
         email_verify: { max: 5, lockMinutes: 30 },
@@ -109,16 +77,12 @@ module.exports = (pool) => {
         };
     };
 
-    // Get client IP consistently
     const getIP = (req) =>
         req.headers['x-forwarded-for']?.split(',')[0]?.trim()
         || req.connection?.remoteAddress
         || req.ip
         || 'unknown';
 
-    // -------------------------------------------------------------------------
-    // Email transporter
-    // -------------------------------------------------------------------------
     const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: parseInt(process.env.SMTP_PORT) || 587,
@@ -129,9 +93,6 @@ module.exports = (pool) => {
         }
     });
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
 
     const logAttempt = async (pool, req, email, success, type = 'login', errorMsg = null) => {
         try {
@@ -183,7 +144,6 @@ module.exports = (pool) => {
         });
     };
 
-    // Admin middleware - verifies final adminToken for protected admin routes
     const adminAuthMiddleware = async (req, res, next) => {
         try {
             const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -215,10 +175,6 @@ module.exports = (pool) => {
         }
     };
 
-    // -------------------------------------------------------------------------
-    // STEP 1: Login
-    // 5 failed attempts -> locked 30 minutes
-    // -------------------------------------------------------------------------
     router.post('/login', loginLimiter, async (req, res) => {
         try {
             const ip = getIP(req);
@@ -284,7 +240,6 @@ module.exports = (pool) => {
                 return res.status(401).json({ success: false, message, attemptsLeft });
             }
 
-            // Credentials correct - generate and send OTP
             const otp = generateOTP();
             const otpHash = await bcrypt.hash(otp, 10);
             const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -318,10 +273,6 @@ module.exports = (pool) => {
         }
     });
 
-    // -------------------------------------------------------------------------
-    // STEP 2a: Verify Email OTP
-    // 5 failed attempts -> locked 30 minutes
-    // -------------------------------------------------------------------------
     router.post('/verify-email', otpLimiter, async (req, res) => {
         try {
             const ip = getIP(req);
@@ -404,10 +355,6 @@ module.exports = (pool) => {
         }
     });
 
-    // -------------------------------------------------------------------------
-    // STEP 2b: Resend OTP
-    // 60 second cooldown between resends
-    // -------------------------------------------------------------------------
     router.post('/resend-email-code', otpLimiter, async (req, res) => {
         try {
             const { tempToken } = req.body;
@@ -456,10 +403,6 @@ module.exports = (pool) => {
         }
     });
 
-    // -------------------------------------------------------------------------
-    // STEP 3: Verify 2FA (Google Authenticator TOTP)
-    // 3 failed attempts -> locked 60 minutes (strictest - last line of defense)
-    // -------------------------------------------------------------------------
     router.post('/verify-2fa', otpLimiter, async (req, res) => {
         try {
             const ip = getIP(req);
@@ -522,8 +465,6 @@ module.exports = (pool) => {
 
                 return res.status(400).json({ success: false, message, attemptsLeft });
             }
-
-            // Prevent replay attack - each TOTP code can only be used once
             const cleanCode = code.trim();
             const [alreadyUsed] = await pool.execute(
                 'SELECT id FROM admin_used_totp WHERE code = ?',
@@ -537,7 +478,6 @@ module.exports = (pool) => {
             await pool.execute('INSERT INTO admin_used_totp (code, used_at) VALUES (?, NOW())', [cleanCode]);
             await pool.execute('DELETE FROM admin_used_totp WHERE used_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)');
 
-            // Issue final adminToken (8 hour session)
             const jti = crypto.randomUUID();
             const adminToken = jwt.sign(
                 { role: 'admin', step: 'complete', email: decoded.email, jti },
@@ -560,9 +500,6 @@ module.exports = (pool) => {
         }
     });
 
-    // -------------------------------------------------------------------------
-    // Logout
-    // -------------------------------------------------------------------------
     router.post('/logout', adminAuthMiddleware, async (req, res) => {
         try {
             await pool.execute(
@@ -576,9 +513,6 @@ module.exports = (pool) => {
         }
     });
 
-    // -------------------------------------------------------------------------
-    // Verify Token
-    // -------------------------------------------------------------------------
     router.get('/verify', adminAuthMiddleware, (req, res) => {
         res.json({ success: true, message: 'Token is valid', admin: req.admin });
     });
