@@ -54,7 +54,7 @@ const AdminDepositsPage: React.FC = () => {
     total_approved_amount: 0
   });
 
-  const API_URL = 'https://admin.mmtsmmpanel.cyberservice.online';
+  const API_URL = 'https://admin.mmtsmmpanel.cyberservice.online/api';
   const IMAGE_URL = 'https://mmtsmmpanel.cyberservice.online';
 
   // Helper function to clean image URL
@@ -647,3 +647,4 @@ const AdminDepositsPage: React.FC = () => {
 };
 
 export default AdminDepositsPage;
+
