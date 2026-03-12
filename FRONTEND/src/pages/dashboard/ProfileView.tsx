@@ -15,7 +15,7 @@ export default function ProfileView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
   
-  // Profile states
+ 
   const [profileData, setProfileData] = useState({
     full_name: contextUserData?.full_name || 'User',
     email: contextUserData?.email || '',
@@ -27,14 +27,14 @@ export default function ProfileView() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
-  // API Key states
+  
   const [apiKey, setApiKey] = useState<string>('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [copied, setCopied] = useState(false);
   const [generatingKey, setGeneratingKey] = useState(false);
 
   
-  // Currency state - number to string mapping
+
   const currencyMap = {
     '1': 'USD',
     '2': 'LKR',
@@ -47,20 +47,20 @@ export default function ProfileView() {
     'INR': '3'
   };
   
-  // Helper function to map backend currency to frontend
+ 
   const mapBackendCurrency = (backendCurrency: string): 'USD' | 'LKR' | 'INR' => {
-    // If it's already USD/LKR/INR, return as is
+   
     if (backendCurrency === 'USD' || backendCurrency === 'LKR' || backendCurrency === 'INR') {
       return backendCurrency;
     }
-    // If it's a number (1,2,3), map it
+    
     return (currencyMap[backendCurrency as keyof typeof currencyMap] || 'USD') as 'USD' | 'LKR' | 'INR';
   };
   
   const [currency, setCurrency] = useState<'USD' | 'LKR' | 'INR'>('USD');
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   
-  // Stats states
+  
   const [stats, setStats] = useState({
     member_since: '',
     last_login: '',
@@ -68,21 +68,19 @@ export default function ProfileView() {
     balance: '0.00',
     spent: '0.00'
   });
-  
-  // Form states
+
+ 
   const [loading, setLoading] = useState(false);
   const [loadingStats, setLoadingStats] = useState(true);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
-  // Load all data on mount
   useEffect(() => {
     loadProfileData();
     loadApiKey();
     loadStats();
   }, []);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (currencyDropdownRef.current && !currencyDropdownRef.current.contains(event.target as Node)) {
@@ -108,8 +106,7 @@ export default function ProfileView() {
           whatsapp: user.whatsapp || '',
           profile_picture: user.profile_picture || null
         });
-        
-        // Set currency from API
+       
         if (user.currency) {
           console.log('💰 [FRONTEND] Raw currency from backend:', user.currency);
           const mappedCurrency = mapBackendCurrency(user.currency);
@@ -121,7 +118,7 @@ export default function ProfileView() {
       }
     } catch (error) {
       console.error('Error loading profile data:', error);
-      // Fallback to context data
+   
       const user = await authService.getCurrentUser();
       if (user) {
         setProfileData({
@@ -143,7 +140,7 @@ export default function ProfileView() {
       }
     } catch (error) {
       console.error('Error loading API key:', error);
-      // Fallback to mock
+     
       const mockKey = "MMT-" + (contextUserData?.id || 'XXXX') + "-" + Math.random().toString(36).substring(2, 15).toUpperCase();
       setApiKey(mockKey);
     }
@@ -173,7 +170,7 @@ export default function ProfileView() {
       }
     } catch (error) {
       console.error('Error loading stats:', error);
-      // Fallback to default
+   
       setStats({
         member_since: 'March 2026',
         last_login: 'Today, 10:30 AM',
@@ -226,13 +223,12 @@ const generateNewApiKey = async () => {
     
     const token = localStorage.getItem('token');
     
-    // USE FULL URL INSTEAD OF PROXY
     const response = await axios.post('/api/user/generate-api-key', {}, { 
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      withCredentials: true // This sends cookies
+      withCredentials: true
     });
     
     console.log('Generate API key response:', response.data);
@@ -286,7 +282,7 @@ const generateNewApiKey = async () => {
       formData.append('phone', profileData.phone);
       formData.append('whatsapp', profileData.whatsapp);
       
-      // Convert currency to number for database
+      
       const currencyNumber = reverseCurrencyMap[currency];
       formData.append('currency', currencyNumber);
       
@@ -315,7 +311,7 @@ const generateNewApiKey = async () => {
         setStatus('success');
         
         if (response.data.user) {
-          // Update profile data
+         
           setProfileData(prev => ({
             ...prev,
             full_name: response.data.user.full_name,
@@ -324,14 +320,12 @@ const generateNewApiKey = async () => {
             profile_picture: response.data.user.profile_picture || prev.profile_picture
           }));
           
-          // Update currency from response using the mapper
           if (response.data.user.currency) {
             const mappedCurrency = mapBackendCurrency(response.data.user.currency);
             setCurrency(mappedCurrency);
             localStorage.setItem('preferred_currency', mappedCurrency);
           }
-          
-          // Update stats if balance/spent changed
+    
           if (response.data.user.balance) {
             setStats(prev => ({ ...prev, balance: response.data.user.balance }));
           }
@@ -342,8 +336,7 @@ const generateNewApiKey = async () => {
         
         setPreviewImage(null);
         setSelectedFile(null);
-        
-        // Refresh profile data to ensure everything is synced
+     
         await loadProfileData();
       }
     } catch (error: any) {
