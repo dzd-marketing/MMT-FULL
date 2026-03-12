@@ -87,7 +87,7 @@ const SocialChat: React.FC = () => {
     if (socialData.whatsapp_channel) {
       buttons.push({
         id: 'whatsapp-channel',
-        icon: <Users className="w-5 h-5 md:w-6 md:h-6" />, // Changed to Users icon for channel
+        icon: <Users className="w-5 h-5 md:w-6 md:h-6" />,
         url: socialData.whatsapp_channel,
         bgColor: 'bg-[#25D366]',
         hoverBg: 'hover:bg-[#20BD5E]',
@@ -117,7 +117,6 @@ const SocialChat: React.FC = () => {
     return null;
   }
 
-  // Variants for animations
   const containerVariants = {
     hidden: { opacity: 0, y: 20, scale: 0.8 },
     visible: { 
@@ -152,11 +151,11 @@ const SocialChat: React.FC = () => {
 
   return (
     <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
-      {/* Dropdown Menu */}
+   
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Backdrop for mobile - only shows on mobile */}
+         
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -165,14 +164,14 @@ const SocialChat: React.FC = () => {
               className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
             />
 
-            {/* Buttons Container */}
+    
             <motion.div
               initial="hidden"
               animate="visible"
               exit="exit"
               className="absolute bottom-20 right-0 flex flex-col items-end gap-3 z-50"
             >
-              {/* Buttons */}
+           
               <div className="flex flex-col items-end gap-3">
                 {buttons.map((button, index) => (
                   <motion.a
@@ -199,7 +198,7 @@ const SocialChat: React.FC = () => {
                     `}
                     title={button.label}
                   >
-                    {/* Pulse Effect - only on hover */}
+           
                     <AnimatePresence>
                       {hoveredButton === button.id && (
                         <motion.span
@@ -212,7 +211,7 @@ const SocialChat: React.FC = () => {
                       )}
                     </AnimatePresence>
                     
-                    {/* Icon with subtle animation */}
+          
                     <motion.div
                       whileHover={{ rotate: 5 }}
                       transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -221,7 +220,7 @@ const SocialChat: React.FC = () => {
                       {button.icon}
                     </motion.div>
 
-                    {/* Tooltip on hover (desktop only) */}
+        
                     <span className="absolute right-16 px-3 py-1.5 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap hidden md:block pointer-events-none">
                       {button.label}
                       <span className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-2 h-2 bg-black/90 rotate-45" />
@@ -230,7 +229,7 @@ const SocialChat: React.FC = () => {
                 ))}
               </div>
 
-              {/* Close Button for Mobile - Only shows when open */}
+  
               <motion.button
                 variants={itemVariants}
                 whileHover={{ scale: 1.1 }}
@@ -245,7 +244,7 @@ const SocialChat: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Main Chat Button */}
+
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
@@ -267,7 +266,7 @@ const SocialChat: React.FC = () => {
           cursor-pointer
         `}
       >
-        {/* Ripple Effect */}
+
         <motion.span
           animate={{ 
             scale: [1, 1.5, 1],
@@ -281,7 +280,7 @@ const SocialChat: React.FC = () => {
           className="absolute inset-0 rounded-full bg-brand"
         />
         
-        {/* Icon with smooth rotation */}
+
         <motion.div
           animate={{ rotate: isOpen ? 90 : 0 }}
           transition={{ type: "spring", stiffness: 260, damping: 20 }}
@@ -294,7 +293,7 @@ const SocialChat: React.FC = () => {
           )}
         </motion.div>
 
-        {/* Notification Dot - Only shows when not open */}
+
         {!isOpen && (
           <motion.span
             initial={{ scale: 0 }}
@@ -316,3 +315,4 @@ const SocialChat: React.FC = () => {
 
 
 export default SocialChat;
+
