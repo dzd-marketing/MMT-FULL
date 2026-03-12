@@ -195,13 +195,15 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SEOHead />
-    <ThemeProvider>
-      <LanguageProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </LanguageProvider>
-    </ThemeProvider>
+    <>
+      <SEOHead />
+      <ThemeProvider>
+        <LanguageProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </LanguageProvider>
+      </ThemeProvider>
+    </>
   );
 }
