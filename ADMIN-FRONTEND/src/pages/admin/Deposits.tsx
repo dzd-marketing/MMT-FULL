@@ -46,7 +46,6 @@ const AdminDepositsPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('pending');
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Stats
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -55,9 +54,8 @@ const AdminDepositsPage: React.FC = () => {
     total_approved_amount: 0
   });
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
-  // Simple notification function
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const icons = {
       success: '✅',
@@ -67,7 +65,6 @@ const AdminDepositsPage: React.FC = () => {
     alert(`${icons[type]} ${message}`);
   };
 
-  // Fetch deposits
   const fetchDeposits = async () => {
     setLoading(true);
     try {
@@ -152,7 +149,6 @@ const AdminDepositsPage: React.FC = () => {
     }
   };
 
-  // Handle reject
   const handleReject = async () => {
     if (!selectedDeposit) return;
 
@@ -235,9 +231,7 @@ const AdminDepositsPage: React.FC = () => {
         activeTickets={0}
       />
 
-      {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-80' : 'md:ml-0'} ml-0 h-screen flex flex-col overflow-hidden`}>
-        {/* Header */}
 <AdminHeader
   title="Deposits Management"
   onMenuClick={() => setSidebarOpen(!sidebarOpen)}
@@ -245,9 +239,7 @@ const AdminDepositsPage: React.FC = () => {
   activeTickets={0} 
 />
 
-        {/* Main Scrollable Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
-          {/* Header with Title */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-black text-white mb-1">Deposit Requests</h1>
@@ -255,7 +247,6 @@ const AdminDepositsPage: React.FC = () => {
             </div>
 
             <div className="flex gap-3">
-              {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <input
@@ -280,7 +271,6 @@ const AdminDepositsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 rounded-xl p-4">
               <p className="text-xs text-gray-400 mb-1">Total Deposits</p>
@@ -339,7 +329,6 @@ const AdminDepositsPage: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6 hover:border-brand/30 transition-all"
                 >
-                  {/* Header with Status */}
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="font-bold text-white text-lg">{deposit.full_name}</h3>
@@ -349,7 +338,6 @@ const AdminDepositsPage: React.FC = () => {
                     {getStatusBadge(deposit.status)}
                   </div>
 
-                  {/* Details */}
                   <div className="space-y-3 mb-4">
                     <div className="flex justify-between items-center border-b border-white/5 pb-2">
                       <span className="text-xs text-gray-500">Amount</span>
@@ -425,7 +413,6 @@ const AdminDepositsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ========== RECEIPT MODAL ========== */}
       <AnimatePresence>
         {showReceiptModal && selectedDeposit && (
           <>
@@ -458,7 +445,7 @@ const AdminDepositsPage: React.FC = () => {
               </div>
               <div className="p-6 max-h-[80vh] overflow-y-auto">
                 <img
-                  src={`http://localhost:5000${selectedDeposit.receipt_url}`}
+                  src={`${API_URL}${selectedDeposit.receipt_url}`}
                   alt="Receipt"
                   className="w-full h-auto rounded-xl"
                   onError={(e) => {
@@ -467,7 +454,7 @@ const AdminDepositsPage: React.FC = () => {
                 />
                 <div className="mt-4 flex justify-end gap-3">
                   <a
-                    href={`http://localhost:5000${selectedDeposit.receipt_url}`}
+                    href={`${API_URL}${selectedDeposit.receipt_url}`}
                     download={selectedDeposit.receipt_filename}
                     className="flex items-center gap-2 px-4 py-2 bg-brand/20 text-brand rounded-xl hover:bg-brand/30 transition-colors"
                   >
@@ -643,3 +630,4 @@ const AdminDepositsPage: React.FC = () => {
 };
 
 export default AdminDepositsPage;
+
