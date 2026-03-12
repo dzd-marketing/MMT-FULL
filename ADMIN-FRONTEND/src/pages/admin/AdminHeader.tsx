@@ -56,16 +56,13 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
     <header className="sticky top-0 z-40 bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/10">
       <div className="flex items-center justify-between px-4 md:px-8 py-3 md:py-4">
 
-        {/* Left — hamburger + page title */}
         <div className="flex items-center gap-2 md:gap-4">
-          {/* Desktop sidebar toggle */}
           <button
             onClick={onMenuClick}
             className="hidden md:block p-1.5 md:p-2 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors"
           >
             <Menu className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
           </button>
-          {/* Mobile sidebar toggle */}
           <button
             onClick={onMobileMenuClick}
             className="md:hidden p-1.5 hover:bg-white/10 rounded-lg transition-colors"
@@ -75,10 +72,8 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
           <h1 className="text-base md:text-2xl font-black text-white hidden sm:block">{title}</h1>
         </div>
 
-        {/* Right — bell + admin account */}
         <div className="flex items-center gap-2 md:gap-3">
 
-          {/* Notification bell */}
           <button className="relative p-1.5 md:p-2 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors">
             <Bell className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
             {activeTickets > 0 && (
@@ -86,17 +81,12 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
             )}
           </button>
 
-          {/* Divider */}
           <div className="h-6 w-px bg-white/10" />
 
-          {/* Admin account */}
           <div className="flex items-center gap-2 md:gap-3">
-            {/* Avatar */}
             <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-brand to-purple-600 flex items-center justify-center shrink-0">
               <span className="text-xs font-black text-white">{initials}</span>
             </div>
-
-            {/* Name + role */}
             <div className="hidden sm:block">
               <p className="text-xs md:text-sm font-bold text-white leading-tight">{name}</p>
               <div className="flex items-center gap-1">
@@ -105,7 +95,6 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({
               </div>
             </div>
 
-            {/* Logout */}
             <button
               onClick={handleLogout}
               title="Logout"
