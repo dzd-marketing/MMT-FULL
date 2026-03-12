@@ -55,6 +55,8 @@ const AdminDepositsPage: React.FC = () => {
   });
 
   const API_URL = 'https://admin.mmtsmmpanel.cyberservice.online';
+  const UPLOADS_URL = 'https://mmtsmmpanel.cyberservice.online';
+
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const icons = {
@@ -445,7 +447,7 @@ const AdminDepositsPage: React.FC = () => {
               </div>
               <div className="p-6 max-h-[80vh] overflow-y-auto">
                 <img
-                  src={`${API_URL}${selectedDeposit.receipt_url}`}
+                  src={`${UPLOADS_URL}${selectedDeposit.receipt_url}`}
                   alt="Receipt"
                   className="w-full h-auto rounded-xl"
                   onError={(e) => {
@@ -454,7 +456,7 @@ const AdminDepositsPage: React.FC = () => {
                 />
                 <div className="mt-4 flex justify-end gap-3">
                   <a
-                    href={`${API_URL}${selectedDeposit.receipt_url}`}
+                    href={`${UPLOADS_URL}${selectedDeposit.receipt_url}`}
                     download={selectedDeposit.receipt_filename}
                     className="flex items-center gap-2 px-4 py-2 bg-brand/20 text-brand rounded-xl hover:bg-brand/30 transition-colors"
                   >
@@ -630,5 +632,6 @@ const AdminDepositsPage: React.FC = () => {
 };
 
 export default AdminDepositsPage;
+
 
 
