@@ -36,7 +36,7 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             styleSrc:   ["'self'", "'unsafe-inline'"],
             scriptSrc:  ["'self'"],
-            imgSrc:     ["'self'", "data:", "blob:", "http://localhost:5000", "https://res.cloudinary.com", process.env.API_URL || "http://localhost:5000"],
+            imgSrc:     ["'self'", "data:", "blob:", "https://mmtsmmpanel.cyberservice.online", "https://res.cloudinary.com", process.env.API_URL || "http://localhost:5000"],
             connectSrc: ["'self'", process.env.FRONTEND_URL || "http://localhost:3000"],
             fontSrc:    ["'self'", "data:"],
         },
