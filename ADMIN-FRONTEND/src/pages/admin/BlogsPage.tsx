@@ -36,7 +36,6 @@ const AdminBlogsPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
-  // Form state
   const [formData, setFormData] = useState({
     title: '',
     short_description: '',
@@ -45,14 +44,12 @@ const AdminBlogsPage: React.FC = () => {
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const blogsPerPage = 10;
 
   const API_URL = import.meta.env.VITE_API_URL;
   const BASE_URL = API_URL.replace('/api', '');
 
-  // Helper function for image URLs
   const getImageUrl = (imagePath: string | null) => {
     if (!imagePath) return null;
     if (imagePath.startsWith('http')) return imagePath;
@@ -182,14 +179,11 @@ const AdminBlogsPage: React.FC = () => {
       alert('Failed to delete blog');
     }
   };
-
-  // Filter blogs based on search
   const filteredBlogs = blogs.filter(blog =>
     blog.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     blog.short_description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Pagination
   const indexOfLastBlog = currentPage * blogsPerPage;
   const indexOfFirstBlog = indexOfLastBlog - blogsPerPage;
   const currentBlogs = filteredBlogs.slice(indexOfFirstBlog, indexOfLastBlog);
@@ -561,3 +555,4 @@ const AdminBlogsPage: React.FC = () => {
 
 
 export default AdminBlogsPage;
+
