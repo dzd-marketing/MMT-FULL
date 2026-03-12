@@ -187,29 +187,60 @@ const AdminUsersPage: React.FC = () => {
       if (response.data.success) {
         const allUsers = response.data.users;
         
-        const headers = ['Full Name', 'Email', 'WhatsApp Number', 'Phone', 'User ID', 'Joined Date'];
-        const csvRows = [];
+        // Create CSV headers
+        const headers = [
+          'User ID', 
+          'Full Name', 
+          'Email', 
+          'Phone', 
+          'WhatsApp', 
+          'Balance (LKR)', 
+          'Spent (LKR)',
+          'Total Orders',
+          'Total Deposits',
+          'Deposit Amount (LKR)',
+          'Auth Provider',
+          'Admin Type',
+          'Status',
+          'Email Verified',
+          'Joined Date',
+          'Last Login',
+          'Currency'
+        ];
         
+        const csvRows = [];
         csvRows.push(headers.join(','));
         
+        // Add data rows
         allUsers.forEach((user: User) => {
           const row = [
+            user.id,
             `"${user.full_name || ''}"`,
             `"${user.email || ''}"`,
-            `"${user.whatsapp || ''}"`,
             `"${user.phone || ''}"`,
-            user.id,
-            `"${format(new Date(user.created_at), 'yyyy-MM-dd')}"`
+            `"${user.whatsapp || ''}"`,
+            user.balance || 0,
+            user.spent || 0,
+            user.total_orders || 0,
+            user.total_deposits || 0,
+            user.total_deposit_amount || 0,
+            `"${user.auth_provider || ''}"`,
+            `"${user.admin_type === '1' ? 'Admin' : 'User'}"`,
+            user.is_active === 1 ? 'Active' : 'Inactive',
+            user.email_verified === 1 ? 'Verified' : 'Unverified',
+            `"${format(new Date(user.created_at), 'yyyy-MM-dd HH:mm:ss')}"`,
+            user.last_login ? `"${format(new Date(user.last_login), 'yyyy-MM-dd HH:mm:ss')}"` : '"Never"',
+            `"${user.currency === '1' ? 'USD' : user.currency === '2' ? 'LKR' : 'INR'}"`
           ];
           csvRows.push(row.join(','));
         });
 
         const csvString = csvRows.join('\n');
-        const blob = new Blob([csvString], { type: 'text/csv' });
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `all_users_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+        a.download = `all_users_${format(new Date(), 'yyyy-MM-dd_HHmm')}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -233,32 +264,56 @@ const AdminUsersPage: React.FC = () => {
       if (response.data.success) {
         const allUsers = response.data.users;
         
-        const headers = ['Full Name', 'Email', 'Balance (LKR)', 'User ID', 'Joined Date'];
-        const csvRows = [];
+        // Create CSV headers
+        const headers = [
+          'User ID', 
+          'Full Name', 
+          'Email', 
+          'Phone', 
+          'Balance (LKR)', 
+          'Spent (LKR)',
+          'Total Deposit Amount (LKR)',
+          'Last Login',
+          'Status'
+        ];
         
+        const csvRows = [];
         csvRows.push(headers.join(','));
         
+        // Add data rows
         allUsers.forEach((user: User) => {
           const balanceValue = typeof user.balance === 'number' 
             ? user.balance 
             : parseFloat(user.balance as any) || 0;
           
+          const spentValue = typeof user.spent === 'number' 
+            ? user.spent 
+            : parseFloat(user.spent as any) || 0;
+          
+          const depositValue = typeof user.total_deposit_amount === 'number' 
+            ? user.total_deposit_amount 
+            : parseFloat(user.total_deposit_amount as any) || 0;
+          
           const row = [
+            user.id,
             `"${user.full_name || ''}"`,
             `"${user.email || ''}"`,
+            `"${user.phone || ''}"`,
             balanceValue.toFixed(2),
-            user.id,
-            `"${format(new Date(user.created_at), 'yyyy-MM-dd')}"`
+            spentValue.toFixed(2),
+            depositValue.toFixed(2),
+            user.last_login ? `"${format(new Date(user.last_login), 'yyyy-MM-dd HH:mm:ss')}"` : '"Never"',
+            user.is_active === 1 ? 'Active' : 'Inactive'
           ];
           csvRows.push(row.join(','));
         });
 
         const csvString = csvRows.join('\n');
-        const blob = new Blob([csvString], { type: 'text/csv' });
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `users_balance_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+        a.download = `users_balance_${format(new Date(), 'yyyy-MM-dd_HHmm')}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -319,15 +374,49 @@ const AdminUsersPage: React.FC = () => {
         />
 
         <div className="flex-1 p-4 md:p-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 gap-3 md:gap-4 mb-6">
-            <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 rounded-xl p-3 md:p-4">
-              <p className="text-xs text-gray-400 mb-1">Total Users</p>
-              <p className="text-xl md:text-2xl font-bold text-white">{stats.total_users}</p>
+          {/* Stats and Download Buttons */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 gap-3 md:gap-4 w-full sm:w-auto">
+              <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 rounded-xl p-3 md:p-4">
+                <p className="text-xs text-gray-400 mb-1">Total Users</p>
+                <p className="text-xl md:text-2xl font-bold text-white">{stats.total_users}</p>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 rounded-xl p-3 md:p-4">
+                <p className="text-xs text-gray-400 mb-1">Admins</p>
+                <p className="text-xl md:text-2xl font-bold text-purple-400">{stats.admin_users}</p>
+              </div>
             </div>
-            <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 rounded-xl p-3 md:p-4">
-              <p className="text-xs text-gray-400 mb-1">Admins</p>
-              <p className="text-xl md:text-2xl font-bold text-purple-400">{stats.admin_users}</p>
+
+            {/* Download Buttons */}
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={downloadAllUsersData}
+                disabled={downloading !== null}
+                className="flex-1 sm:flex-none px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {downloading === 'all' ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <DownloadCloud className="w-4 h-4 text-brand" />
+                )}
+                <span className="hidden sm:inline">Download All Users</span>
+                <span className="sm:hidden">All Users</span>
+              </button>
+              
+              <button
+                onClick={downloadUsersWithBalance}
+                disabled={downloading !== null}
+                className="flex-1 sm:flex-none px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {downloading === 'balance' ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Wallet className="w-4 h-4 text-green-400" />
+                )}
+                <span className="hidden sm:inline">Download Balance</span>
+                <span className="sm:hidden">Balance</span>
+              </button>
             </div>
           </div>
 
@@ -582,7 +671,7 @@ const AdminUsersPage: React.FC = () => {
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div className="bg-white/5 rounded-lg p-2 sm:p-3">
                     <p className="text-[8px] sm:text-xs text-gray-400 mb-0.5 sm:mb-1">Spent</p>
                     <p className="text-xs sm:text-sm font-bold text-purple-400 truncate">LKR {formatCurrency(selectedUser.spent)}</p>
