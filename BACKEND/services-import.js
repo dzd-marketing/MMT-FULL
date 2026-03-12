@@ -1,11 +1,10 @@
-// import-services.js
 const mysql = require('mysql2');
 const axios = require('axios');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
-// Database connection
+
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -18,15 +17,15 @@ const pool = mysql.createPool({
 
 const promisePool = pool.promise();
 
-// API configuration
+
 const API_URL = 'https://makemetrend.online/api/v2';
-const API_KEY = '5f8dbf1fb00b5c539ffde36d60ad49ea'; // Your new API key
+const API_KEY = '5f8dbf1fb00b5c539ffde36d60ad49ea'; 
 
 async function importServices() {
     console.log('🔄 Starting service import...');
     
     try {
-        // Fetch services from API
+       
         console.log('📡 Fetching services from API...');
         
         const formData = new URLSearchParams();
@@ -46,16 +45,16 @@ async function importServices() {
         let updated = 0;
         let skipped = 0;
 
-        // Process each service
+       
         for (const apiService of services) {
             try {
-                // Check if service already exists
+               
                 const [existing] = await promisePool.execute(
                     'SELECT service_id FROM services WHERE api_service = ? AND service_api = ?',
                     [apiService.service, 1]
                 );
 
-                // Prepare service data with ALL required fields
+              
                 const serviceData = {
                     service_api: 1,
                     api_service: apiService.service,
@@ -67,7 +66,7 @@ async function importServices() {
                         type: apiService.type
                     }),
                     category_id: 1,
-                    service_line: 0, // Will be updated
+                    service_line: 0, 
                     service_type: '2',
                     service_package: getPackageFromType(apiService.type),
                     service_name: apiService.name,
@@ -92,7 +91,7 @@ async function importServices() {
                     time: 'Not enough data',
                     cancelbutton: '2',
                     show_refill: 'false',
-                    service_profit: '', // Empty string for required field
+                    service_profit: '', 
                     refill_days: '30',
                     refill_hours: '24',
                     avg_days: 0,
@@ -106,7 +105,7 @@ async function importServices() {
                 };
 
                 if (existing.length > 0) {
-                    // Update existing service
+  
                     await promisePool.execute(
                         `UPDATE services SET 
                             service_name = ?,
@@ -137,13 +136,13 @@ async function importServices() {
                     updated++;
                     console.log(`🔄 Updated: ${apiService.name}`);
                 } else {
-                    // Get last service line
+              
                     const [lastLine] = await promisePool.execute(
                         'SELECT MAX(service_line) as max_line FROM services'
                     );
                     serviceData.service_line = (lastLine[0].max_line || 0) + 1;
 
-                    // Insert new service with ALL fields
+            
                     await promisePool.execute(
                         `INSERT INTO services (
                             service_api, api_service, api_servicetype, api_detail,
@@ -241,5 +240,4 @@ function getPackageFromType(type) {
     return packageMap[type] || '1';
 }
 
-// Run the import
 importServices();
