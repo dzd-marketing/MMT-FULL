@@ -8,7 +8,7 @@ import {
 import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
 
-// Icon mapping
+
 const iconMap: Record<string, any> = {
   'Landmark': Landmark,
   'Smartphone': Smartphone,
@@ -17,7 +17,7 @@ const iconMap: Record<string, any> = {
   'default': Landmark
 };
 
-// Currency symbols
+
 const currencySymbols = {
   USD: '$',
   LKR: 'LKR ',
@@ -49,14 +49,14 @@ export default function AddFundsView() {
   const [loadingMethods, setLoadingMethods] = useState(true);
   const [showImageModal, setShowImageModal] = useState(false);
   
-  // Currency states
+  
   const [userCurrency, setUserCurrency] = useState<'USD' | 'LKR' | 'INR'>('LKR');
   const [conversionRates, setConversionRates] = useState({
     usdToLkr: 309.45,
     inrToLkr: 3.37
   });
   
-  // States for feedback
+ 
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -64,7 +64,7 @@ export default function AddFundsView() {
   const API_URL = import.meta.env.VITE_API_URL;
   const BASE_URL = API_URL.replace('/api', '');
 
-  // Fetch deposit methods
+  
   useEffect(() => {
     const fetchDepositMethods = async () => {
       try {
@@ -82,7 +82,7 @@ export default function AddFundsView() {
     fetchDepositMethods();
   }, [API_URL]);
 
-  // Fetch conversion rates
+
   useEffect(() => {
     const fetchConversionRates = async () => {
       try {
@@ -112,7 +112,6 @@ export default function AddFundsView() {
     fetchConversionRates();
   }, []);
 
-  // Fetch user currency from profile
   useEffect(() => {
     const fetchUserCurrency = async () => {
       try {
@@ -133,7 +132,7 @@ export default function AddFundsView() {
     fetchUserCurrency();
   }, []);
 
-  // Helper function to map backend currency
+  
   const mapBackendCurrency = (backendCurrency: string): 'USD' | 'LKR' | 'INR' => {
     if (backendCurrency === 'USD' || backendCurrency === 'LKR' || backendCurrency === 'INR') {
       return backendCurrency;
@@ -146,12 +145,10 @@ export default function AddFundsView() {
     return (map[backendCurrency as keyof typeof map] || 'LKR') as 'USD' | 'LKR' | 'INR';
   };
 
-  // Get currency symbol
   const getCurrencySymbol = () => {
     return currencySymbols[userCurrency] || 'LKR ';
   };
 
-  // Convert user's currency to LKR
   const convertToLkr = (amountInUserCurrency: number) => {
     if (userCurrency === 'LKR') {
       return amountInUserCurrency;
@@ -164,8 +161,6 @@ export default function AddFundsView() {
     }
     return amountInUserCurrency;
   };
-
-  // Convert LKR to user's currency (for display)
   const convertFromLkr = (amountInLkr: number) => {
     if (userCurrency === 'LKR') {
       return amountInLkr;
@@ -178,13 +173,10 @@ export default function AddFundsView() {
     }
     return amountInLkr;
   };
-
-  // Format amount with currency symbol
   const formatAmount = (amount: number) => {
     return `${getCurrencySymbol()}${amount.toFixed(2)}`;
   };
 
-  // Get image URL helper
   const getImageUrl = (path: string) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
@@ -243,7 +235,6 @@ export default function AddFundsView() {
     }
   };
 
-  // Get icon component for method
   const getIconForMethod = (method: DepositMethod) => {
     const IconComponent = iconMap[method.icon || 'default'] || Landmark;
     return IconComponent;
@@ -550,4 +541,5 @@ export default function AddFundsView() {
     </div>
   );
 }
+
 
