@@ -48,9 +48,24 @@ app.use(helmet({
     }
 }));
 
-// ============= CORS =============
+// ============= CORS ============
+
+// With this — allow both frontend and admin frontend:
+const allowedOrigins = [
+    'https://mmtsmmpanel.cyberservice.online',
+    'https://admin.mmtsmmpanel.cyberservice.online',
+    'http://localhost:3000',
+    'http://localhost:5173',
+];
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error(`CORS blocked: ${origin}`));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
