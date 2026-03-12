@@ -1,4 +1,3 @@
-// services/admin.email.service.js
 const nodemailer = require('nodemailer');
 
 class AdminEmailService {
@@ -24,7 +23,7 @@ class AdminEmailService {
             logger: true
         });
 
-        // Test connection on initialization
+   
         this.verifyConnection();
     }
 
@@ -40,9 +39,6 @@ class AdminEmailService {
         }
     }
 
-    /**
-     * Send notification to user when admin replies to their ticket
-     */
     async sendTicketReplyNotification(ticketData, replyData, userData) {
         const { ticket_number, subject, status } = ticketData;
         const { message } = replyData;
@@ -226,9 +222,7 @@ class AdminEmailService {
         }
     }
 
-    /**
-     * Send notification to admin when a new ticket is created
-     */
+  
     async sendNewTicketNotification(ticketData, userData) {
         const { ticket_number, subject, department, priority, message } = ticketData;
         const { name, email, id } = userData;
@@ -436,9 +430,6 @@ class AdminEmailService {
         }
     }
 
-    /**
-     * Send notification to user when their ticket status changes
-     */
     async sendTicketStatusUpdateNotification(ticketData, userData) {
         const { ticket_number, subject, status } = ticketData;
         const { name, email } = userData;
