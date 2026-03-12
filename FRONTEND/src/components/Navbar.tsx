@@ -32,7 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
   const location = useLocation();
   const { t, language, setLanguage } = useTranslation();
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
   const BASE_URL = API_URL.replace('/api', '');
 
   // Fetch site logo from database
