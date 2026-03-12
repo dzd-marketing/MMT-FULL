@@ -205,10 +205,24 @@ const Avatar: React.FC<{ src?: string | null; name: string; size?: 'sm' | 'md' |
   const [imgError, setImgError] = useState(false);
   const sizeClass = size === 'sm' ? 'w-6 h-6 text-[10px]' : size === 'md' ? 'w-8 h-8 text-xs' : 'w-12 h-12 text-lg';
 
-  if (src && !imgError) {
+  // Get image URL with proper base
+  const getImageUrl = (imagePath: string | null) => {
+    if (!imagePath) return '';
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    const API_URL = import.meta.env.VITE_API_URL;
+    const BASE_URL = API_URL?.replace('/api', '') || 'https://mmtsmmpanel.cyberservice.online';
+    
+    const cleanPath = imagePath.replace(/^\/api/, '');
+    return `${BASE_URL}${cleanPath}`;
+  };
+
+  const imageUrl = getImageUrl(src || '');
+
+  if (src && !imgError && imageUrl) {
     return (
       <img
-        src={src}
+        src={imageUrl}
         alt={name}
         className={`${sizeClass} rounded-full object-cover flex-shrink-0`}
         onError={() => setImgError(true)}
@@ -265,7 +279,26 @@ const AdminTicketsPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const API_URL = import.meta.env.VITE_API_URL;
+  const BASE_URL = API_URL?.replace('/api', '') || 'https://mmtsmmpanel.cyberservice.online';
+
   const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('adminToken')}` });
+
+  // ============= IMAGE URL HELPER =============
+  const getImageUrl = (imagePath: string | null) => {
+    if (!imagePath) return '';
+    if (imagePath.startsWith('http')) return imagePath;
+    const cleanPath = imagePath.replace(/^\/api/, '');
+    return `${BASE_URL}${cleanPath}`;
+  };
+
+  // For ticket attachments
+  const getAttachmentUrl = (attachment: TicketAttachment) => {
+    if (attachment.file_url) return attachment.file_url;
+    if (attachment.file_path) {
+      return getImageUrl(attachment.file_path);
+    }
+    return '';
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -690,7 +723,7 @@ const AdminTicketsPage: React.FC = () => {
                       <td className="py-3 px-3"><span className="text-sm font-mono font-medium text-brand">#{ticket.ticket_number}</span></td>
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-2">
-                          {/* ✅ Fixed: Avatar component handles image errors gracefully */}
+                          {/* ✅ FIXED: Using Avatar component that handles images correctly */}
                           <Avatar src={ticket.profile_picture} name={ticket.full_name || 'User'} size="sm" />
                           <div>
                             <p className="text-sm text-white truncate max-w-[150px]">{ticket.full_name}</p>
@@ -862,7 +895,7 @@ const AdminTicketsPage: React.FC = () => {
                 <div className="bg-white/5 rounded-xl p-4">
                   <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><User className="w-4 h-4 text-brand" />User Information</h3>
                   <div className="flex items-center gap-3">
-                    {/* ✅ Fixed: Avatar component handles errors */}
+                    {/* ✅ FIXED: Using Avatar component */}
                     <Avatar src={selectedTicket.profile_picture} name={selectedTicket.full_name || 'User'} size="lg" />
                     <div>
                       <p className="text-white font-medium">{selectedTicket.full_name}</p>
@@ -884,7 +917,7 @@ const AdminTicketsPage: React.FC = () => {
                     <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><Paperclip className="w-4 h-4 text-brand" />Attachments ({ticketAttachments.length})</h3>
                     <div className="grid grid-cols-2 gap-2">
                       {ticketAttachments.map(att => {
-                        const fileUrl = att.file_url || `${API_URL.replace('/api', '')}/uploads/tickets/${att.file_path?.split('/').pop()}`;
+                        const fileUrl = getAttachmentUrl(att);
                         return (
                           <a key={att.id} href={fileUrl} target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-2 p-2 bg-black/30 rounded-lg hover:bg-black/50 transition-colors">
@@ -912,7 +945,7 @@ const AdminTicketsPage: React.FC = () => {
                     <div className="space-y-4">
                       {ticketReplies.map(reply => (
                         <div key={reply.id} className={`flex gap-3 ${reply.is_staff ? 'flex-row' : 'flex-row-reverse'}`}>
-                          {/* ✅ Fixed: Avatar with fallback */}
+                          {/* ✅ FIXED: Using Avatar component */}
                           <Avatar src={reply.profile_picture} name={reply.full_name || (reply.is_staff ? 'Admin' : 'User')} size="md" />
                           <div className={`flex-1 max-w-[80%] ${reply.is_staff ? '' : 'text-right'}`}>
                             <div className={`inline-block max-w-full rounded-xl p-3 ${reply.is_staff ? 'bg-brand/20 text-white' : 'bg-white/5 text-gray-300'}`}>
