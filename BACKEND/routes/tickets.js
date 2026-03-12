@@ -123,7 +123,7 @@ module.exports = (pool) => {
             if (req.files && req.files.length > 0) {
                 attachments = req.files.map(file => ({
                     file_name: file.originalname,
-                    file_path: file.path,
+                    file_path: /uploads/tickets/${file.filename},
                     file_size: file.size,
                     mime_type: file.mimetype
                 }));
@@ -156,7 +156,7 @@ module.exports = (pool) => {
                         [
                             ticketResult.insertId,
                             attachment.file_name,
-                            attachment.file_path,
+                            attachment./uploads/tickets/${file.filename},
                             attachment.file_size,
                             attachment.mime_type,
                             user_id
@@ -399,7 +399,7 @@ module.exports = (pool) => {
                             ticket.id,
                             replyResult.insertId,
                             file.originalname,
-                            file.path,
+                            `/uploads/tickets/${file.filename}`,
                             file.size,
                             file.mimetype,
                             user_id
