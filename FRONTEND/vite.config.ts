@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
       // ✅ PROXY SETUP එක add කරන්න
       proxy: {
         '/api': {
-          target: 'https://mmtsmmpanel.cyberservice.online/api',
+          target: 'https://mmtsmmpanel.cyberservice.online',
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path,
