@@ -507,6 +507,33 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
+router.get('/seo-data', async (req, res) => {
+    try {
+        const [configs] = await pool.execute(
+            `SELECT config_key, config_value FROM config 
+             WHERE config_key LIKE 'seo_%' 
+             OR config_key IN ('site_name', 'site_title', 'site_description', 'site_keywords', 'site_logo')`
+        );
+
+        const seoData = {};
+        configs.forEach(config => {
+            seoData[config.config_key] = config.config_value;
+        });
+
+        res.json({
+            success: true,
+            data: seoData
+        });
+    } catch (error) {
+        console.error('Get SEO data error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch SEO data'
+        });
+    }
+});
+
     return router;
 };
+
 
