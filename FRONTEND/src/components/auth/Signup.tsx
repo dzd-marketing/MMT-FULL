@@ -281,7 +281,7 @@ const Signup: React.FC = () => {
         setSuccessMessage('');
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth/signup', {
+            const response = await fetch('VITE_API_URL=https://mmtsmmpanel.cyberservice.online/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
