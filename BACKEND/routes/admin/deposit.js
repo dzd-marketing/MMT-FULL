@@ -265,140 +265,119 @@ const adminAuth = require('../admin-auth')(pool);
     // ===========================================
     // 6. APPROVE DEPOSIT (WITH EDITABLE AMOUNT AND EMAIL)
     // ===========================================
-    router.post('/:id/approve', adminAuth.adminAuthMiddleware, async (req, res) => {
-        const connection = await pool.getConnection();
+    // routes/admin/deposit.js එකේ approve route එක
+router.post('/:id/approve', adminAuth.adminAuthMiddleware, async (req, res) => {
+    console.log('🟢 Approve endpoint hit!');
+    console.log('📌 req.admin:', req.admin); // මෙතනින් බලන්න
+    
+    const connection = await pool.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+
+        const depositId = req.params.id;
+        const adminId = req.admin?.id || req.admin?.userId; // ✅ admin object එකෙන් id එක ගන්න
         
-        try {
-            await connection.beginTransaction();
+        // amount එක req.body එකෙන් ගන්න
+        const { amount } = req.body;
+        
+        console.log(`📝 Approving deposit ID: ${depositId}`);
+        console.log(`💰 Amount from request body: ${amount}`);
 
-            const depositId = req.params.id;
-            const adminId = req.adminId;
-            
-            // amount එක req.body එකෙන් ගන්න
-            const { amount } = req.body;
-            
-            console.log(`📝 Approving deposit ID: ${depositId}`);
-            console.log(`💰 Amount from request body: ${amount}`);
-
-            // Validate amount
-            if (!amount || amount <= 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Valid amount is required'
-                });
-            }
-
-            // Get deposit details with user info
-            const [deposits] = await connection.execute(
-                'SELECT d.*, u.full_name as user_name, u.email as user_email FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = ? AND d.status = "pending"',
-                [depositId]
-            );
-
-            if (deposits.length === 0) {
-                await connection.rollback();
-                return res.status(404).json({
-                    success: false,
-                    message: 'Pending deposit not found'
-                });
-            }
-
-            const deposit = deposits[0];
-            const userId = deposit.user_id;
-            
-            console.log(`👤 User ID: ${userId}`);
-            console.log(`💰 Original amount: ${deposit.amount}`);
-            console.log(`💰 New amount: ${amount}`);
-
-            // Update deposit with NEW amount
-            await connection.execute(
-                `UPDATE deposits 
-                SET status = 'approved', 
-                    amount = ?,
-                    approved_by = ?, 
-                    approved_at = NOW() 
-                WHERE id = ?`,
-                [amount, adminId, depositId]
-            );
-
-            // Check if wallet exists
-            const [wallets] = await connection.execute(
-                'SELECT * FROM wallets WHERE user_id = ?',
-                [userId]
-            );
-
-            if (wallets.length === 0) {
-                // Create new wallet
-                await connection.execute(
-                    `INSERT INTO wallets (user_id, email, available_balance, total_history_balance) 
-                     SELECT ?, email, ?, ? FROM users WHERE id = ?`,
-                    [userId, amount, amount, userId]
-                );
-                console.log(`🆕 New wallet created for user ${userId}`);
-            } else {
-                // Update existing wallet
-                await connection.execute(
-                    `UPDATE wallets 
-                    SET available_balance = available_balance + ?,
-                        total_history_balance = total_history_balance + ?
-                    WHERE user_id = ?`,
-                    [amount, amount, userId]
-                );
-                console.log(`💰 Wallet updated for user ${userId}: +${amount}`);
-            }
-
-            await connection.commit();
-
-            // Get updated balance
-            const [updatedWallet] = await connection.execute(
-                'SELECT available_balance FROM wallets WHERE user_id = ?',
-                [userId]
-            );
-
-            // ===========================================
-            // SEND APPROVED EMAIL TO USER
-            // ===========================================
-            try {
-                const depositData = {
-                    id: deposit.id,
-                    amount: parseFloat(amount),
-                    receipt_url: deposit.receipt_url,
-                    approved_at: new Date()
-                };
-
-                const userData = {
-                    name: deposit.user_name || deposit.full_name,
-                    email: deposit.user_email || deposit.email,
-                    id: userId
-                };
-
-                await emailService.sendDepositApprovedEmail(depositData, userData);
-                console.log(`✅ Approval email sent to user ${userId}`);
-            } catch (emailError) {
-                console.error('❌ Error sending approval email:', emailError.message);
-                // Don't fail the request if email fails
-            }
-            // ===========================================
-
-            res.json({
-                success: true,
-                message: 'Deposit approved successfully',
-                amount: amount,
-                user_id: userId,
-                new_balance: updatedWallet[0]?.available_balance || 0
-            });
-
-        } catch (error) {
-            await connection.rollback();
-            console.error('Approve deposit error:', error);
-            res.status(500).json({
+        // Validate amount
+        if (!amount || amount <= 0) {
+            return res.status(400).json({
                 success: false,
-                message: 'Failed to approve deposit',
-                error: error.message
+                message: 'Valid amount is required'
             });
-        } finally {
-            connection.release();
         }
-    });
+
+        // Get deposit details with user info
+        const [deposits] = await connection.execute(
+            'SELECT d.*, u.full_name as user_name, u.email as user_email FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = ? AND d.status = "pending"',
+            [depositId]
+        );
+
+        if (deposits.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                message: 'Pending deposit not found'
+            });
+        }
+
+        const deposit = deposits[0];
+        const userId = deposit.user_id;
+        
+        console.log(`👤 User ID: ${userId}`);
+        console.log(`💰 Original amount: ${deposit.amount}`);
+        console.log(`💰 New amount: ${amount}`);
+
+        // Update deposit with NEW amount - adminId දාන්න
+        await connection.execute(
+            `UPDATE deposits 
+            SET status = 'approved', 
+                amount = ?,
+                approved_by = ?, 
+                approved_at = NOW() 
+            WHERE id = ?`,
+            [amount, adminId, depositId]  // ✅ adminId එක දාන්න
+        );
+
+        // Check if wallet exists
+        const [wallets] = await connection.execute(
+            'SELECT * FROM wallets WHERE user_id = ?',
+            [userId]
+        );
+
+        if (wallets.length === 0) {
+            // Create new wallet
+            await connection.execute(
+                `INSERT INTO wallets (user_id, email, available_balance, total_history_balance) 
+                 SELECT ?, email, ?, ? FROM users WHERE id = ?`,
+                [userId, amount, amount, userId]
+            );
+            console.log(`🆕 New wallet created for user ${userId}`);
+        } else {
+            // Update existing wallet
+            await connection.execute(
+                `UPDATE wallets 
+                SET available_balance = available_balance + ?,
+                    total_history_balance = total_history_balance + ?
+                WHERE user_id = ?`,
+                [amount, amount, userId]
+            );
+            console.log(`💰 Wallet updated for user ${userId}: +${amount}`);
+        }
+
+        await connection.commit();
+
+        // Get updated balance
+        const [updatedWallet] = await connection.execute(
+            'SELECT available_balance FROM wallets WHERE user_id = ?',
+            [userId]
+        );
+
+        res.json({
+            success: true,
+            message: 'Deposit approved successfully',
+            amount: amount,
+            user_id: userId,
+            new_balance: updatedWallet[0]?.available_balance || 0
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('❌ Approve deposit error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to approve deposit',
+            error: error.message
+        });
+    } finally {
+        connection.release();
+    }
+});
 
     return router;
 };
