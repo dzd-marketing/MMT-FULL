@@ -14,14 +14,14 @@ interface User {
   email: string;
 }
 
-// Currency symbols
+
 const currencySymbols = {
   USD: '$',
   LKR: 'LKR ',
   INR: '₹'
 };
 
-// Custom debounce function
+
 const debounce = (func: Function, delay: number) => {
   let timeoutId: NodeJS.Timeout;
   return (...args: any[]) => {
@@ -33,41 +33,40 @@ const debounce = (func: Function, delay: number) => {
 export default function TransferFundsView() {
   const { userData }: any = useOutletContext();
   
-  // API URL
+  
     const API_URL = import.meta.env.VITE_API_URL;
   
-  // Form states
+ 
   const [receiverIdentifier, setReceiverIdentifier] = useState('');
   const [amount, setAmount] = useState('');
   
-  // Search states
+ 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedReceiver, setSelectedReceiver] = useState<User | null>(null);
   
-  // Transfer states
+  
   const [transferring, setTransferring] = useState(false);
   const [transferSuccess, setTransferSuccess] = useState(false);
   const [transferError, setTransferError] = useState('');
   
-  // Balance check
+  
   const [insufficientBalance, setInsufficientBalance] = useState(false);
   
-  // Currency states
+ 
   const [userCurrency, setUserCurrency] = useState<'USD' | 'LKR' | 'INR'>('LKR');
   const [conversionRates, setConversionRates] = useState({
     usdToLkr: 309.45,
     inrToLkr: 3.37
   });
 
-  // Recent transfers (mock data)
+
   const [recentTransfers, setRecentTransfers] = useState([
     { id: 1, name: 'John Doe', email: 'john@example.com', amount: '50.00', date: '2 hours ago', status: 'completed' },
     { id: 2, name: 'Jane Smith', email: 'jane@example.com', amount: '25.00', date: 'Yesterday', status: 'completed' },
   ]);
 
-  // Fetch conversion rates
   useEffect(() => {
     const fetchConversionRates = async () => {
       try {
@@ -97,7 +96,6 @@ export default function TransferFundsView() {
     fetchConversionRates();
   }, []);
 
-  // Fetch user currency from profile
   const fetchUserCurrency = async () => {
     try {
       const profileResponse = await axios.get(`${API_URL}/user/profiles`, { withCredentials: true });
@@ -114,7 +112,6 @@ export default function TransferFundsView() {
     }
   };
 
-  // Helper function to map backend currency
   const mapBackendCurrency = (backendCurrency: string): 'USD' | 'LKR' | 'INR' => {
     if (backendCurrency === 'USD' || backendCurrency === 'LKR' || backendCurrency === 'INR') {
       return backendCurrency;
@@ -127,7 +124,6 @@ export default function TransferFundsView() {
     return (map[backendCurrency as keyof typeof map] || 'LKR') as 'USD' | 'LKR' | 'INR';
   };
 
-  // Listen for currency updates
   useEffect(() => {
     const handleCurrencyUpdate = (event: CustomEvent) => {
       const { currency } = event.detail;
@@ -142,17 +138,14 @@ export default function TransferFundsView() {
     };
   }, []);
 
-  // Fetch user currency on mount
   useEffect(() => {
     fetchUserCurrency();
   }, []);
 
-  // Get currency symbol
   const getCurrencySymbol = () => {
     return currencySymbols[userCurrency] || 'LKR ';
   };
 
-  // Convert LKR to user's preferred currency
   const convertFromLkr = (amountInLkr: number) => {
     if (userCurrency === 'LKR') {
       return amountInLkr;
@@ -166,7 +159,6 @@ export default function TransferFundsView() {
     return amountInLkr;
   };
 
-  // Convert user's preferred currency to LKR (for sending to backend)
   const convertToLkr = (amountInUserCurrency: number) => {
     if (userCurrency === 'LKR') {
       return amountInUserCurrency;
@@ -180,12 +172,9 @@ export default function TransferFundsView() {
     return amountInUserCurrency;
   };
 
-  // Format amount with currency symbol
   const formatAmount = (amount: number) => {
     return `${getCurrencySymbol()}${amount.toFixed(2)}`;
   };
-
-  // Debounced search function - FIXED
   const debouncedSearch = useMemo(
     () => debounce(async (query: string) => {
       if (query.length < 3) {
@@ -210,7 +199,6 @@ export default function TransferFundsView() {
     [API_URL]
   );
 
-  // Handle search input
   useEffect(() => {
     debouncedSearch(searchQuery);
     return () => {
@@ -218,7 +206,6 @@ export default function TransferFundsView() {
     };
   }, [searchQuery, debouncedSearch]);
 
-  // Check if amount exceeds balance
   useEffect(() => {
     if (amount && userData?.available_balance) {
       const transferAmountInLkr = convertToLkr(parseFloat(amount));
@@ -229,7 +216,6 @@ export default function TransferFundsView() {
     }
   }, [amount, userData, userCurrency, conversionRates]);
 
-  // Handle transfer - FIXED
   const handleTransfer = async () => {
     if (!receiverIdentifier || !amount) {
       setTransferError('Please enter receiver email/username and amount');
@@ -245,7 +231,7 @@ export default function TransferFundsView() {
     setTransferError('');
 
     try {
-      // Convert amount to LKR before sending to backend
+   
       const amountInLkr = convertToLkr(parseFloat(amount)).toFixed(2);
 
       const response = await axios.post(`${API_URL}/transfer/send`,
@@ -283,7 +269,6 @@ export default function TransferFundsView() {
     }
   };
 
-  // Select user from search
   const selectUser = (user: User) => {
     setReceiverIdentifier(user.email);
     setSelectedReceiver(user);
@@ -291,7 +276,6 @@ export default function TransferFundsView() {
     setSearchResults([]);
   };
 
-  // Parse amount safely
   const parsedAmount = parseFloat(amount || '0');
   const parsedBalance = parseFloat(userData?.available_balance || '0');
   const convertedBalance = convertFromLkr(parsedBalance);
