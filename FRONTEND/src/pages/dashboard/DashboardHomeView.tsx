@@ -64,6 +64,8 @@ export default function DashboardHomeView() {
     inrToLkr: 3.37
   });
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   // Fetch conversion rates
   useEffect(() => {
     const fetchConversionRates = async () => {
@@ -101,7 +103,7 @@ export default function DashboardHomeView() {
   // Fetch user currency from profile
   const fetchUserCurrency = async () => {
     try {
-      const profileResponse = await axios.get('/api/user/profiles', { withCredentials: true });
+      const profileResponse = await axios.get(`${API_URL}/user/profiles`, { withCredentials: true });
       if (profileResponse.data.success) {
         const profileUser = profileResponse.data.user;
         if (profileUser.currency) {
@@ -119,7 +121,7 @@ export default function DashboardHomeView() {
 const fetchTotalOrders = async () => {
   try {
     // Get ALL orders count (no limit)
-    const response = await axios.get('/api/orders/my-orders?limit=1000&page=1', {
+    const response = await axios.get(`${API_URL}/orders/my-orders?limit=1000&page=1`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -139,7 +141,7 @@ const fetchTotalOrders = async () => {
   const fetchRecentOrders = async () => {
     setOrdersLoading(true);
     try {
-      const response = await axios.get('/api/orders/my-orders?limit=5&page=1', {
+      const response = await axios.get(`${API_URL}/orders/my-orders?limit=5&page=1`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -165,7 +167,7 @@ const fetchTotalOrders = async () => {
         await fetchUserCurrency();
         
         // 1. Wallet details
-        const walletResponse = await axios.get('/api/wallet/details');
+        const walletResponse = await axios.get(`${API_URL}/wallet/details`);
         if (walletResponse.data.success) {
           setWalletData({
             available_balance: walletResponse.data.wallet.available_balance || '0.00',
@@ -472,4 +474,5 @@ const fetchTotalOrders = async () => {
       </section>
     </div>
   );
+
 }
