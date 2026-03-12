@@ -8,12 +8,11 @@ const fs = require('fs');
 module.exports = (pool) => {
 const adminAuth = require('../admin-auth')(pool);
 
-    // Configure multer for image upload - FIXED PATH
     const storage = multer.diskStorage({
         destination: function (req, file, cb) {
-            // Go up TWO levels from routes/admin/ to project root
+
             const uploadDir = path.join(__dirname, '../../uploads/config');
-            console.log('Upload directory:', uploadDir); // Debug line
+            console.log('Upload directory:', uploadDir); 
             
             if (!fs.existsSync(uploadDir)) {
                 fs.mkdirSync(uploadDir, { recursive: true });
@@ -32,7 +31,7 @@ const adminAuth = require('../admin-auth')(pool);
 
     const upload = multer({ 
         storage: storage,
-        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+        limits: { fileSize: 5 * 1024 * 1024 },
         fileFilter: (req, file, cb) => {
             const allowedTypes = /jpeg|jpg|png|gif|webp|ico/;
             const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -46,9 +45,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // ============= PUBLIC ROUTES (No auth needed) =============
-
-    // Get maintenance status (public route)
     router.get('/check-maintenance', async (req, res) => {
         try {
             const [configs] = await pool.execute(
@@ -80,8 +76,6 @@ const adminAuth = require('../admin-auth')(pool);
             });
         }
     });
-
-    // Get snow effect status
     router.get('/snow-effect', async (req, res) => {
         try {
             const [configs] = await pool.execute(
@@ -103,8 +97,6 @@ const adminAuth = require('../admin-auth')(pool);
             });
         }
     });
-
-    // Get festival effect status
     router.get('/festival-effect', async (req, res) => {
         try {
             const [configs] = await pool.execute(
@@ -126,8 +118,6 @@ const adminAuth = require('../admin-auth')(pool);
             });
         }
     });
-
-    // Get all effect statuses at once
     router.get('/effects', async (req, res) => {
         try {
             const [configs] = await pool.execute(
@@ -156,8 +146,6 @@ const adminAuth = require('../admin-auth')(pool);
             });
         }
     });
-
-    // Get public config values (safe ones only)
     router.get('/public', async (req, res) => {
         try {
             const [configs] = await pool.execute(
@@ -195,9 +183,7 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // ============= ADMIN ROUTES (Auth required) =============
 
-    // Get all config values (admin only)
     router.get('/all', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const [configs] = await pool.execute('SELECT * FROM config ORDER BY id');
@@ -220,7 +206,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Get single config value by key (admin only)
     router.get('/:key', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const { key } = req.params;
@@ -252,7 +237,7 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Update config value (admin only)
+
     router.post('/update', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const { key, value } = req.body;
@@ -264,7 +249,6 @@ const adminAuth = require('../admin-auth')(pool);
                 });
             }
 
-            // Sanitize URL fields
             let sanitizedValue = value;
             if (key.includes('url') || key.includes('channel')) {
                 if (value && value.trim() !== '') {
@@ -305,12 +289,11 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Toggle snow effect (admin only)
+
     router.post('/toggle-snow', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const { enabled } = req.body;
 
-            // Check if config exists
             const [existing] = await pool.execute(
                 'SELECT id FROM config WHERE config_key = "snow_effect"'
             );
@@ -341,12 +324,11 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Toggle festival effect (admin only)
+
     router.post('/toggle-festival', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const { enabled } = req.body;
 
-            // Check if config exists
             const [existing] = await pool.execute(
                 'SELECT id FROM config WHERE config_key = "festival_effect"'
             );
@@ -377,7 +359,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Update multiple config values at once (admin only)
     router.post('/update-multiple', adminAuth.adminAuthMiddleware, async (req, res) => {
         const connection = await pool.getConnection();
         try {
@@ -432,7 +413,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Toggle maintenance mode (admin only)
     router.post('/toggle-maintenance', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const { enabled, message } = req.body;
@@ -463,7 +443,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Upload image for config (logo only)
     router.post('/upload-image', adminAuth.adminAuthMiddleware, upload.single('image'), async (req, res) => {
         try {
             const { key } = req.body;
@@ -505,7 +484,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Delete config key (admin only)
     router.delete('/:key', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const { key } = req.params;
@@ -531,3 +509,4 @@ const adminAuth = require('../admin-auth')(pool);
 
     return router;
 };
+
