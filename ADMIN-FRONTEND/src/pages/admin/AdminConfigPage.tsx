@@ -222,7 +222,7 @@ const AdminConfigPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/admin/config/all`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
       });
 
       if (response.data.success) {
@@ -322,7 +322,7 @@ const AdminConfigPage: React.FC = () => {
       const response = await axios.post(`${API_URL}/admin/config/update-multiple`, {
         configs: configsToSave
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
       });
 
       if (response.data.success) {
@@ -344,7 +344,7 @@ const AdminConfigPage: React.FC = () => {
         enabled: newValue === '1',
         message: config.maintenance_message
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
       });
 
       if (response.data.success) {
@@ -366,7 +366,7 @@ const AdminConfigPage: React.FC = () => {
       const response = await axios.post(`${API_URL}/admin/config/toggle-snow`, {
         enabled: newValue === '1'
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
       });
 
       if (response.data.success) {
@@ -388,7 +388,7 @@ const AdminConfigPage: React.FC = () => {
       const response = await axios.post(`${API_URL}/admin/config/toggle-festival`, {
         enabled: newValue === '1'
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
       });
 
       if (response.data.success) {
@@ -413,7 +413,7 @@ const AdminConfigPage: React.FC = () => {
     try {
       const response = await axios.post(`${API_URL}/admin/config/upload-image`, formData, {
         headers: { 
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -1403,5 +1403,6 @@ const PreviewItem = ({ icon, label }: any) => (
 );
 
 export default AdminConfigPage;
+
 
 
