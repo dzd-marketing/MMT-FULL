@@ -19,7 +19,6 @@ import axios from 'axios';
 import Sidebar from './Sidebar';
 
 interface Config {
-  // Maintenance
   maintenance_mode: string;
   maintenance_message: string;
   
@@ -1407,3 +1406,4 @@ const PreviewItem = ({ icon, label }: any) => (
 );
 
 export default AdminConfigPage;
+
