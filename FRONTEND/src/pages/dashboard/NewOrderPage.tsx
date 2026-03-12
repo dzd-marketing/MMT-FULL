@@ -128,7 +128,7 @@ const NewOrder: React.FC = () => {
   const [serviceDropdownOpen, setServiceDropdownOpen] = useState(false);
   const [showServiceInfo, setShowServiceInfo] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const mapBackendCurrency = (backendCurrency: string): Currency => {
     if (backendCurrency === 'USD' || backendCurrency === 'LKR' || backendCurrency === 'INR') return backendCurrency;
