@@ -17,7 +17,8 @@ import {
   LayoutGrid, ListTodo, SlidersHorizontal, Settings2, Code,
   Inbox, Send, Reply, Paperclip, AtSign, Flag, AlertTriangle,
   AlertOctagon, MessageCircle, MessagesSquare, PhoneCall,
-  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Archive, Tag, Minus
+  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Archive, Tag, Minus,
+  FileText, File, FileImage, FileArchive
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
@@ -68,7 +69,6 @@ interface TicketAttachment {
   reply_id: number | null;
   file_name: string;
   file_path: string;
-  file_url?: string;
   file_size: number;
   mime_type: string;
   uploaded_by: number | null;
@@ -236,6 +236,78 @@ const Avatar: React.FC<{ src?: string | null; name: string; size?: 'sm' | 'md' |
   );
 };
 
+// ============= Attachment Preview Component =============
+
+const AttachmentPreview: React.FC<{ attachment: TicketAttachment }> = ({ attachment }) => {
+  const [imageError, setImageError] = useState(false);
+  
+  const API_URL = import.meta.env.VITE_API_URL;
+  const BASE_URL = API_URL?.replace('/api', '') || 'https://mmtsmmpanel.cyberservice.online';
+
+  // Get attachment URL from file_path
+  const getAttachmentUrl = () => {
+    if (!attachment.file_path) return '';
+    
+    // If it's already a full URL
+    if (attachment.file_path.startsWith('http')) return attachment.file_path;
+    
+    // Extract just the filename from the full system path
+    // Example: "/home/user/.../uploads/tickets/filename.png" -> "filename.png"
+    const filename = attachment.file_path.split('/').pop();
+    
+    // Return the public URL
+    return `${BASE_URL}/uploads/tickets/${filename}`;
+  };
+
+  const fileUrl = getAttachmentUrl();
+
+  // Get appropriate icon based on file type
+  const getFileIcon = () => {
+    if (attachment.mime_type?.startsWith('image/')) return <FileImage className="w-4 h-4 text-brand" />;
+    if (attachment.mime_type?.includes('pdf')) return <FileText className="w-4 h-4 text-red-400" />;
+    if (attachment.mime_type?.includes('zip') || attachment.mime_type?.includes('rar') || attachment.mime_type?.includes('tar')) 
+      return <FileArchive className="w-4 h-4 text-yellow-400" />;
+    if (attachment.mime_type?.includes('word') || attachment.file_name?.endsWith('.doc') || attachment.file_name?.endsWith('.docx')) 
+      return <FileText className="w-4 h-4 text-blue-400" />;
+    return <File className="w-4 h-4 text-gray-400" />;
+  };
+
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  return (
+    <a 
+      href={fileUrl} 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 p-2 bg-black/30 rounded-lg hover:bg-black/50 transition-colors group"
+    >
+      {attachment.mime_type?.startsWith('image/') && !imageError ? (
+        <img 
+          src={fileUrl} 
+          alt={attachment.file_name} 
+          className="w-10 h-10 object-cover rounded group-hover:scale-110 transition-transform" 
+          onError={() => setImageError(true)}
+          loading="lazy"
+        />
+      ) : (
+        <div className="w-10 h-10 bg-brand/10 rounded flex items-center justify-center">
+          {getFileIcon()}
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-white truncate">{attachment.file_name}</p>
+        <p className="text-xs text-gray-500">{formatFileSize(attachment.file_size)}</p>
+      </div>
+      <ExternalLink className="w-4 h-4 text-gray-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+    </a>
+  );
+};
+
 // ============= Main Component =============
 
 const AdminTicketsPage: React.FC = () => {
@@ -283,34 +355,11 @@ const AdminTicketsPage: React.FC = () => {
 
   const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('adminToken')}` });
 
-  // ============= IMAGE URL HELPER =============
-  const getImageUrl = (imagePath: string | null) => {
-    if (!imagePath) return '';
-    if (imagePath.startsWith('http')) return imagePath;
-    const cleanPath = imagePath.replace(/^\/api/, '');
-    return `${BASE_URL}${cleanPath}`;
-  };
-
-  // ============= FIXED: For ticket attachments =============
-  const getAttachmentUrl = (attachment: TicketAttachment) => {
-    if (attachment.file_url) return attachment.file_url;
-    if (attachment.file_path) {
-      // If it's already a full URL
-      if (attachment.file_path.startsWith('http')) return attachment.file_path;
-      
-      // Remove any '/api' prefix if present
-      const cleanPath = attachment.file_path.replace(/^\/api/, '');
-      
-      // If path doesn't start with /uploads, add it
-      if (!cleanPath.startsWith('/uploads')) {
-        // Extract filename from path
-        const filename = cleanPath.split('/').pop();
-        return `${BASE_URL}/uploads/tickets/${filename}`;
-      }
-      
-      return `${BASE_URL}${cleanPath}`;
-    }
-    return '';
+  // ============= Helper Functions =============
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
   useEffect(() => {
@@ -369,7 +418,6 @@ const AdminTicketsPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-
   const fetchTickets = async () => {
     setLoading(true);
     try {
@@ -416,7 +464,6 @@ const AdminTicketsPage: React.FC = () => {
       console.error('Error fetching ticket details:', error);
     }
   };
-
 
   const handleBulkAction = async () => {
     if (!bulkAction || selectedTickets.length === 0) return;
@@ -532,13 +579,6 @@ const AdminTicketsPage: React.FC = () => {
     );
     setActiveDropdown(ticketId);
   };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
 
   const StatCard = ({ label, count, icon: Icon, color, onClick, active }: any) => (
     <motion.div whileHover={{ y: -2, scale: 1.02 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -925,34 +965,14 @@ const AdminTicketsPage: React.FC = () => {
                 {/* Attachments - FIXED */}
                 {ticketAttachments.length > 0 && (
                   <div className="bg-white/5 rounded-xl p-4">
-                    <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><Paperclip className="w-4 h-4 text-brand" />Attachments ({ticketAttachments.length})</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      {ticketAttachments.map(att => {
-                        const fileUrl = getAttachmentUrl(att);
-                        return (
-                          <a key={att.id} href={fileUrl} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-2 p-2 bg-black/30 rounded-lg hover:bg-black/50 transition-colors">
-                            {att.mime_type?.startsWith('image/') ? (
-                              <img 
-                                src={fileUrl} 
-                                alt={att.file_name} 
-                                className="w-8 h-8 object-cover rounded" 
-                                onError={(e) => { 
-                                  console.log('Image failed to load:', fileUrl);
-                                  e.currentTarget.style.display = 'none'; 
-                                }} 
-                              />
-                            ) : (
-                              <Paperclip className="w-4 h-4 text-gray-400" />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-white truncate">{att.file_name}</p>
-                              <p className="text-xs text-gray-500">{formatFileSize(att.file_size)}</p>
-                            </div>
-                            <ExternalLink className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                          </a>
-                        );
-                      })}
+                    <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                      <Paperclip className="w-4 h-4 text-brand" />
+                      Attachments ({ticketAttachments.length})
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {ticketAttachments.map(att => (
+                        <AttachmentPreview key={att.id} attachment={att} />
+                      ))}
                     </div>
                   </div>
                 )}
