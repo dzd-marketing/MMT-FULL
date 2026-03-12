@@ -1,11 +1,10 @@
-// routes/wallet.js
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { cache, CACHE_KEYS } = require('../utils/cache');
 
 module.exports = (pool) => {
-    // Middleware to verify token
+
     const verifyToken = async (req, res, next) => {
         try {
             const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -19,7 +18,6 @@ module.exports = (pool) => {
 
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             
-            // Check if session exists
             const [sessions] = await pool.execute(
                 'SELECT user_id FROM user_sessions WHERE token = ? AND expires_at > NOW() AND is_valid = true',
                 [token]
@@ -47,12 +45,11 @@ module.exports = (pool) => {
         }
     };
 
-    // Get wallet details for logged in user (with caching)
+   
     router.get('/details', verifyToken, async (req, res) => {
         try {
             const userId = req.userId;
-            
-            // Check cache first
+    
             const cacheKey = CACHE_KEYS.USER_WALLET(userId);
             const cachedWallet = cache.get(cacheKey);
             
@@ -67,7 +64,7 @@ module.exports = (pool) => {
             
             console.log(`💰 [CACHE] Wallet miss for user ${userId} - fetching from DB`);
 
-            // Get wallet details - created_at, updated_at columns නැතුව
+         
             const [wallets] = await pool.execute(
                 `SELECT 
                     id,
@@ -84,7 +81,7 @@ module.exports = (pool) => {
             let walletData;
 
             if (wallets.length === 0) {
-                // If wallet doesn't exist, create one
+         
                 const [users] = await pool.execute(
                     'SELECT email FROM users WHERE id = ?',
                     [userId]
@@ -117,7 +114,6 @@ module.exports = (pool) => {
                 };
             }
 
-            // Store in cache for 5 minutes (300 seconds)
             cache.set(cacheKey, walletData, 2);
             console.log(`💰 [CACHE] Cached wallet for user ${userId}`);
 
@@ -135,7 +131,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Get wallet balance only (lightweight) with caching
     router.get('/balance', verifyToken, async (req, res) => {
         try {
             const userId = req.userId;
@@ -178,13 +173,12 @@ module.exports = (pool) => {
         }
     });
 
-    // Get transaction history (if you have transactions table)
     router.get('/transactions', verifyToken, async (req, res) => {
         try {
             const userId = req.userId;
             const limit = parseInt(req.query.limit) || 10;
 
-            // Check cache for transactions
+ 
             const cacheKey = `user:${userId}:transactions:${limit}`;
             const cachedTransactions = cache.get(cacheKey);
             
@@ -196,7 +190,7 @@ module.exports = (pool) => {
                 });
             }
 
-            // If you have a transactions table
+    
             const [transactions] = await pool.execute(
                 `SELECT 
                     id,
@@ -212,7 +206,6 @@ module.exports = (pool) => {
                 [userId, limit]
             );
 
-            // Cache transactions for 2 minutes
             cache.set(cacheKey, transactions, 120);
 
             res.json({
@@ -222,7 +215,7 @@ module.exports = (pool) => {
 
         } catch (error) {
             console.error('Get transactions error:', error);
-            // If transactions table doesn't exist, return empty array
+            
             res.json({
                 success: true,
                 transactions: []
@@ -230,7 +223,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Update wallet balance (for internal use - protected)
+
     router.post('/update-balance', verifyToken, async (req, res) => {
         try {
             const { amount, type } = req.body; // type: 'add' or 'spend'
@@ -243,7 +236,6 @@ module.exports = (pool) => {
                 });
             }
 
-            // Clear wallet cache before updating
             const cacheKey = CACHE_KEYS.USER_WALLET(userId);
             cache.del(cacheKey);
             console.log(`🧹 [CACHE] Cleared wallet cache for user ${userId} before update`);
@@ -270,7 +262,7 @@ module.exports = (pool) => {
 
             const newBalance = parseFloat(wallets[0]?.available_balance || 0).toFixed(2);
 
-            // Update cache with new wallet data
+     
             const [fullWallet] = await pool.execute(
                 `SELECT 
                     id,
@@ -313,7 +305,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Clear wallet cache manually (useful for testing)
     router.post('/clear-cache', verifyToken, async (req, res) => {
         try {
             const userId = req.userId;
@@ -335,3 +326,4 @@ module.exports = (pool) => {
 
     return router;
 };
+
