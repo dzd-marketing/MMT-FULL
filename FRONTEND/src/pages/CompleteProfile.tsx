@@ -15,7 +15,6 @@ import {
 } from 'libphonenumber-js';
 import Loader1 from '../components/LoadingScreen2';
 
-// ─── Country data ─────────────────────────────────────────────────────────────
 
 const COUNTRY_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
 const API_URL = import.meta.env.VITE_API_URL;
@@ -40,7 +39,7 @@ const ALL_COUNTRIES: Country[] = getCountries()
 
 const DEFAULT_COUNTRY = ALL_COUNTRIES.find(c => c.code === 'LK')!;
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+
 
 interface FieldErrors {
     name?: string;
@@ -51,7 +50,7 @@ interface FieldErrors {
     general?: string;
 }
 
-// ─── Custom Phone Input ───────────────────────────────────────────────────────
+
 
 interface PhoneFieldProps {
     value: string;
@@ -71,8 +70,6 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
     const dropdownRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
 
-
-    // Close on outside click
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -84,7 +81,6 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Focus search when dropdown opens
     useEffect(() => {
         if (open) setTimeout(() => searchRef.current?.focus(), 50);
     }, [open]);
@@ -107,7 +103,7 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
         onCountryChange(c);
         setOpen(false);
         setSearch('');
-        // Re-emit with new dial code
+      
         const full = `${c.dialCode}${raw.replace(/\D/g, '')}`;
         onChange(full);
     };
@@ -118,9 +114,9 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
 
     return (
         <div className="relative" ref={dropdownRef}>
-            {/* Input row */}
+         
             <div className={`flex items-center border rounded-xl bg-zinc-50 dark:bg-zinc-900 transition-all overflow-visible ${borderClass}`}>
-                {/* Country button */}
+         
                 <button
                     type="button"
                     onClick={() => setOpen(o => !o)}
@@ -166,7 +162,7 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
                             </div>
                         </div>
 
-                        {/* Country list */}
+                  
                         <ul className="max-h-52 overflow-y-auto py-1 scrollbar-thin">
                             {filtered.length === 0 ? (
                                 <li className="px-4 py-3 text-sm text-zinc-400 text-center">No countries found</li>
@@ -197,8 +193,6 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
     );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
 interface FormData {
     name: string;
     email: string;
@@ -219,14 +213,13 @@ const CompleteProfile: React.FC = () => {
         name: '', email: '', password: '', confirmPassword: ''
     });
 
-    // Phone state — country + raw E.164
+   
     const [phoneCountry, setPhoneCountry] = useState<Country>(DEFAULT_COUNTRY);
     const [phoneE164, setPhoneE164] = useState('');
 
     const [waCountry, setWaCountry] = useState<Country>(DEFAULT_COUNTRY);
     const [waE164, setWaE164] = useState('');
 
-    // ── Fetch user from token ────────────────────────────────────────────────
 
     useEffect(() => {
         const init = async () => {
@@ -259,8 +252,7 @@ const CompleteProfile: React.FC = () => {
         init();
     }, [navigate]);
 
-    // ── Password validation ──────────────────────────────────────────────────
-
+   
     const validatePassword = (pass: string) => {
         const errs: string[] = [];
         if (pass.length < 8)                          errs.push('At least 8 characters');
@@ -276,8 +268,6 @@ const CompleteProfile: React.FC = () => {
         setPasswordErrors(formData.password ? validatePassword(formData.password) : []);
     }, [formData.password]);
 
-    // ── Handlers ────────────────────────────────────────────────────────────
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(p => ({ ...p, [name]: value }));
@@ -285,8 +275,7 @@ const CompleteProfile: React.FC = () => {
             setFieldErrors(p => ({ ...p, [name]: undefined }));
     };
 
-    // ── Validation ───────────────────────────────────────────────────────────
-
+   
     const validateForm = (): boolean => {
         const errors: FieldErrors = {};
 
@@ -314,8 +303,7 @@ const CompleteProfile: React.FC = () => {
         return Object.keys(errors).length === 0;
     };
 
-    // ── Submit ───────────────────────────────────────────────────────────────
-
+    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateForm()) return;
@@ -362,7 +350,7 @@ const CompleteProfile: React.FC = () => {
         }
     };
 
-    // ── UI helpers ───────────────────────────────────────────────────────────
+ 
 
     const FieldError = ({ error }: { error?: string }) =>
         error ? (
@@ -385,7 +373,6 @@ const CompleteProfile: React.FC = () => {
                 : 'border-zinc-200 dark:border-zinc-800 focus:ring-brand'
         }`;
 
-    // ── Render ───────────────────────────────────────────────────────────────
 
     return (
         <motion.div
@@ -410,7 +397,7 @@ const CompleteProfile: React.FC = () => {
                 )}
 
                 <div className="p-8 md:p-12">
-                    {/* Header */}
+                   
                     <div className="mb-8 text-center">
                         <Link to="/">
                             <img
@@ -433,8 +420,7 @@ const CompleteProfile: React.FC = () => {
                         </p>
                     </div>
 
-                    {/* General error */}
-                    <AnimatePresence>
+                   <AnimatePresence>
                         {fieldErrors.general && (
                             <motion.div
                                 initial={{ opacity: 0, y: -8 }}
@@ -448,7 +434,6 @@ const CompleteProfile: React.FC = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Success banner */}
                     <AnimatePresence>
                         {successMessage && (
                             <motion.div
@@ -626,7 +611,7 @@ const CompleteProfile: React.FC = () => {
                             <FieldError error={fieldErrors.confirmPassword} />
                         </div>
 
-                        {/* Submit */}
+                    
                         <div className="pt-4">
                             <button
                                 type="submit"
