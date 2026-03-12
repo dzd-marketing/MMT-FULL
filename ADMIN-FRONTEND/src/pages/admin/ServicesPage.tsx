@@ -1,4 +1,3 @@
-// pages/admin/ServicesPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactDOM from 'react-dom';
@@ -406,7 +405,7 @@ const AdminServicesPage: React.FC = () => {
   // Refs
   const dropdownRef = useRef<HTMLDivElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
   const [currentPage, setCurrentPage] = useState(1);
 
   // Sync states
@@ -439,7 +438,6 @@ const AdminServicesPage: React.FC = () => {
     if (search) setSearchQuery(search);
   }, []);
 
-  // Load all data on component mount
   useEffect(() => {
     loadServices();
     fetchStats();
@@ -447,13 +445,11 @@ const AdminServicesPage: React.FC = () => {
     fetchProviders();
   }, []);
 
-  // Filter services whenever filters or search change
   useEffect(() => {
     if (!allServices.length) return;
 
     let filtered = [...allServices];
 
-    // Apply search filter
     if (searchQuery && searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(service => {
@@ -464,14 +460,12 @@ const AdminServicesPage: React.FC = () => {
       });
     }
 
-    // Apply category filter
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(service =>
         service.category_id.toString() === selectedCategory
       );
     }
 
-    // Apply status filter
     if (selectedStatus !== 'all') {
       filtered = filtered.filter(service => {
         if (selectedStatus === 'active') {
@@ -483,14 +477,12 @@ const AdminServicesPage: React.FC = () => {
       });
     }
 
-    // Apply package filter
     if (selectedPackage !== 'all') {
       filtered = filtered.filter(service =>
         service.service_package === selectedPackage
       );
     }
 
-    // Apply secret filter
     if (selectedSecret !== 'all') {
       filtered = filtered.filter(service => {
         if (selectedSecret === 'secret') {
@@ -502,7 +494,6 @@ const AdminServicesPage: React.FC = () => {
       });
     }
 
-    // Apply refill filter
     if (selectedRefill !== 'all') {
       filtered = filtered.filter(service => {
         if (selectedRefill === 'true') {
@@ -514,7 +505,6 @@ const AdminServicesPage: React.FC = () => {
       });
     }
 
-    // Apply cancel filter
     if (selectedCancel !== 'all') {
       filtered = filtered.filter(service => {
         if (selectedCancel === '1') {
@@ -533,7 +523,6 @@ const AdminServicesPage: React.FC = () => {
   }, [allServices, searchQuery, selectedCategory, selectedStatus, selectedPackage,
     selectedSecret, selectedRefill, selectedCancel, displayLimit]);
 
-  // Update URL params when filters change
   useEffect(() => {
     const params = new URLSearchParams();
     if (selectedCategory !== 'all') params.set('category', selectedCategory);
@@ -547,7 +536,6 @@ const AdminServicesPage: React.FC = () => {
   }, [selectedCategory, selectedStatus, selectedPackage, selectedSecret,
     selectedRefill, selectedCancel, searchQuery]);
 
-  // Handle select all checkbox
   useEffect(() => {
     if (selectAll) {
       setSelectedServices(displayedServices.map(s => s.service_id));
@@ -556,7 +544,6 @@ const AdminServicesPage: React.FC = () => {
     }
   }, [selectAll, displayedServices]);
 
-  // Handle click outside for dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -568,7 +555,6 @@ const AdminServicesPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ============= Load More Function =============
   const loadMore = () => {
     const newLimit = displayLimit + 30;
     setDisplayLimit(newLimit);
@@ -576,13 +562,11 @@ const AdminServicesPage: React.FC = () => {
     setHasMore(filteredServices.length > newLimit);
   };
 
-  // ============= Load Services with Cache =============
   const loadServices = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
 
-      // Check cache first
       const cachedData = localStorage.getItem(CACHE_KEY);
       const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
 
@@ -601,7 +585,6 @@ const AdminServicesPage: React.FC = () => {
         }
       }
 
-      // If cache expired or doesn't exist, fetch from API
       await fetchAllServicesFromAPI();
 
     } catch (error) {
@@ -610,7 +593,6 @@ const AdminServicesPage: React.FC = () => {
     }
   };
 
-  // ============= Fetch ALL Services from API =============
   const fetchAllServicesFromAPI = async () => {
     setLoadingCache(true);
     try {
@@ -622,7 +604,6 @@ const AdminServicesPage: React.FC = () => {
       if (response.data.success) {
         const services = response.data.services;
 
-        // Store in cache
         localStorage.setItem(CACHE_KEY, JSON.stringify(services));
         localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
 
@@ -639,7 +620,6 @@ const AdminServicesPage: React.FC = () => {
     }
   };
 
-  // ============= Search Handler =============
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
@@ -707,7 +687,6 @@ const AdminServicesPage: React.FC = () => {
     }
   };
 
-  // ============= Action Handlers =============
 
   const handleBulkAction = async () => {
     if (!bulkAction || selectedServices.length === 0) return;
@@ -724,7 +703,7 @@ const AdminServicesPage: React.FC = () => {
       );
 
       if (response.data.success) {
-        await loadServices(); // Reload from cache/API
+        await loadServices(); 
         fetchStats();
         setSelectedServices([]);
         setSelectAll(false);
@@ -763,7 +742,7 @@ const AdminServicesPage: React.FC = () => {
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      await loadServices(); // Reload from cache/API
+      await loadServices();
       fetchStats();
       setActiveDropdown(null);
       setDropdownPosition(null);
@@ -783,7 +762,7 @@ const AdminServicesPage: React.FC = () => {
         { secret: newSecret },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      await loadServices(); // Reload from cache/API
+      await loadServices(); 
       setActiveDropdown(null);
       setDropdownPosition(null);
     } catch (error) {
@@ -802,7 +781,7 @@ const AdminServicesPage: React.FC = () => {
         { enabled: newRefill },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      await loadServices(); // Reload from cache/API
+      await loadServices(); 
       setActiveDropdown(null);
       setDropdownPosition(null);
     } catch (error) {
@@ -821,7 +800,7 @@ const AdminServicesPage: React.FC = () => {
         { enabled: newCancel },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      await loadServices(); // Reload from cache/API
+      await loadServices(); 
       setActiveDropdown(null);
       setDropdownPosition(null);
     } catch (error) {
@@ -840,7 +819,7 @@ const AdminServicesPage: React.FC = () => {
       await axios.delete(`${API_URL}/admin/services/${serviceId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      await loadServices(); // Reload from cache/API
+      await loadServices(); 
       fetchStats();
       setActiveDropdown(null);
       setDropdownPosition(null);
@@ -881,7 +860,7 @@ const AdminServicesPage: React.FC = () => {
 
       if (response.data.success) {
         setShowCreateModal(false);
-        await loadServices(); // Reload from cache/API
+        await loadServices(); 
         fetchStats();
       }
     } catch (error) {
@@ -919,7 +898,7 @@ const AdminServicesPage: React.FC = () => {
 
       if (response.data.success) {
         setShowEditModal(false);
-        await loadServices(); // Reload from cache/API
+        await loadServices(); 
         fetchStats();
       }
     } catch (error) {
@@ -963,7 +942,7 @@ const AdminServicesPage: React.FC = () => {
         setProviderServices([]);
         setSelectedImportServices({});
         setAutoCreateCategories(false);
-        await loadServices(); // Reload from cache/API
+        await loadServices(); 
         fetchStats();
         fetchCategories();
 
@@ -1015,7 +994,6 @@ const AdminServicesPage: React.FC = () => {
 
   const handleRefresh = async () => {
     setLoading(true);
-    // Clear cache
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(CACHE_TIMESTAMP_KEY);
     await loadServices();
@@ -1054,7 +1032,6 @@ const AdminServicesPage: React.FC = () => {
     setActiveDropdown(serviceId);
   };
 
-  // ============= Helper Functions =============
 
   const parsePrice = (price: number | string): number => {
     if (typeof price === 'string') {
@@ -1136,7 +1113,6 @@ const AdminServicesPage: React.FC = () => {
     </motion.div>
   );
 
-  // ============= Sync Prices Function =============
   const handleSyncPrices = async () => {
     setSyncing(true);
     try {
@@ -1149,7 +1125,6 @@ const AdminServicesPage: React.FC = () => {
 
       if (response.data.success) {
         setSyncResults(response.data.results);
-        // Reload services to show updated is_new flags
         await loadServices();
 
         if (autoUpdate) {
@@ -1165,7 +1140,6 @@ const AdminServicesPage: React.FC = () => {
     }
   };
 
-  // Add this function with your other handlers
   const handleApplyPriceUpdates = async () => {
     const selectedIds = Object.keys(selectedUpdates)
       .filter(id => selectedUpdates[parseInt(id)])
@@ -1180,7 +1154,6 @@ const AdminServicesPage: React.FC = () => {
     try {
       const token = localStorage.getItem('adminToken');
 
-      // Find the selected updates from syncResults
       const updatesToApply = syncResults.updates.filter(
         (u: any) => selectedIds.includes(u.service_id)
       );
@@ -1193,7 +1166,7 @@ const AdminServicesPage: React.FC = () => {
 
       if (response.data.success) {
         alert(`Successfully updated ${response.data.updated} services!`);
-        await loadServices(); // Reload to get fresh data
+        await loadServices(); 
         setShowSyncModal(false);
         setSyncResults(null);
         setSelectedUpdates({});
@@ -1205,7 +1178,6 @@ const AdminServicesPage: React.FC = () => {
       setApplyingUpdates(false);
     }
   };
-  // ============= Options for Dropdowns =============
 
   const statusOptions = [
     { value: 'all', label: 'All Status' },
@@ -1504,9 +1476,7 @@ const AdminServicesPage: React.FC = () => {
             />
           </div>
 
-          {/* Main Content Area with Categories Sidebar */}
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Categories Sidebar */}
             <div className="lg:w-80 shrink-0">
               <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-5 sticky top-24">
                 <div className="flex items-center justify-between mb-4">
@@ -1520,8 +1490,8 @@ const AdminServicesPage: React.FC = () => {
                   <button
                     onClick={() => {
                       setSelectedCategory('all');
-                      setSearchQuery(''); // Clear search query
-                      setCurrentPage(1); // Reset to first page
+                      setSearchQuery(''); 
+                      setCurrentPage(1); 
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all duration-200 ${selectedCategory === 'all'
                       ? 'bg-gradient-to-r from-brand/20 to-purple-600/20 text-white border border-brand/30'
@@ -1541,8 +1511,8 @@ const AdminServicesPage: React.FC = () => {
                       key={category.category_id}
                       onClick={() => {
                         setSelectedCategory(category.category_id.toString());
-                        setSearchQuery(''); // Clear search query when clicking category
-                        setCurrentPage(1); // Reset to first page
+                        setSearchQuery('');
+                        setCurrentPage(1); 
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all duration-200 ${selectedCategory === category.category_id.toString()
                         ? 'bg-gradient-to-r from-brand/20 to-purple-600/20 text-white border border-brand/30'
