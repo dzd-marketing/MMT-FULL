@@ -117,7 +117,7 @@ const Services: React.FC = () => {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   
-  // Currency states
+
   const [currency, setCurrency] = useState<'LKR' | 'USD' | 'INR'>('LKR');
   const [exchangeRate, setExchangeRate] = useState<ExchangeRateData | null>(null);
   const [loadingRate, setLoadingRate] = useState(false);
@@ -140,8 +140,8 @@ const Services: React.FC = () => {
   const CACHE_TIMESTAMP_KEY = 'services_cache_timestamp';
   const RATE_CACHE_KEY = 'exchange_rate_cache';
   const RATE_TIMESTAMP_KEY = 'exchange_rate_timestamp';
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-  const RATE_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+  const CACHE_DURATION = 5 * 60 * 1000;
+  const RATE_CACHE_DURATION = 60 * 60 * 1000; 
 
   const categories: Category[] = [
     { id: 'all', name: 'All Services' },
@@ -195,10 +195,10 @@ const Services: React.FC = () => {
   useEffect(() => {
     setCurrentPage(1);
     updateDisplayedServices(filteredServices, 1);
-  }, [filteredServices, currency, exchangeRate]); // Re-render when currency changes
+  }, [filteredServices, currency, exchangeRate]);
 
   const loadExchangeRate = async () => {
-    // Check cache first
+  
     const cachedRate = localStorage.getItem(RATE_CACHE_KEY);
     const cachedTimestamp = localStorage.getItem(RATE_TIMESTAMP_KEY);
     
@@ -212,7 +212,7 @@ const Services: React.FC = () => {
       }
     }
     
-    // Fetch new rate
+   
     setLoadingRate(true);
     try {
       const response = await fetch('https://hexarate.paikama.co/api/rates/USD/LKR/latest');
@@ -397,7 +397,7 @@ const Services: React.FC = () => {
     
     if (isNaN(num)) return '0.00';
     
-    // Convert currency if needed
+   
     if (currency === 'USD' && exchangeRate) {
       const usdPrice = num / exchangeRate.rate;
       return usdPrice.toLocaleString('en-US', {
@@ -407,17 +407,16 @@ const Services: React.FC = () => {
     }
     
     if (currency === 'INR' && exchangeRate) {
-      // First convert LKR to USD, then USD to INR (approximate)
-      // Using approximate rate: 1 USD ≈ 85 INR
+     
+      
       const usdPrice = num / exchangeRate.rate;
-      const inrPrice = usdPrice * 85; // Approximate USD to INR rate
+      const inrPrice = usdPrice * 85;
       return inrPrice.toLocaleString('en-IN', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 3
       });
     }
     
-    // LKR - format with Sri Lankan style
     return num.toLocaleString('en-LK', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 3
@@ -435,7 +434,7 @@ const Services: React.FC = () => {
   };
 
   const handleOrderNow = (service: Service) => {
-    // Navigate to order page with service data
+   
     navigate('/dashboard/new-order', { 
       state: { 
         service: {
@@ -469,7 +468,7 @@ const Services: React.FC = () => {
     setLoading(true);
     setInitialLoad(true);
     fetchServicesFromAPI();
-    loadExchangeRate(); // Refresh rate too
+    loadExchangeRate();
   };
 
   if (initialLoad) {
