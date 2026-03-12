@@ -37,7 +37,7 @@ const API_URL = import.meta.env.VITE_API_URL;
   useEffect(() => {
     if (isVisible) {
       const startTime = Date.now();
-      const duration = 8000; // 8 seconds
+      const duration = 8000; 
 
       const timer = setInterval(() => {
         const elapsed = Date.now() - startTime;
@@ -71,15 +71,15 @@ const API_URL = import.meta.env.VITE_API_URL;
         
         setAlert(newAlert);
 
-        // Check if this alert has been shown before
+   
         const alertKey = `alert_${newAlert.heading}_${newAlert.description}`;
         const hasBeenShown = localStorage.getItem(alertKey);
 
-        // Auto show if enabled, has content, and hasn't been shown before
+  
         if (enabled && !hasBeenShown && (newAlert.heading || newAlert.description || newAlert.message)) {
           setTimeout(() => {
             setIsVisible(true);
-            // Mark as shown in local storage
+       
             localStorage.setItem(alertKey, 'true');
           }, 1500);
         }
@@ -151,7 +151,7 @@ const API_URL = import.meta.env.VITE_API_URL;
     return colors[alert.type] || colors.info;
   };
 
-  // Don't render if no content or not enabled
+
   const hasContent = alert.heading || alert.description || alert.message;
   if (!hasContent || !alert.enabled || loading) {
     return null;
@@ -163,7 +163,7 @@ const API_URL = import.meta.env.VITE_API_URL;
     <AnimatePresence>
       {isVisible && (
         <>
-          {/* Backdrop */}
+       
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -172,7 +172,7 @@ const API_URL = import.meta.env.VITE_API_URL;
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
           />
 
-          {/* Alert Popup */}
+        
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -184,7 +184,7 @@ const API_URL = import.meta.env.VITE_API_URL;
             }}
             className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[90%] sm:w-[400px] max-w-[400px]"
           >
-            {/* Card */}
+      
             <div className={`
               relative overflow-hidden
               ${colors.bg}
@@ -192,18 +192,17 @@ const API_URL = import.meta.env.VITE_API_URL;
               rounded-2xl shadow-2xl ${colors.shadow}
               backdrop-blur-md
             `}>
-              {/* Top Gradient Line */}
               <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${colors.gradient}`} />
 
-              {/* Decorative Elements */}
+     
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full blur-2xl" />
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-white/5 to-transparent rounded-full blur-xl" />
 
-              {/* Content */}
+  
               <div className="relative p-5">
-                {/* Header */}
+            
                 <div className="flex items-start gap-3 mb-4">
-                  {/* Icon */}
+               
                   <div className={`
                     relative p-2.5 rounded-xl
                     ${colors.light}
@@ -214,7 +213,7 @@ const API_URL = import.meta.env.VITE_API_URL;
                     </div>
                   </div>
 
-                  {/* Title and Time */}
+        
                   <div className="flex-1">
                     <h3 className={`text-base font-bold ${colors.text}`}>
                       {alert.heading || (
@@ -232,7 +231,7 @@ const API_URL = import.meta.env.VITE_API_URL;
                     </p>
                   </div>
 
-                  {/* Close Button */}
+         
                   <button
                     onClick={handleClose}
                     className={`
@@ -247,7 +246,6 @@ const API_URL = import.meta.env.VITE_API_URL;
                   </button>
                 </div>
 
-                {/* Description */}
                 {(alert.description || alert.message) && (
                   <div className="mb-4">
                     <p className="text-sm text-gray-300 leading-relaxed">
@@ -256,7 +254,6 @@ const API_URL = import.meta.env.VITE_API_URL;
                   </div>
                 )}
 
-                {/* Progress Bar */}
                 <div className="relative h-1 bg-white/5 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: '100%' }}
@@ -275,4 +272,5 @@ const API_URL = import.meta.env.VITE_API_URL;
 };
 
 export default GlobalAlert;
+
 
