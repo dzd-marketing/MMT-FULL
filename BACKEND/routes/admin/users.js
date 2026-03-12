@@ -6,7 +6,6 @@ const bcrypt = require('bcryptjs');
 module.exports = (pool) => {
 const adminAuth = require('../admin-auth')(pool);
 
-    // Get all users with pagination and filters
     router.get('/all', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
@@ -45,7 +44,6 @@ const adminAuth = require('../admin-auth')(pool);
             let countParams = [];
             let queryParams = [];
 
-            // Add search filter
             if (search) {
                 const searchPattern = `%${search}%`;
                 countQuery += ' AND (full_name LIKE ? OR email LIKE ? OR phone LIKE ?)';
@@ -54,7 +52,6 @@ const adminAuth = require('../admin-auth')(pool);
                 queryParams.push(searchPattern, searchPattern, searchPattern);
             }
 
-            // Add status filter
             if (status !== 'all') {
                 const isActive = status === 'active' ? 1 : 0;
                 countQuery += ' AND u.is_active = ?';
@@ -63,7 +60,6 @@ const adminAuth = require('../admin-auth')(pool);
                 queryParams.push(isActive);
             }
 
-            // Add provider filter
             if (provider !== 'all') {
                 countQuery += ' AND u.auth_provider = ?';
                 query += ' AND u.auth_provider = ?';
@@ -71,27 +67,23 @@ const adminAuth = require('../admin-auth')(pool);
                 queryParams.push(provider);
             }
 
-            // Get total count
             const [countResult] = await pool.execute(countQuery, countParams);
             const totalUsers = countResult[0].total;
             const totalPages = Math.ceil(totalUsers / limit);
 
-            // Get users for current page
             query += ' ORDER BY u.created_at DESC LIMIT ? OFFSET ?';
             queryParams.push(limit, offset);
 
             const [users] = await pool.execute(query, queryParams);
 
-            // Get user stats for each user
             for (let user of users) {
-                // Get total orders
+     
                 const [orders] = await pool.execute(
                     'SELECT COUNT(*) as total_orders FROM orders WHERE user_id = ?',
                     [user.id]
                 );
                 user.total_orders = orders[0].total_orders;
 
-                // Get total deposits
                 const [deposits] = await pool.execute(
                     'SELECT COUNT(*) as total_deposits, COALESCE(SUM(amount), 0) as total_deposit_amount FROM deposits WHERE user_id = ?',
                     [user.id]
@@ -120,7 +112,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Get single user by ID
     router.get('/:id', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const { id } = req.params;
@@ -146,7 +137,6 @@ const adminAuth = require('../admin-auth')(pool);
 
             const user = users[0];
 
-            // Get orders
             const [orders] = await pool.execute(
                 `SELECT 
                     order_id, 
@@ -162,7 +152,6 @@ const adminAuth = require('../admin-auth')(pool);
             );
             user.recent_orders = orders;
 
-            // Get deposits
             const [deposits] = await pool.execute(
                 `SELECT 
                     id, 
@@ -177,7 +166,6 @@ const adminAuth = require('../admin-auth')(pool);
             );
             user.recent_deposits = deposits;
 
-            // Get stats
             const [stats] = await pool.execute(
                 `SELECT 
                     (SELECT COUNT(*) FROM orders WHERE user_id = ?) as total_orders,
@@ -202,7 +190,7 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Search users by email/name
+
     router.get('/search/:query', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const { query } = req.params;
@@ -237,7 +225,7 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Update user
+
     router.put('/:id', adminAuth.adminAuthMiddleware, async (req, res) => {
         const connection = await pool.getConnection();
         try {
@@ -255,7 +243,6 @@ const adminAuth = require('../admin-auth')(pool);
                 password 
             } = req.body;
 
-            // Check if user exists
             const [existing] = await connection.execute(
                 'SELECT id FROM users WHERE id = ?',
                 [id]
@@ -267,8 +254,6 @@ const adminAuth = require('../admin-auth')(pool);
                     message: 'User not found'
                 });
             }
-
-            // Build update query
             let updateFields = [];
             let queryParams = [];
 
@@ -316,7 +301,6 @@ const adminAuth = require('../admin-auth')(pool);
                 );
             }
 
-            // Update wallet balance if provided
             if (balance !== undefined) {
                 await connection.execute(
                     'UPDATE wallets SET available_balance = ? WHERE user_id = ?',
@@ -343,7 +327,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Delete user
     router.delete('/:id', adminAuth.adminAuthMiddleware, async (req, res) => {
         const connection = await pool.getConnection();
         try {
@@ -351,7 +334,6 @@ const adminAuth = require('../admin-auth')(pool);
 
             const { id } = req.params;
 
-            // Check if user exists
             const [existing] = await connection.execute(
                 'SELECT id FROM users WHERE id = ?',
                 [id]
@@ -364,31 +346,26 @@ const adminAuth = require('../admin-auth')(pool);
                 });
             }
 
-            // Delete user's sessions
             await connection.execute(
                 'DELETE FROM user_sessions WHERE user_id = ?',
                 [id]
             );
 
-            // Delete user's wallet
             await connection.execute(
                 'DELETE FROM wallets WHERE user_id = ?',
                 [id]
             );
 
-            // Delete user's deposits
             await connection.execute(
                 'DELETE FROM deposits WHERE user_id = ?',
                 [id]
             );
 
-            // Delete user's orders
             await connection.execute(
                 'DELETE FROM orders WHERE user_id = ?',
                 [id]
             );
 
-            // Finally delete user
             await connection.execute(
                 'DELETE FROM users WHERE id = ?',
                 [id]
@@ -413,7 +390,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Toggle user status
     router.patch('/:id/toggle-status', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const { id } = req.params;
@@ -424,7 +400,6 @@ const adminAuth = require('../admin-auth')(pool);
                 [is_active, id]
             );
 
-            // Invalidate sessions if deactivating
             if (is_active === 0) {
                 await pool.execute(
                     'UPDATE user_sessions SET is_valid = false WHERE user_id = ?',
@@ -446,7 +421,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Get user statistics
     router.get('/stats/summary', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const [stats] = await pool.execute(`
@@ -486,4 +460,5 @@ const adminAuth = require('../admin-auth')(pool);
     });
 
     return router;
+
 };
