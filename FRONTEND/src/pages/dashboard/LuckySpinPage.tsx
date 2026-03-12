@@ -21,7 +21,7 @@ import Chart from 'chart.js/auto';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import axios from 'axios';
 
-// Register Chart.js plugin
+
 Chart.register(ChartDataLabels);
 
 interface UserData {
@@ -70,68 +70,64 @@ const LuckySpin: React.FC = () => {
 
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // ===== SEGMENTS WITH EQUAL VISUAL SIZE =====
-  // All segments have equal min/max (60 degrees each) for equal visual appearance
   const segments = [
     { 
       value: "Rs. 200", 
-      color: "#1E3A5F", // Deep navy blue
+      color: "#1E3A5F", 
       textColor: "#ffffff", 
       min: 0, 
       max: 60 
     },
     { 
       value: "Rs. 100", 
-      color: "#2C3E50", // Dark slate
+      color: "#2C3E50", 
       textColor: "#ffffff", 
       min: 61, 
       max: 120 
     },
     { 
       value: "Rs. 20", 
-      color: "#4A2C40", // Deep burgundy
+      color: "#4A2C40", 
       textColor: "#ffffff", 
       min: 121, 
       max: 180 
     },
     { 
       value: "Rs. 10", 
-      color: "#7D4F2D", // Dark amber/bronze
+      color: "#7D4F2D", 
       textColor: "#ffffff", 
       min: 181, 
       max: 240 
     },
     { 
       value: "Rs. 10", 
-      color: "#2D2D2D", // Dark gray
+      color: "#2D2D2D",
       textColor: "#A0A0A0", 
       min: 241, 
       max: 300 
     },
     { 
       value: "No Luck", 
-      color: "#1E4A4A", // Deep teal
+      color: "#1E4A4A", 
       textColor: "#ffffff", 
       min: 301, 
       max: 360 
     },
   ];
 
-  // ===== PROBABILITY WEIGHTS (Hidden logic) =====
-  // These control the actual odds WITHOUT changing visual size
-  // Format: [Rs.200, Rs.100, Rs.20, Rs.10, Rs.10, No Luck]
-  const probabilityWeights = [0, 0, 2, 5, 5, 88]; // Total = 100
 
-  // Visual data - all equal (16.67% each) for display
+
+  const probabilityWeights = [0, 0, 2, 5, 5, 88];
+
+
   const visualData = [16.67, 16.67, 16.67, 16.67, 16.67, 16.67];
 
-  // Physics parameters
   const FRICTION = 0.993;
   const INITIAL_VELOCITY = 45;
   const MIN_VELOCITY = 0.1;
   const MAX_DURATION = 15000;
 
-// ===== Helper function to select segment based on probability weights =====
+
 const selectSegmentByProbability = (): number => {
   const totalWeight = probabilityWeights.reduce((sum, w) => sum + w, 0);
   const random = Math.random() * totalWeight;
@@ -140,15 +136,15 @@ const selectSegmentByProbability = (): number => {
   for (let i = 0; i < probabilityWeights.length; i++) {
     cumulative += probabilityWeights[i];
     if (random < cumulative) {
-      console.log(`Selected segment ${i} with weight ${probabilityWeights[i]}, random: ${random.toFixed(2)}`); // Debug
+      console.log(`Selected segment ${i} with weight ${probabilityWeights[i]}, random: ${random.toFixed(2)}`); 
       return i;
     }
   }
-  console.log(`Fallback to last segment`); // Debug
+  console.log(`Fallback to last segment`); 
   return probabilityWeights.length - 1;
 };
 
-  // Fetch spin stats
+
   const fetchSpinStats = async () => {
     try {
       const response = await axios.get(`${API_URL}/spin/stats`, {
@@ -175,7 +171,7 @@ const selectSegmentByProbability = (): number => {
     }
   };
 
-  // Check authentication and load data
+
   useEffect(() => {
     let isMounted = true;
 
@@ -210,7 +206,6 @@ const selectSegmentByProbability = (): number => {
     fetchUser();
   }, [navigate]);
 
-  // Initialize wheel chart with EQUAL visual segments
   useEffect(() => {
     if (!wheelRef.current || !user || authLoading || loading) return;
 
@@ -235,7 +230,7 @@ const selectSegmentByProbability = (): number => {
           data: {
             labels: segments.map(s => s.value),
             datasets: [{
-              data: visualData, // ← Equal sizes for display
+              data: visualData,
               backgroundColor: segments.map(s => s.color),
               borderColor: '#ffffff',
               borderWidth: isMobile ? 1.5 : 2.5,
@@ -297,7 +292,6 @@ const selectSegmentByProbability = (): number => {
     };
   }, [user, authLoading, loading]);
 
-  // Handle window resize
   useEffect(() => {
     if (!chartRef.current) return;
 
@@ -308,13 +302,12 @@ const selectSegmentByProbability = (): number => {
         const chart = chartRef.current;
         
         if (chart.options.plugins?.datalabels) {
-          // @ts-ignore
+       
           chart.options.plugins.datalabels.font = { 
             ...chart.options.plugins.datalabels.font,
             size: isMobile ? 11 : 16 
           };
-          
-          // @ts-ignore
+  
           chart.options.plugins.datalabels.formatter = (value: any, context: any) => {
             const index = context.dataIndex;
             if (isMobile) {
@@ -339,7 +332,7 @@ const selectSegmentByProbability = (): number => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-// Handle spin with PROBABILITY WEIGHTS and proper duration
+
 const handleSpin = () => {
   if (spinning || !canSpin) return;
 
@@ -348,26 +341,22 @@ const handleSpin = () => {
   setShowResult(false);
   setError('');
 
-  // Select segment based on probability weights (THIS IS CRITICAL)
   const targetSegmentIndex = selectSegmentByProbability();
   const targetSegment = segments[targetSegmentIndex];
   
-  // Calculate a random angle WITHIN that segment
-  // This ensures the wheel can land anywhere in the segment
+ 
   const targetDegree = Math.floor(
     Math.random() * (targetSegment.max - targetSegment.min) + targetSegment.min
   );
 
-  // We need to calculate how many rotations to add to reach target angle
-  // Start with a random number of full rotations (5-10) plus the target angle
+ 
   const currentRotation = chartRef.current?.options.rotation || 0;
-  const fullRotations = Math.floor(Math.random() * 5) + 8; // 8-12 full rotations
+  const fullRotations = Math.floor(Math.random() * 5) + 8;
   const totalTargetRotation = (fullRotations * 360) + targetDegree;
   
-  // Calculate how much we need to rotate from current position
+  
   let rotationNeeded = totalTargetRotation - currentRotation;
   
-  // Normalize to positive value
   while (rotationNeeded < 0) {
     rotationNeeded += 360;
   }
@@ -382,26 +371,25 @@ const handleSpin = () => {
     
     setTimer(`⏱️ ${remaining}s`);
 
-    // Apply friction to slow down
     currentVelocity *= FRICTION;
     
-    // Add current velocity to rotated amount
+  
     rotatedAmount += currentVelocity;
 
-    // Update rotation
+  
     if (chartRef.current) {
-      // @ts-ignore
+   
       chartRef.current.options.rotation = (currentRotation + rotatedAmount) % 360;
       chartRef.current.update();
     }
 
-    // Stop when we've rotated enough AND velocity is low OR max duration reached
+   
     if ((rotatedAmount >= rotationNeeded && currentVelocity < 5) || elapsed >= MAX_DURATION) {
       clearInterval(spinInterval);
       
-      // Ensure we end exactly at target degree
+      
       if (chartRef.current) {
-        // @ts-ignore
+      
         chartRef.current.options.rotation = targetDegree;
         chartRef.current.update();
       }
@@ -421,7 +409,7 @@ const handleSpin = () => {
   }, 20);
 };
 
-  // Submit spin result to backend
+  
   const submitSpinResult = async (prizeValue: string, prizeAmount: number) => {
     try {
       const response = await axios.post(`${API_URL}/spin/spin-result`, 
@@ -450,7 +438,7 @@ const handleSpin = () => {
     }
   };
 
-  // Play again
+
   const handlePlayAgain = () => {
     setShowResult(false);
     setResult(null);
