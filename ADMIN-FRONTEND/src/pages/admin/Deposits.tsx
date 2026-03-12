@@ -54,7 +54,7 @@ const AdminDepositsPage: React.FC = () => {
     total_approved_amount: 0
   });
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = 'https://admin.mmtsmmpanel.cyberservice.online';
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const icons = {
@@ -630,4 +630,5 @@ const AdminDepositsPage: React.FC = () => {
 };
 
 export default AdminDepositsPage;
+
 
