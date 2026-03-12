@@ -14,10 +14,9 @@ dotenv.config();
 
 const app = express();
 
-// Trust proxy — required for correct IP/protocol detection behind LiteSpeed
 app.set('trust proxy', 1);
 
-// ============= ALLOWED ORIGINS =============
+
 const allowedOrigins = [
     'https://mmtsmmpanel.cyberservice.online',
     'https://admin.mmtsmmpanel.cyberservice.online',
@@ -29,8 +28,7 @@ const corsOptions = {
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
         
-        // ✅ Fix: LiteSpeed sometimes duplicates the origin header
-        // Clean it by taking only the first value
+      
         const cleanOrigin = origin.split(',')[0].trim();
         
         if (allowedOrigins.includes(cleanOrigin)) {
@@ -47,7 +45,7 @@ const corsOptions = {
     optionsSuccessStatus: 200
 };
 
-// ============= CORS — MUST BE FIRST =============
+
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
@@ -62,7 +60,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// ============= UPLOAD FOLDER SETUP =============
+
 const uploadDirs = [
     './uploads/receipts',
     './uploads/config',
@@ -77,14 +75,13 @@ uploadDirs.forEach(dir => {
 const seoMiddleware = require('./middleware/seo-middleware')(promisePool);
 app.use(seoMiddleware);
 
-// ============= STATIC FILES (uploads) =============
-// ✅ FIXED: Remove manual CORS header, let CORS middleware handle it
+
 app.use('/uploads', (req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
 }, express.static(path.join(__dirname, 'uploads')));
 
-// ============= SECURITY MIDDLEWARE =============
+
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     contentSecurityPolicy: {
@@ -115,13 +112,10 @@ app.use(helmet({
     }
 }));
 
-
-// ============= BODY PARSERS =============
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ============= SESSION =============
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -134,11 +128,9 @@ app.use(session({
     }
 }));
 
-// ============= PASSPORT =============
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ============= DATABASE =============
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -166,7 +158,6 @@ const testConnection = async () => {
 };
 testConnection();
 
-// ============= PASSPORT SERIALIZATION =============
 passport.serializeUser((user, done) => {
     done(null, user.id);
 });
@@ -183,7 +174,6 @@ passport.deserializeUser(async (id, done) => {
     }
 });
 
-// ============= RATE LIMITERS =============
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
@@ -203,7 +193,6 @@ app.use('/api/auth/send-verification-code', authLimiter);
 app.use('/api/auth/verify-code', authLimiter);
 app.use('/api/', apiLimiter);
 
-// ============= SECURITY HEADERS =============
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -213,7 +202,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// ============= IMPORT ROUTES =============
 const authRoutes           = require('./routes/auth');
 const userRoutes           = require('./routes/user');
 const walletRoutes         = require('./routes/wallet');
@@ -237,9 +225,6 @@ const adminAuthRouter      = require('./routes/admin-auth');
 const adminTicketsRoutes   = require('./routes/admin.tickets');
 const translateRoutes = require('./routes/translate');
 
-
-
-// ============= REGISTER ROUTES =============
 app.use('/api/auth',            authRoutes(promisePool));
 app.use('/api/user',            userRoutes(promisePool));
 app.use('/api/user',            userSettingsRoutes(promisePool));
@@ -263,7 +248,6 @@ app.use('/api/admin/auth',      adminAuthRouter(promisePool));
 app.use('/api/admin/tickets',   adminTicketsRoutes(promisePool));
 app.use('/api/translate', translateRoutes);
 
-// ============= HEALTH CHECK =============
 app.get('/api/health', (req, res) => {
     res.json({
         success: true,
@@ -273,7 +257,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// ============= ERROR HANDLER =============
 app.use((err, req, res, next) => {
     if (err.message && err.message.startsWith('CORS blocked')) {
         return res.status(403).json({
@@ -289,12 +272,10 @@ app.use((err, req, res, next) => {
     });
 });
 
-// ============= 404 HANDLER =============
 app.use('*', (req, res) => {
     res.status(404).json({ success: false, message: 'Route not found' });
 });
 
-// ============= START SERVER =============
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
