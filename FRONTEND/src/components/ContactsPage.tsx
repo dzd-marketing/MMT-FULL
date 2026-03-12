@@ -9,12 +9,12 @@ import {
 import axios from 'axios';
 
 interface ContactData {
-  // Contact Info
+
   contact_email: string;
   contact_phone: string;
   contact_whatsapp: string;
   
-  // Social Media
+
   facebook_url: string;
   instagram_url: string;
   twitter_url: string;
@@ -22,10 +22,10 @@ interface ContactData {
   telegram_url: string;
   tiktok_url: string;
   
-  // Business
+
   address: string;
   
-  // Footer
+
   footer_copyright: string;
   footer_description: string;
 }
@@ -103,9 +103,9 @@ const API_URL = import.meta.env.VITE_API_URL;
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white">
-      {/* Hero Section */}
+    
       <div className="relative overflow-hidden">
-        {/* Background Effects */}
+      
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-0 -left-40 w-96 h-96 bg-brand/5 rounded-full blur-[120px] animate-pulse" />
           <div className="absolute bottom-0 -right-40 w-96 h-96 bg-purple-600/5 rounded-full blur-[120px] animate-pulse delay-1000" />
@@ -120,14 +120,14 @@ const API_URL = import.meta.env.VITE_API_URL;
             className="text-center space-y-6"
           >
 
-            {/* Title */}
+           
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter">
               <span className="bg-gradient-to-r from-brand to-purple-400 bg-clip-text text-transparent">
                 Contact Us
               </span>
             </h1>
 
-            {/* Description */}
+    
             <p className="text-lg text-gray-400 max-w-2xl mx-auto">
               Have questions? We're here to help. Reach out to us through any of these channels.
             </p>
@@ -135,12 +135,12 @@ const API_URL = import.meta.env.VITE_API_URL;
         </div>
       </div>
 
-      {/* Main Content */}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left Column - Contact Info Cards */}
+       
           <div className="space-y-6">
-            {/* Contact Cards */}
+        
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -152,7 +152,7 @@ const API_URL = import.meta.env.VITE_API_URL;
                 Contact Information
               </h2>
 
-              {/* Email Card */}
+           
               <div className="group relative">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-brand to-purple-600 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 blur" />
                 <div className="relative glass border border-white/10 rounded-2xl p-6 bg-gradient-to-br from-white/5 to-white/2 hover:border-brand/30 transition-all">
@@ -187,7 +187,7 @@ const API_URL = import.meta.env.VITE_API_URL;
                 </div>
               </div>
 
-              {/* Phone Card */}
+     
               <div className="group relative">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-brand to-purple-600 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 blur" />
                 <div className="relative glass border border-white/10 rounded-2xl p-6 bg-gradient-to-br from-white/5 to-white/2 hover:border-brand/30 transition-all">
@@ -222,7 +222,7 @@ const API_URL = import.meta.env.VITE_API_URL;
                 </div>
               </div>
 
-              {/* WhatsApp Card */}
+           
               <div className="group relative">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 blur" />
                 <div className="relative glass border border-white/10 rounded-2xl p-6 bg-gradient-to-br from-green-500/5 to-green-500/2 hover:border-green-500/30 transition-all">
@@ -284,9 +284,9 @@ const API_URL = import.meta.env.VITE_API_URL;
             </motion.div>
           </div>
 
-          {/* Right Column - Social Links & Map */}
+     
           <div className="space-y-6">
-            {/* Social Links */}
+      
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -327,7 +327,7 @@ const API_URL = import.meta.env.VITE_API_URL;
               </div>
             </motion.div>
 
-            {/* Map Placeholder */}
+
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -346,7 +346,7 @@ const API_URL = import.meta.env.VITE_API_URL;
                   </div>
                 </div>
                 
-                {/* Map Placeholder */}
+               
                 <div className="relative w-full h-48 rounded-xl overflow-hidden bg-gradient-to-br from-brand/10 to-purple-600/10 border border-white/10">
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
@@ -354,7 +354,7 @@ const API_URL = import.meta.env.VITE_API_URL;
                       <p className="text-sm text-gray-400">{contactData.address}</p>
                     </div>
                   </div>
-                  {/* Decorative Grid */}
+           
                   <div className="absolute inset-0" style={{
                     backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(139, 92, 246, 0.1) 1px, transparent 0)',
                     backgroundSize: '40px 40px'
@@ -373,7 +373,6 @@ const API_URL = import.meta.env.VITE_API_URL;
               </div>
             </motion.div>
 
-            {/* Business Hours */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -397,7 +396,7 @@ const API_URL = import.meta.env.VITE_API_URL;
           </div>
         </div>
 
-        {/* Footer */}
+  
         <motion.footer
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -414,3 +413,4 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 
 export default ContactsPage;
+
