@@ -1,4 +1,3 @@
-// routes/child-panels.js
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
@@ -6,7 +5,6 @@ const bcrypt = require('bcryptjs');
 const EmailService = require('../services/email.service');
 
 module.exports = (pool) => {
-    // Auth middleware - FIXED to match tickets page
     const authMiddleware = async (req, res, next) => {
         try {
             const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -21,10 +19,9 @@ module.exports = (pool) => {
             const jwt = require('jsonwebtoken');
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             
-            // FIXED: Use decoded.userId (same as tickets page)
             const [users] = await pool.execute(
                 'SELECT id, full_name as name, email FROM users WHERE id = ?',
-                [decoded.userId]  // Changed from decoded.id to decoded.userId
+                [decoded.userId]
             );
 
             if (users.length === 0) {
@@ -45,7 +42,6 @@ module.exports = (pool) => {
         }
     };
 
-    // Get user's child panels
     router.get('/', authMiddleware, async (req, res) => {
         try {
             const user_id = req.user.id;
@@ -79,13 +75,11 @@ module.exports = (pool) => {
         }
     });
 
-    // Send email notification endpoint
     router.post('/send-email', authMiddleware, async (req, res) => {
         try {
             const { domain, panel_currency, admin_username, admin_password, user_name, user_email, user_id } = req.body;
             const price = parseFloat(process.env.CHILD_PANEL_PRICE || '10.00');
 
-            // Send email to admin using EmailService
             await EmailService.sendChildPanelNotification(
                 {
                     domain,
@@ -101,7 +95,7 @@ module.exports = (pool) => {
                 }
             );
 
-            // Send confirmation to user
+        
             await EmailService.sendChildPanelConfirmationToUser(
                 {
                     domain,
@@ -129,7 +123,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Create new child panel
     router.post('/', authMiddleware, async (req, res) => {
         const connection = await pool.getConnection();
         
@@ -140,7 +133,7 @@ module.exports = (pool) => {
             const user_id = req.user.id;
             const price = parseFloat(process.env.CHILD_PANEL_PRICE || '10.00');
 
-            // Validate inputs
+    
             if (!domain || !panel_currency || !admin_username || !admin_password) {
                 return res.status(400).json({
                     success: false,
@@ -148,7 +141,7 @@ module.exports = (pool) => {
                 });
             }
 
-            // Check user balance
+ 
             const [wallets] = await connection.execute(`
                 SELECT available_balance FROM wallets WHERE user_id = ?
             `, [user_id]);
@@ -162,7 +155,7 @@ module.exports = (pool) => {
                     const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(admin_password, saltRounds);
 
-            // Calculate renewal date (30 days from now)
+  
             const renewalDate = new Date();
             renewalDate.setDate(renewalDate.getDate() + 30);
 
@@ -171,7 +164,6 @@ module.exports = (pool) => {
                 .update(crypto.randomBytes(16).toString('hex'))
                 .digest('hex');
 
-            // Insert child panel
         const [insertResult] = await connection.execute(`
             INSERT INTO child_panels (
                 client_id, domain, panel_currency, admin_username, 
@@ -180,12 +172,12 @@ module.exports = (pool) => {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, 'active')
         `, [
             user_id, domain, panel_currency, admin_username,
-            hashedPassword, // 🔐 CHANGED: was admin_password, now hashedPassword
+            hashedPassword,
             price, renewalDate.toISOString().split('T')[0],
             panelUqid
         ]);
 
-            // Deduct from wallet
+  
             await connection.execute(`
                 UPDATE wallets 
                 SET available_balance = available_balance - ?,
@@ -193,7 +185,6 @@ module.exports = (pool) => {
                 WHERE user_id = ?
             `, [price, price, user_id]);
 
-            // Log the transaction
             await connection.execute(`
                 INSERT INTO client_report (client_id, action, report_ip, report_date)
                 VALUES (?, ?, ?, NOW())
@@ -201,21 +192,20 @@ module.exports = (pool) => {
 
             await connection.commit();
 
-            // Get updated wallet balance
+
             const [updatedWallet] = await connection.execute(`
                 SELECT available_balance FROM wallets WHERE user_id = ?
             `, [user_id]);
 
-            // Get user details for email
+       
             const [users] = await pool.execute(`
                 SELECT full_name as name, email FROM users WHERE id = ?
             `, [user_id]);
 
-            // Send email notifications (don't await to not block response)
+ 
             try {
                 const user = users[0];
                 
-                // Send to admin
                 await EmailService.sendChildPanelNotification(
                     {
                         domain,
@@ -231,7 +221,6 @@ module.exports = (pool) => {
                     }
                 );
 
-                // Send confirmation to user
                 await EmailService.sendChildPanelConfirmationToUser(
                     {
                         domain,
@@ -249,7 +238,6 @@ module.exports = (pool) => {
                 console.log('✅ Email notifications sent for panel #', insertResult.insertId);
             } catch (emailError) {
                 console.error('❌ Failed to send email notifications:', emailError);
-                // Don't fail the request if email fails
             }
 
             res.json({
@@ -273,7 +261,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Renew child panel
+
     router.post('/:id/renew', authMiddleware, async (req, res) => {
         const connection = await pool.getConnection();
         
@@ -284,7 +272,7 @@ module.exports = (pool) => {
             const user_id = req.user.id;
             const price = parseFloat(process.env.CHILD_PANEL_PRICE || '10.00');
 
-            // Get panel details
+  
             const [panels] = await connection.execute(`
                 SELECT * FROM child_panels 
                 WHERE id = ? AND client_id = ?
@@ -297,7 +285,6 @@ module.exports = (pool) => {
                 });
             }
 
-            // Check balance
             const [wallets] = await connection.execute(`
                 SELECT available_balance FROM wallets WHERE user_id = ?
             `, [user_id]);
@@ -309,19 +296,17 @@ module.exports = (pool) => {
                 });
             }
 
-            // Calculate new renewal date (add 30 days to current renewal date)
             const currentRenewal = new Date(panels[0].renewal_date);
             const newRenewal = new Date(currentRenewal);
             newRenewal.setDate(newRenewal.getDate() + 30);
 
-            // Update panel
             await connection.execute(`
                 UPDATE child_panels 
                 SET renewal_date = ?, status = 'active'
                 WHERE id = ?
             `, [newRenewal.toISOString().split('T')[0], panelId]);
 
-            // Deduct from wallet
+ 
             await connection.execute(`
                 UPDATE wallets 
                 SET available_balance = available_balance - ?,
@@ -329,7 +314,6 @@ module.exports = (pool) => {
                 WHERE user_id = ?
             `, [price, price, user_id]);
 
-            // Log renewal
             await connection.execute(`
                 INSERT INTO client_report (client_id, action, report_ip, report_date)
                 VALUES (?, ?, ?, NOW())
@@ -337,7 +321,6 @@ module.exports = (pool) => {
 
             await connection.commit();
 
-            // Get updated balance
             const [updatedWallet] = await connection.execute(`
                 SELECT available_balance FROM wallets WHERE user_id = ?
             `, [user_id]);
