@@ -17,7 +17,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { useNavigate } from 'react-router-dom';
 
 const services = [
-  // TikTok Services
+
   { 
     id: 1001, 
     platform: 'TikTok',
@@ -48,7 +48,7 @@ const services = [
     bgColor: 'bg-black/5 dark:bg-white/5'
   },
   
-  // Facebook Services
+
   { 
     id: 2001, 
     platform: 'Facebook',
@@ -64,8 +64,7 @@ const services = [
     iconColor: 'text-blue-600',
     bgColor: 'bg-blue-500/10'
   },
-  
-  // Instagram Services
+
   { 
     id: 3001, 
     platform: 'Instagram',
@@ -82,7 +81,7 @@ const services = [
     bgColor: 'bg-pink-500/10'
   },
   
-  // YouTube Services
+
   { 
     id: 4001, 
     platform: 'YouTube',
@@ -127,7 +126,7 @@ const services = [
     bgColor: 'bg-red-500/10'
   },
   
-  // Twitter/X Services
+
   { 
     id: 5001, 
     platform: 'Twitter',
@@ -138,7 +137,7 @@ const services = [
     badge: 'New',
     minMax: '100 / 50,000',
     avgTime: '0-48H',
-    icon: Music2, // Using Music2 as Twitter icon
+    icon: Music2, 
     iconColor: 'text-sky-500',
     bgColor: 'bg-sky-500/10'
   }
@@ -157,7 +156,6 @@ export function ServiceSlider() {
     }
   };
 
-  // Function to get platform color
   const getPlatformColor = (platform: string) => {
     switch(platform) {
       case 'TikTok': return 'text-black dark:text-white';
@@ -169,7 +167,6 @@ export function ServiceSlider() {
     }
   };
 
-  // Function to get platform badge color
   const getPlatformBadgeColor = (platform: string) => {
     switch(platform) {
       case 'TikTok': return 'bg-black/10 dark:bg-white/10';
@@ -183,7 +180,7 @@ export function ServiceSlider() {
 
   return (
     <div className="relative w-full overflow-hidden py-10">
-      {/* Gradient Overlays for smooth edges */}
+
       <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-r from-white dark:from-[#050505] to-transparent z-10 pointer-events-none" />
       <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-l from-white dark:from-[#050505] to-transparent z-10 pointer-events-none" />
 
@@ -206,10 +203,9 @@ export function ServiceSlider() {
               key={`${service.id}-${index}`}
               className="flex-shrink-0 w-[280px] sm:w-[340px] glass p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-black/5 dark:border-white/5 hover:border-brand/30 transition-all group relative overflow-hidden"
             >
-              {/* Background Accent */}
               <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand/5 rounded-full blur-3xl group-hover:bg-brand/10 transition-colors" />
 
-              {/* Platform Icon */}
+         
               <div className="flex justify-between items-start mb-8 relative z-10">
                 <div className={`${platformBadgeColor} p-3 rounded-2xl`}>
                   <Icon className={`w-6 h-6 ${platformColor}`} />
