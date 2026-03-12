@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const emailService = require('../services/email.service');
 
 module.exports = (pool) => {
-    // Helper function to get real IP address
+
     const getRealIp = (req) => {
         const forwardedFor = req.headers['x-forwarded-for'];
         const realIp = req.headers['x-real-ip'];
@@ -23,12 +23,11 @@ module.exports = (pool) => {
         return req.ip || req.connection.remoteAddress || '0.0.0.0';
     };
 
-    // Helper function to get user agent
     const getUserAgent = (req) => {
         return req.headers['user-agent'] || 'Unknown';
     };
 
-    // Helper function to log login attempts
+
     const logLoginAttempt = async (email, req, success) => {
         try {
             const ipAddress = getRealIp(req);
@@ -43,7 +42,6 @@ module.exports = (pool) => {
         }
     };
 
-    // Helper function to log signup attempts
     const logSignupAttempt = async (email, req, success, failureReason = null) => {
         try {
             const ipAddress = getRealIp(req);
@@ -58,7 +56,6 @@ module.exports = (pool) => {
         }
     };
 
-    // Configure Google Strategy
     passport.use(new GoogleStrategy({
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -128,7 +125,6 @@ module.exports = (pool) => {
             }
         }));
 
-    // Test route
     router.get('/test', (req, res) => {
         res.json({
             success: true,
@@ -137,7 +133,6 @@ module.exports = (pool) => {
         });
     });
 
-    // Signup Route
     router.post('/signup', [
         body('name').trim().notEmpty().withMessage('Full name is required'),
         body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
@@ -213,7 +208,6 @@ module.exports = (pool) => {
                 [name, email, phone, whatsapp, hashedPassword, 'local', false]
             );
 
-            // --- WALLET CREATION ---
             await pool.execute(
                 'INSERT INTO wallets (user_id, email, available_balance, spent_balance, total_history_balance) VALUES (?, ?, ?, ?, ?)',
                 [result.insertId, email, 0.00, 0.00, 0.00]
@@ -284,7 +278,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Login Route
     router.post('/login', [
         body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
         body('password').notEmpty().withMessage('Password is required')
@@ -303,8 +296,7 @@ module.exports = (pool) => {
 
             const { email, password, rememberMe } = req.body;
 
-            // ── Rate limit: max 5 failed attempts per email in 15 minutes ──
-            const lockoutWindow = new Date(Date.now() - 15 * 60 * 1000); // 15 min ago
+            const lockoutWindow = new Date(Date.now() - 15 * 60 * 1000); 
             const [recentFailures] = await pool.execute(
                 `SELECT COUNT(*) as count FROM login_attempts
                  WHERE email = ? AND success = 0 AND attempted_at >= ?`,
@@ -374,7 +366,7 @@ module.exports = (pool) => {
                 [user.id]
             );
 
-            // ── Clear failed attempts on successful login ──
+          
             await pool.execute(
                 `DELETE FROM login_attempts WHERE email = ? AND success = 0`,
                 [email]
@@ -413,7 +405,7 @@ module.exports = (pool) => {
                 maxAge: (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000
             });
 
-            // Check if email is verified
+          
             if (!user.email_verified) {
                 const tempToken = crypto.randomBytes(32).toString('hex');
                 const verifyExpiresAt = new Date();
@@ -454,8 +446,7 @@ module.exports = (pool) => {
                     }
                 });
             }
-
-            // ✅ NEW: Check if phone/whatsapp is missing — prompt profile completion
+            
             const needsProfileCompletion = !user.phone || !user.whatsapp;
             if (needsProfileCompletion) {
                 const profileToken = crypto.randomBytes(32).toString('hex');
@@ -510,7 +501,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Google OAuth routes
+ 
     router.get('/google', (req, res, next) => {
         console.log('📌 Google auth route accessed');
         passport.authenticate('google', {
@@ -533,7 +524,7 @@ module.exports = (pool) => {
                 return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_user`);
             }
 
-            // --- WALLET CHECK/CREATE FOR GOOGLE USER ---
+          
             const [wallets] = await pool.execute('SELECT id FROM wallets WHERE user_id = ?', [user.id]);
             if (wallets.length === 0) {
                 await pool.execute(
@@ -542,13 +533,13 @@ module.exports = (pool) => {
                 );
             }
 
-            // Invalidate previous sessions
+       
             await pool.execute(
                 'UPDATE user_sessions SET is_valid = false WHERE user_id = ?',
                 [user.id]
             );
 
-            // Create new session
+           
             const expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -575,7 +566,6 @@ module.exports = (pool) => {
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
-            // Check email verification
             if (!user.email_verified) {
                 await pool.execute(
                     'DELETE FROM verification_tokens WHERE email = ? AND used = false',
@@ -607,7 +597,7 @@ module.exports = (pool) => {
                 return res.redirect(`${process.env.FRONTEND_URL}/verify-email?token=${tempToken}`);
             }
 
-            // ✅ Check if phone/whatsapp is missing
+           
             const [userDetails] = await pool.execute(
                 'SELECT phone, whatsapp, full_name FROM users WHERE id = ?',
                 [user.id]
@@ -633,12 +623,12 @@ module.exports = (pool) => {
                 return res.redirect(`${process.env.FRONTEND_URL}/complete-profile?token=${profileToken}`);
             }
 
-            // All good — redirect to homepage
+           
             res.redirect(`${process.env.FRONTEND_URL}/?token=${user.token}`);
         })(req, res, next);
     });
 
-    // Logout Route
+  
     router.post('/logout', async (req, res) => {
         try {
             const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -671,7 +661,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Verify Token Route
+   
     router.get('/verify', async (req, res) => {
         try {
             const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -710,7 +700,7 @@ module.exports = (pool) => {
                 [token]
             );
 
-            // Auto-recreate missing/invalid session
+        
             if (sessions.length === 0 || !sessions[0].is_valid) {
                 console.log('🔄 Session missing but user valid - creating new session for user:', decoded.userId);
 
@@ -725,7 +715,7 @@ module.exports = (pool) => {
 
             const u = users[0];
 
-            // ✅ NEW: Flag missing phone/whatsapp so frontend can redirect
+       
             const needsProfileCompletion = !u.phone || !u.whatsapp;
 
             res.json({
@@ -750,7 +740,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Send verification code
     router.post('/send-verification-code', async (req, res) => {
         try {
             const { token } = req.body;
@@ -822,7 +811,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Verify code
+ 
     router.post('/verify-code', async (req, res) => {
         try {
             const { token, code } = req.body;
@@ -871,7 +860,7 @@ module.exports = (pool) => {
 
             const user = users[0];
 
-            // ✅ Check phone/whatsapp after email verification too
+       
             const needsProfileCompletion = !user.phone || !user.whatsapp || !user.full_name || user.full_name === '';
 
             if (needsProfileCompletion) {
@@ -902,7 +891,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Forgot Password
     router.post('/forgot-password', async (req, res) => {
         try {
             const { email } = req.body;
@@ -988,7 +976,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Verify reset code
     router.post('/verify-reset-code', async (req, res) => {
         try {
             const { token, code } = req.body;
@@ -1027,7 +1014,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Get user from token
     router.get('/get-user-from-token', async (req, res) => {
         try {
             const { token } = req.query;
@@ -1059,7 +1045,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Reset password
     router.post('/reset-password', [
         body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
         body('confirmPassword').custom((value, { req }) => {
@@ -1148,7 +1133,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Complete profile (for Google users or users missing phone/whatsapp)
     router.post('/complete-profile', [
         body('name').trim().notEmpty().withMessage('Full name is required'),
         body('phone').notEmpty().withMessage('Phone number is required'),
@@ -1191,7 +1175,6 @@ module.exports = (pool) => {
 
             const user = users[0];
 
-            // ✅ Check phone and whatsapp are not already taken by another user
             const [phoneCheck] = await pool.execute(
                 'SELECT id FROM users WHERE phone = ? AND email != ?',
                 [phone, email]
