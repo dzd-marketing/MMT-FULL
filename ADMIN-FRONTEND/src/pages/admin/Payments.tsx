@@ -86,10 +86,9 @@ const PaymentsPage: React.FC = () => {
     display_order: 0
   });
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
   const BASE_URL = API_URL.replace('/api', '');
 
-  // ── Helper: get auth header using adminToken ──────────────────────────
   const authHeader = () => ({
     Authorization: `Bearer ${localStorage.getItem('adminToken')}`
   });
@@ -262,11 +261,9 @@ const PaymentsPage: React.FC = () => {
 
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-80' : 'md:ml-0'} ml-0 h-screen flex flex-col overflow-hidden`}>
 
-        {/* ── Header ────────────────────────────────────────────────────── */}
         <header className="sticky top-0 z-40 bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/10">
           <div className="flex items-center justify-between px-4 md:px-8 py-3 md:py-4">
 
-            {/* Left */}
             <div className="flex items-center gap-2 md:gap-4">
               <button onClick={() => setSidebarOpen(!sidebarOpen)} className="hidden md:block p-1.5 md:p-2 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors">
                 <Menu className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
@@ -277,7 +274,6 @@ const PaymentsPage: React.FC = () => {
               <h1 className="text-base md:text-2xl font-black text-white hidden sm:block">Payment Methods</h1>
             </div>
 
-            {/* Right — real admin info */}
             <div className="flex items-center gap-2 md:gap-3">
               <button className="relative p-1.5 md:p-2 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors">
                 <Bell className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
@@ -309,7 +305,6 @@ const PaymentsPage: React.FC = () => {
           </div>
         </header>
 
-        {/* ── Main Content ───────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
             <div>
@@ -321,7 +316,6 @@ const PaymentsPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Notification */}
           <AnimatePresence>
             {status !== 'idle' && (
               <motion.div
@@ -552,5 +546,6 @@ const PaymentsPage: React.FC = () => {
     </div>
   );
 };
+
 
 export default PaymentsPage;
