@@ -72,8 +72,7 @@ uploadDirs.forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-const seoMiddleware = require('./middleware/seo-middleware')(promisePool);
-app.use(seoMiddleware);
+
 
 
 app.use('/uploads', (req, res, next) => {
@@ -144,6 +143,8 @@ const pool = mysql.createPool({
 });
 
 const promisePool = pool.promise();
+const seoMiddleware = require('./middleware/seo-middleware')(promisePool);
+app.use(seoMiddleware);
 
 const testConnection = async () => {
     try {
