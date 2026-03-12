@@ -535,5 +535,3 @@ router.get('/seo-data', async (req, res) => {
 
     return router;
 };
-
-
