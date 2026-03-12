@@ -74,6 +74,9 @@ uploadDirs.forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
+const seoMiddleware = require('./middleware/seo-middleware')(promisePool);
+app.use(seoMiddleware);
+
 // ============= STATIC FILES (uploads) =============
 // ✅ FIXED: Remove manual CORS header, let CORS middleware handle it
 app.use('/uploads', (req, res, next) => {
@@ -300,5 +303,4 @@ app.listen(PORT, () => {
     console.log(`✅ Allowed CORS origins: ${allowedOrigins.join(', ')}`);
 });
 
-const seoMiddleware = require('./middleware/seo-middleware')(promisePool);
-app.use(seoMiddleware);
+
