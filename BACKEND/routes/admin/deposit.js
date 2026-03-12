@@ -6,9 +6,11 @@ const fs = require('fs');
 const emailService = require('../../services/email.service'); 
 
 module.exports = (pool) => {
-    // Middleware to verify admin token
-const adminAuth = require('../admin-auth')(pool);
+    const adminAuth = require('../admin-auth')(pool);
 
+    // ===========================================
+    // 1. GET PENDING DEPOSITS
+    // ===========================================
     router.get('/pending', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             console.log('Fetching pending deposits...');
@@ -162,7 +164,6 @@ const adminAuth = require('../admin-auth')(pool);
 
             console.log(`Rejecting deposit ID: ${depositId}. Reason: ${reason || 'No reason provided'}`);
 
-            // Get deposit details first (for email)
             const [deposits] = await connection.execute(
                 'SELECT d.*, u.full_name as user_name, u.email as user_email FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = ? AND d.status = "pending"',
                 [depositId]
@@ -178,8 +179,7 @@ const adminAuth = require('../admin-auth')(pool);
 
             const deposit = deposits[0];
 
-            // Update deposit status
-            const [result] = await connection.execute(
+            await connection.execute(
                 `UPDATE deposits 
                 SET status = 'rejected', 
                     reject_reason = ? 
@@ -191,9 +191,6 @@ const adminAuth = require('../admin-auth')(pool);
 
             console.log(`Deposit ${depositId} rejected successfully`);
 
-            // ===========================================
-            // SEND REJECTED EMAIL TO USER
-            // ===========================================
             try {
                 const depositData = {
                     id: deposit.id,
@@ -211,9 +208,7 @@ const adminAuth = require('../admin-auth')(pool);
                 console.log(`✅ Rejection email sent to user ${deposit.user_id}`);
             } catch (emailError) {
                 console.error('❌ Error sending rejection email:', emailError.message);
-                // Don't fail the request if email fails
             }
-            // ===========================================
 
             res.json({
                 success: true,
@@ -262,140 +257,110 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-router.post('/:id/approve', adminAuth.adminAuthMiddleware, async (req, res) => {
-    console.log('🟢 Approve endpoint hit!');
-    
-    const connection = await pool.getConnection();
-    
-    try {
-        await connection.beginTransaction();
+    // ===========================================
+    // 6. APPROVE DEPOSIT (ADMIN ID CHECK REMOVED)
+    // ===========================================
+    router.post('/:id/approve', adminAuth.adminAuthMiddleware, async (req, res) => {
+        console.log('🟢 Approve endpoint hit!');
 
-        const depositId = req.params.id;
+        const connection = await pool.getConnection();
         
-        // amount එක req.body එකෙන් ගන්න
-        const { amount } = req.body;
-        
-        console.log(`📝 Approving deposit ID: ${depositId}`);
-        console.log(`💰 Amount from request body: ${amount}`);
-
-        // Validate amount
-        if (!amount || amount <= 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Valid amount is required'
-            });
-        }
-
-        // Get deposit details with user info (reject එකේ වගේම)
-        const [deposits] = await connection.execute(
-            'SELECT d.*, u.full_name as user_name, u.email as user_email FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = ? AND d.status = "pending"',
-            [depositId]
-        );
-
-        if (deposits.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({
-                success: false,
-                message: 'Pending deposit not found'
-            });
-        }
-
-        const deposit = deposits[0];
-        const userId = deposit.user_id;
-        
-        console.log(`👤 User ID: ${userId}`);
-        console.log(`💰 Original amount: ${deposit.amount}`);
-        console.log(`💰 New amount: ${amount}`);
-
-        // Update deposit with NEW amount (approved_by අයින් කළා - reject එකේ වගේම)
-        await connection.execute(
-            `UPDATE deposits 
-            SET status = 'approved', 
-                amount = ?,
-                approved_at = NOW() 
-            WHERE id = ?`,
-            [amount, depositId]
-        );
-
-        // Check if wallet exists
-        const [wallets] = await connection.execute(
-            'SELECT * FROM wallets WHERE user_id = ?',
-            [userId]
-        );
-
-        if (wallets.length === 0) {
-            // Create new wallet
-            await connection.execute(
-                `INSERT INTO wallets (user_id, email, available_balance, total_history_balance) 
-                 SELECT ?, email, ?, ? FROM users WHERE id = ?`,
-                [userId, amount, amount, userId]
-            );
-            console.log(`🆕 New wallet created for user ${userId}`);
-        } else {
-            // Update existing wallet
-            await connection.execute(
-                `UPDATE wallets 
-                SET available_balance = available_balance + ?,
-                    total_history_balance = total_history_balance + ?
-                WHERE user_id = ?`,
-                [amount, amount, userId]
-            );
-            console.log(`💰 Wallet updated for user ${userId}: +${amount}`);
-        }
-
-        await connection.commit();
-
-        // Get updated balance
-        const [updatedWallet] = await connection.execute(
-            'SELECT available_balance FROM wallets WHERE user_id = ?',
-            [userId]
-        );
-
-        // ===========================================
-        // SEND APPROVED EMAIL TO USER (reject එකේ වගේම)
-        // ===========================================
         try {
-            const depositData = {
-                id: deposit.id,
-                amount: parseFloat(amount),
-                receipt_url: deposit.receipt_url,
-                approved_at: new Date()
-            };
+            await connection.beginTransaction();
 
-            const userData = {
-                name: deposit.user_name || deposit.full_name,
-                email: deposit.user_email || deposit.email,
-                id: userId
-            };
+            const depositId = req.params.id;
+            const { amount } = req.body;
+            
+            console.log(`📝 Approving deposit ID: ${depositId}`);
+            console.log(`💰 Amount from request body: ${amount}`);
 
-            await emailService.sendDepositApprovedEmail(depositData, userData);
-            console.log(`✅ Approval email sent to user ${userId}`);
-        } catch (emailError) {
-            console.error('❌ Error sending approval email:', emailError.message);
-            // Don't fail the request if email fails
+            if (!amount || amount <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Valid amount is required'
+                });
+            }
+
+            const [deposits] = await connection.execute(
+                'SELECT d.*, u.full_name as user_name, u.email as user_email FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = ? AND d.status = "pending"',
+                [depositId]
+            );
+
+            if (deposits.length === 0) {
+                await connection.rollback();
+                return res.status(404).json({
+                    success: false,
+                    message: 'Pending deposit not found'
+                });
+            }
+
+            const deposit = deposits[0];
+            const userId = deposit.user_id;
+            
+            console.log(`👤 User ID: ${userId}`);
+            console.log(`💰 Original amount: ${deposit.amount}`);
+            console.log(`💰 New amount: ${amount}`);
+
+            // Update deposit — no adminId required
+            await connection.execute(
+                `UPDATE deposits 
+                SET status = 'approved', 
+                    amount = ?,
+                    approved_at = NOW() 
+                WHERE id = ?`,
+                [amount, depositId]
+            );
+
+            const [wallets] = await connection.execute(
+                'SELECT * FROM wallets WHERE user_id = ?',
+                [userId]
+            );
+
+            if (wallets.length === 0) {
+                await connection.execute(
+                    `INSERT INTO wallets (user_id, email, available_balance, total_history_balance) 
+                     SELECT ?, email, ?, ? FROM users WHERE id = ?`,
+                    [userId, amount, amount, userId]
+                );
+                console.log(`🆕 New wallet created for user ${userId}`);
+            } else {
+                await connection.execute(
+                    `UPDATE wallets 
+                    SET available_balance = available_balance + ?,
+                        total_history_balance = total_history_balance + ?
+                    WHERE user_id = ?`,
+                    [amount, amount, userId]
+                );
+                console.log(`💰 Wallet updated for user ${userId}: +${amount}`);
+            }
+
+            await connection.commit();
+
+            const [updatedWallet] = await connection.execute(
+                'SELECT available_balance FROM wallets WHERE user_id = ?',
+                [userId]
+            );
+
+            res.json({
+                success: true,
+                message: 'Deposit approved successfully',
+                amount: amount,
+                user_id: userId,
+                new_balance: updatedWallet[0]?.available_balance || 0
+            });
+
+        } catch (error) {
+            await connection.rollback();
+            console.error('❌ Approve deposit error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to approve deposit',
+                error: error.message
+            });
+        } finally {
+            connection.release();
         }
-        // ===========================================
-
-        res.json({
-            success: true,
-            message: 'Deposit approved successfully',
-            amount: amount,
-            user_id: userId,
-            new_balance: updatedWallet[0]?.available_balance || 0
-        });
-
-    } catch (error) {
-        await connection.rollback();
-        console.error('❌ Approve deposit error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to approve deposit',
-            error: error.message
-        });
-    } finally {
-        connection.release();
-    }
-});
+    });
 
     return router;
 };
