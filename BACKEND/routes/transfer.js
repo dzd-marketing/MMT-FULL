@@ -3,7 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 
 module.exports = (pool) => {
-    // Middleware to verify token
+
     const verifyToken = async (req, res, next) => {
         try {
             const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -38,7 +38,7 @@ module.exports = (pool) => {
         }
     };
 
-    // Search user by email or username
+
     router.get('/search', verifyToken, async (req, res) => {
         try {
             const { query } = req.query;
@@ -50,7 +50,7 @@ module.exports = (pool) => {
                 });
             }
 
-            // Search users by email or full_name (username)
+     
             const [users] = await pool.execute(
                 `SELECT 
                     id, 
@@ -76,7 +76,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Transfer funds
+
     router.post('/send', verifyToken, async (req, res) => {
         const connection = await pool.getConnection();
         try {
@@ -85,7 +85,6 @@ module.exports = (pool) => {
             const senderId = req.userId;
             const { receiverEmail, amount } = req.body;
 
-            // Validation
             if (!receiverEmail || !amount) {
                 return res.status(400).json({
                     success: false,
@@ -101,7 +100,7 @@ module.exports = (pool) => {
                 });
             }
 
-            // Check if receiver exists
+
             const [receivers] = await connection.execute(
                 'SELECT id, full_name, email FROM users WHERE email = ?',
                 [receiverEmail]
@@ -116,7 +115,7 @@ module.exports = (pool) => {
 
             const receiver = receivers[0];
 
-            // Check if sending to self
+     
             if (receiver.id === senderId) {
                 return res.status(400).json({
                     success: false,
@@ -124,7 +123,7 @@ module.exports = (pool) => {
                 });
             }
 
-            // Get sender's wallet
+         
             const [senderWallets] = await connection.execute(
                 'SELECT id, available_balance FROM wallets WHERE user_id = ?',
                 [senderId]
@@ -139,7 +138,7 @@ module.exports = (pool) => {
 
             const senderBalance = parseFloat(senderWallets[0].available_balance);
 
-            // Check if sender has sufficient balance
+       
             if (senderBalance < transferAmount) {
                 return res.status(400).json({
                     success: false,
@@ -147,7 +146,6 @@ module.exports = (pool) => {
                 });
             }
 
-            // Get receiver's wallet (create if not exists)
             let [receiverWallets] = await connection.execute(
                 'SELECT id, available_balance FROM wallets WHERE user_id = ?',
                 [receiver.id]
@@ -166,19 +164,19 @@ module.exports = (pool) => {
                 }];
             }
 
-            // Deduct from sender
+      
             await connection.execute(
                 'UPDATE wallets SET available_balance = available_balance - ? WHERE user_id = ?',
                 [transferAmount, senderId]
             );
 
-            // Add to receiver
+      
             await connection.execute(
                 'UPDATE wallets SET available_balance = available_balance + ? WHERE user_id = ?',
                 [transferAmount, receiver.id]
             );
 
-            // Record transaction for sender (optional - if you have transactions table)
+    
             try {
                 await connection.execute(
                     `INSERT INTO transactions 
@@ -199,7 +197,7 @@ module.exports = (pool) => {
 
             await connection.commit();
 
-            // Get updated balances
+  
             const [updatedSender] = await connection.execute(
                 'SELECT available_balance FROM wallets WHERE user_id = ?',
                 [senderId]
