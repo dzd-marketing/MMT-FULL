@@ -8,6 +8,33 @@ const emailService = require('../../services/email.service');
 module.exports = (pool) => {
     const adminAuth = require('../admin-auth')(pool);
 
+    // Helper function to delete receipt image
+    const deleteReceiptImage = async (receiptUrl) => {
+        if (!receiptUrl) return false;
+        
+        try {
+            // Remove leading '/api' if present (for safety)
+            const cleanPath = receiptUrl.replace(/^\/api/, '');
+            
+            // Construct full file path
+            const filePath = path.join(__dirname, '../../', cleanPath);
+            
+            console.log(`Attempting to delete receipt: ${filePath}`);
+            
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+                console.log(`✅ Receipt deleted successfully: ${cleanPath}`);
+                return true;
+            } else {
+                console.log(`⚠️ Receipt file not found: ${filePath}`);
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Error deleting receipt:', error.message);
+            return false;
+        }
+    };
+
     // ===========================================
     // 1. GET PENDING DEPOSITS
     // ===========================================
@@ -151,7 +178,7 @@ module.exports = (pool) => {
     });
 
     // ===========================================
-    // 4. REJECT DEPOSIT (WITH EMAIL)
+    // 4. REJECT DEPOSIT (WITH EMAIL + AUTO-DELETE)
     // ===========================================
     router.post('/:id/reject', adminAuth.adminAuthMiddleware, async (req, res) => {
         const connection = await pool.getConnection();
@@ -178,6 +205,7 @@ module.exports = (pool) => {
             }
 
             const deposit = deposits[0];
+            const receiptUrl = deposit.receipt_url;
 
             await connection.execute(
                 `UPDATE deposits 
@@ -190,6 +218,14 @@ module.exports = (pool) => {
             await connection.commit();
 
             console.log(`Deposit ${depositId} rejected successfully`);
+
+            // ===========================================
+            // AUTO-DELETE RECEIPT IMAGE
+            // ===========================================
+            if (receiptUrl) {
+                await deleteReceiptImage(receiptUrl);
+            }
+            // ===========================================
 
             try {
                 const depositData = {
@@ -258,7 +294,7 @@ module.exports = (pool) => {
     });
 
     // ===========================================
-    // 6. APPROVE DEPOSIT (ADMIN ID CHECK REMOVED)
+    // 6. APPROVE DEPOSIT (ADMIN ID CHECK REMOVED + AUTO-DELETE)
     // ===========================================
     router.post('/:id/approve', adminAuth.adminAuthMiddleware, async (req, res) => {
         console.log('🟢 Approve endpoint hit!');
@@ -296,6 +332,7 @@ module.exports = (pool) => {
 
             const deposit = deposits[0];
             const userId = deposit.user_id;
+            const receiptUrl = deposit.receipt_url;
             
             console.log(`👤 User ID: ${userId}`);
             console.log(`💰 Original amount: ${deposit.amount}`);
@@ -341,6 +378,14 @@ module.exports = (pool) => {
                 [userId]
             );
 
+            // ===========================================
+            // AUTO-DELETE RECEIPT IMAGE
+            // ===========================================
+            if (receiptUrl) {
+                await deleteReceiptImage(receiptUrl);
+            }
+            // ===========================================
+
             res.json({
                 success: true,
                 message: 'Deposit approved successfully',
@@ -359,6 +404,59 @@ module.exports = (pool) => {
             });
         } finally {
             connection.release();
+        }
+    });
+
+    // ===========================================
+    // 7. DELETE RECEIPT (MANUAL DELETE - OPTIONAL)
+    // ===========================================
+    router.post('/:id/delete-receipt', adminAuth.adminAuthMiddleware, async (req, res) => {
+        try {
+            const depositId = req.params.id;
+
+            const [deposits] = await pool.execute(
+                'SELECT receipt_url FROM deposits WHERE id = ?',
+                [depositId]
+            );
+
+            if (deposits.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Deposit not found'
+                });
+            }
+
+            const receiptUrl = deposits[0].receipt_url;
+            
+            if (!receiptUrl) {
+                return res.json({
+                    success: true,
+                    message: 'No receipt to delete'
+                });
+            }
+
+            const deleted = await deleteReceiptImage(receiptUrl);
+
+            if (deleted) {
+                // Optionally remove receipt_url from database
+                await pool.execute(
+                    'UPDATE deposits SET receipt_url = NULL WHERE id = ?',
+                    [depositId]
+                );
+            }
+
+            res.json({
+                success: true,
+                message: deleted ? 'Receipt deleted successfully' : 'Receipt file not found'
+            });
+
+        } catch (error) {
+            console.error('Delete receipt error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to delete receipt',
+                error: error.message
+            });
         }
     });
 
