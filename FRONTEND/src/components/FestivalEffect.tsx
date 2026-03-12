@@ -47,7 +47,7 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
   };
 
   const createExplosion = (centerX: number, centerY: number) => {
-    // Limit explosion rate
+ 
     const now = Date.now();
     if (now - lastExplosionRef.current < 300) return;
     lastExplosionRef.current = now;
@@ -90,7 +90,7 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
+   
     const handleResize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -98,30 +98,30 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
     handleResize();
     window.addEventListener('resize', handleResize);
 
-    // Animation function
+
     const animate = () => {
       if (!ctx || !canvas) return;
 
       frameCountRef.current++;
 
-      // **FIXED: Completely clear canvas every frame**
+  
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Update and draw particles
+ 
       particlesRef.current = particlesRef.current.filter((particle) => {
-        // Update position
+
         particle.x += particle.speedX;
         particle.y += particle.speedY;
         particle.rotation += particle.spin;
         particle.life -= 1;
         
-        // Gentle gravity
+ 
         particle.speedY += 0.05;
 
-        // Fade out based on life
+   
         particle.opacity = (particle.life / particle.maxLife) * 0.7;
 
-        // Soft bounce off edges (reduced bounce effect)
+       
         if (particle.x < 0 || particle.x > canvas.width) {
           particle.speedX *= -0.2;
           particle.x = Math.max(0, Math.min(canvas.width, particle.x));
@@ -131,9 +131,8 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
           particle.y = Math.max(0, Math.min(canvas.height, particle.y));
         }
 
-        // Only draw if life is > 0 and opacity is noticeable
         if (particle.life > 0 && particle.opacity > 0.05) {
-          // Draw particle
+      
           ctx.save();
           ctx.translate(particle.x, particle.y);
           ctx.rotate(particle.rotation);
@@ -143,7 +142,7 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
           ctx.globalAlpha = particle.opacity;
 
           if (particle.shape === 'star') {
-            // Draw simple star
+       
             ctx.beginPath();
             for (let i = 0; i < 5; i++) {
               const angle = (i * Math.PI * 2) / 5 - Math.PI / 2;
@@ -161,7 +160,7 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
             ctx.fillStyle = particle.color;
             ctx.fill();
           } else if (particle.shape === 'spark') {
-            // Draw spark (simple line)
+       
             ctx.beginPath();
             ctx.moveTo(-particle.size, 0);
             ctx.lineTo(particle.size, 0);
@@ -171,7 +170,7 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
             ctx.lineWidth = 1.5;
             ctx.stroke();
           } else {
-            // Draw dot
+        
             ctx.beginPath();
             ctx.arc(0, 0, particle.size * 0.8, 0, Math.PI * 2);
             ctx.fillStyle = particle.color;
@@ -184,7 +183,6 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
         return particle.life > 0;
       });
 
-      // Create occasional explosions
       if (frameCountRef.current % 60 === 0 && particlesRef.current.length < 100) {
         const x = Math.random() * canvas.width;
         const y = Math.random() * canvas.height * 0.7;
@@ -194,7 +192,6 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
       animationRef.current = requestAnimationFrame(animate);
     };
 
-    // Start with a few initial explosions
     setTimeout(() => {
       for (let i = 0; i < 5; i++) {
         setTimeout(() => {
@@ -210,7 +207,7 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
 
     animate();
 
-    // Cleanup
+   
     return () => {
       window.removeEventListener('resize', handleResize);
       if (animationRef.current) {
@@ -232,5 +229,6 @@ const FestivalEffect: React.FC<FestivalEffectProps> = ({
     />
   );
 };
+
 
 export default FestivalEffect;
