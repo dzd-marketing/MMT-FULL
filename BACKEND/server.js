@@ -112,6 +112,9 @@ app.use(helmet({
     }
 }));
 
+const seoMiddleware = require('./middleware/seo-middleware')(promisePool);
+app.use(seoMiddleware);
+
 // ============= BODY PARSERS =============
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -232,6 +235,8 @@ const configRoutes         = require('./routes/admin/configs');
 const adminAuthRouter      = require('./routes/admin-auth');
 const adminTicketsRoutes   = require('./routes/admin.tickets');
 const translateRoutes = require('./routes/translate');
+
+
 
 // ============= REGISTER ROUTES =============
 app.use('/api/auth',            authRoutes(promisePool));
