@@ -70,6 +70,8 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
     const dropdownRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
 
+        const API_URL = import.meta.env.VITE_API_URL;
+
     // Close on outside click
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -235,7 +237,7 @@ const CompleteProfile: React.FC = () => {
                 sessionStorage.setItem('profileToken', urlToken);
                 try {
                     const res = await fetch(
-                        `http://localhost:5000/api/auth/get-user-from-token?token=${urlToken}`
+                        `${API_URL}/auth/get-user-from-token?token=${urlToken}`
                     );
                     const data = await res.json();
                     if (data.success) {
@@ -324,7 +326,7 @@ const CompleteProfile: React.FC = () => {
         const startTime = Date.now();
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/complete-profile', {
+            const res = await fetch(`${API_URL}/auth/complete-profile`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
