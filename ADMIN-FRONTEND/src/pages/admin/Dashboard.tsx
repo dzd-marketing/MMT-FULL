@@ -1,4 +1,3 @@
-// pages/admin/Dashboard.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { 
@@ -106,7 +105,6 @@ interface ChartSummary {
 
 type DateRange = '30days' | '60days' | '90days' | 'year' | 'lifetime';
 
-// ── Read real admin info from JWT ─────────────────────────────────────────
 const useAdminInfo = () => {
   return useMemo(() => {
     try {
@@ -134,7 +132,6 @@ const AdminDashboard: React.FC = () => {
   const [showAllRecords, setShowAllRecords] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>('30days');
   
-  // Column resizing states
   const [columnWidths, setColumnWidths] = useState([20, 12, 8, 8, 15, 37]);
   const [resizing, setResizing] = useState<{ index: number; startX: number; startWidth: number } | null>(null);
   
@@ -159,7 +156,6 @@ const AdminDashboard: React.FC = () => {
 
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // Column resize handlers
   const initResize = (e: React.MouseEvent, index: number) => {
     e.preventDefault();
     setResizing({ index, startX: e.clientX, startWidth: columnWidths[index] });
@@ -348,14 +344,11 @@ const AdminDashboard: React.FC = () => {
         activeTickets={stats.activeTickets}
       />
 
-      {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-80' : 'md:ml-0'} ml-0`}>
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
         <header className="sticky top-0 z-40 bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/10">
           <div className="flex items-center justify-between px-4 md:px-8 py-3 md:py-4">
 
-            {/* Left — hamburger + page title */}
             <div className="flex items-center gap-2 md:gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -372,10 +365,8 @@ const AdminDashboard: React.FC = () => {
               <h1 className="text-base md:text-2xl font-black text-white hidden sm:block">Admin Dashboard</h1>
             </div>
 
-            {/* Right — notifications + admin account */}
             <div className="flex items-center gap-2 md:gap-3">
 
-              {/* Notification bell */}
               <button className="relative p-1.5 md:p-2 hover:bg-white/10 rounded-lg md:rounded-xl transition-colors">
                 <Bell className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
                 {stats.activeTickets > 0 && (
@@ -383,17 +374,13 @@ const AdminDashboard: React.FC = () => {
                 )}
               </button>
 
-              {/* Divider */}
               <div className="h-6 w-px bg-white/10" />
 
-              {/* Admin account card */}
               <div className="flex items-center gap-2 md:gap-3">
-                {/* Avatar */}
                 <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-brand to-purple-600 flex items-center justify-center shrink-0">
                   <span className="text-xs font-black text-white">{initials}</span>
                 </div>
 
-                {/* Name + role — hidden on small mobile */}
                 <div className="hidden sm:block">
                   <p className="text-xs md:text-sm font-bold text-white leading-tight">{name}</p>
                   <div className="flex items-center gap-1">
@@ -402,7 +389,6 @@ const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Logout button */}
                 <button
                   onClick={handleLogout}
                   title="Logout"
@@ -416,10 +402,8 @@ const AdminDashboard: React.FC = () => {
           </div>
         </header>
 
-        {/* ── Dashboard Content ───────────────────────────────────────────── */}
         <main className="p-4 md:p-8">
 
-          {/* Welcome Section */}
           <div className="mb-6 md:mb-8">
             <h1 className="text-2xl md:text-3xl font-black text-white mb-1 md:mb-2">
               Welcome back, <span className="text-brand">{name}</span> 👋
@@ -427,7 +411,6 @@ const AdminDashboard: React.FC = () => {
             <p className="text-xs md:text-sm text-gray-400">Here's what's happening with your SMM panel today.</p>
           </div>
 
-          {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
             <StatCard title="Total Orders"   value={stats.totalOrders}   icon={ShoppingBag} color={{ bg: 'bg-brand/20',       text: 'text-brand' }}        trend={12.5} />
             <StatCard title="Total Users"    value={stats.totalUsers}    icon={Users}       color={{ bg: 'bg-purple-500/20',  text: 'text-purple-400' }}   trend={8.4} />
@@ -435,7 +418,6 @@ const AdminDashboard: React.FC = () => {
             <StatCard title="Active Tickets" value={stats.activeTickets} icon={Ticket}      color={{ bg: 'bg-orange-500/20',  text: 'text-orange-400' }}   subtitle="Requires attention" />
           </div>
 
-          {/* Analytics Section */}
           <div className="mb-6 md:mb-8">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
               <div>
@@ -457,7 +439,6 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
               <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-xl p-4">
                 <p className="text-xs text-gray-400 mb-1">Total Orders</p>
@@ -477,7 +458,6 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Combo Chart */}
             <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 backdrop-blur-xl">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm md:text-lg font-bold text-white">Orders & Revenue Overview</h3>
@@ -513,7 +493,6 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Security Analytics */}
           {securityAnalytics && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -558,7 +537,6 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Records controls */}
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-3 mb-3 px-1">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] md:text-xs text-gray-400">Show:</span>
@@ -595,7 +573,6 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Attempts Table */}
               <div className="bg-black/30 rounded-lg md:rounded-xl overflow-hidden border border-white/10">
                 <div className="px-3 md:px-4 py-2 md:py-3 bg-white/5 border-b border-white/10">
                   <h4 className="text-[10px] md:text-xs font-bold text-white flex items-center gap-1 md:gap-2">
@@ -653,9 +630,8 @@ const AdminDashboard: React.FC = () => {
             </motion.div>
           )}
 
-          {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-            {/* Platform Distribution */}
+ 
             <div className="lg:col-span-1 bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 backdrop-blur-xl">
               <h3 className="text-sm md:text-lg font-bold text-white mb-2 md:mb-4">Service Distribution</h3>
               <div className="h-40 md:h-52">
@@ -681,7 +657,7 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Recent Orders */}
+
             <div className="lg:col-span-2 bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-6 backdrop-blur-xl">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-6 mb-4 md:mb-6">
                 <div>
