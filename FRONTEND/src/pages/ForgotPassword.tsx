@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Mail, ArrowRight, AlertCircle, CheckCircle, Lock, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import Loader1 from '../components/LoadingScreen2'; // Adjust path as needed
+import Loader1 from '../components/LoadingScreen2';
 
 const ForgotPassword: React.FC = () => {
     const navigate = useNavigate();
@@ -26,7 +26,6 @@ const ForgotPassword: React.FC = () => {
 
     const API_URL = import.meta.env.VITE_API_URL;
 
-    // Password validation function
     const validatePassword = (pass: string) => {
         const errors = [];
         if (pass.length < 8) errors.push('At least 8 characters');
@@ -69,8 +68,7 @@ const handleRequestReset = async (e: React.FormEvent) => {
         if (response.ok) {
             setMessageType('success');
             setMessage('If this email exists in our system, you will receive a reset code.');
-            
-            // Store remaining attempts if provided
+          
             if (data.attemptsRemaining !== undefined) {
                 setAttemptsRemaining(data.attemptsRemaining);
             }
@@ -84,7 +82,6 @@ const handleRequestReset = async (e: React.FormEvent) => {
             setMessageType('error');
             setMessage(data.message || 'Failed to process request');
             
-            // Handle rate limit error (429)
             if (response.status === 429) {
                 setMessageType('error');
                 setMessage('You have reached the maximum of 3 password reset attempts today. Please try again tomorrow.');
@@ -147,13 +144,13 @@ const handleRequestReset = async (e: React.FormEvent) => {
     };
 
     const handleCodeChange = (index: number, value: string) => {
-        // Only allow single digit
+       
         if (/^\d*$/.test(value) && value.length <= 1) {
             const newCode = [...code];
             newCode[index] = value;
             setCode(newCode);
 
-            // Auto-focus next input
+         
             if (value && index < 5) {
                 inputRefs.current[index + 1]?.focus();
             }
@@ -170,7 +167,6 @@ const handleRequestReset = async (e: React.FormEvent) => {
     const handlePaste = (e: React.ClipboardEvent) => {
         e.preventDefault();
         const pastedData = e.clipboardData.getData('text');
-        // Only allow digits and limit to 6 characters
         const digits = pastedData.replace(/\D/g, '').slice(0, 6);
         
         if (digits) {
@@ -180,7 +176,7 @@ const handleRequestReset = async (e: React.FormEvent) => {
             }
             setCode(newCode);
             
-            // Focus the next empty input or last input
+            
             const focusIndex = Math.min(digits.length, 5);
             inputRefs.current[focusIndex]?.focus();
         }
@@ -226,7 +222,7 @@ const handleRequestReset = async (e: React.FormEvent) => {
     };
 
     const handleResetPassword = async () => {
-        // Validate password
+      
         const errors = validatePassword(password);
         if (errors.length > 0) {
             setMessageType('error');
