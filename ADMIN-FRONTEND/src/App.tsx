@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navig
 import { AnimatePresence } from 'motion/react';
 import { Toaster } from 'react-hot-toast';
 
-// Pages
 import AdminAuthPage from './pages/admin/AdminAuth';
 import AdminLogoutPage from './pages/admin/AdminLogout';
 import AdminDashboard from './pages/admin/Dashboard';
@@ -16,7 +15,6 @@ import BlogsUpdate from './pages/admin/BlogsPage';
 import ConfigView from './pages/admin/AdminConfigPage';
 import AdminTicketsPage from './pages/admin/TicketsPage';
 
-// ============= Admin Guard =============
 const AdminGuard = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
@@ -33,7 +31,6 @@ const AdminGuard = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// ============= App Content =============
 function AppContent() {
   const location = useLocation();
 
@@ -41,14 +38,11 @@ function AppContent() {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
 
-        {/* Root redirect */}
         <Route path='/' element={<Navigate to='/admin/login' replace />} />
 
-        {/* Public routes */}
         <Route path='/admin/login'  element={<AdminAuthPage />} />
         <Route path='/admin/logout' element={<AdminLogoutPage />} />
 
-        {/* Protected routes */}
         <Route path='/admin/dashboard' element={<AdminGuard><AdminDashboard /></AdminGuard>} />
         <Route path='/admin/orders'    element={<AdminGuard><AdminOrdersPage /></AdminGuard>} />
         <Route path='/admin/payments'  element={<AdminGuard><PaymentDetails /></AdminGuard>} />
@@ -59,7 +53,6 @@ function AppContent() {
         <Route path='/admin/configs'   element={<AdminGuard><ConfigView /></AdminGuard>} />
         <Route path='/admin/tickets'   element={<AdminGuard><AdminTicketsPage /></AdminGuard>} />
 
-        {/* Catch all → redirect to login */}
         <Route path='*' element={<Navigate to='/admin/login' replace />} />
 
       </Routes>
@@ -67,7 +60,6 @@ function AppContent() {
   );
 }
 
-// ============= Root App =============
 export default function App() {
   return (
     <Router>
