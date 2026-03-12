@@ -118,18 +118,15 @@ const AdminConfigPage: React.FC = () => {
   const [seoTwitterImagePreview, setSeoTwitterImagePreview] = useState<string | null>(null);
   
   const [config, setConfig] = useState<Config>({
-    // Maintenance
     maintenance_mode: '0',
     maintenance_message: 'Site is under maintenance. We will be back soon!',
     
-    // Site Info
     site_name: 'MAKE ME TREND',
     site_title: 'MAKE ME TREND - Best SMM Panel in Sri Lanka',
     site_description: 'Best SMM Panel in Sri Lanka. Buy Facebook, Instagram, TikTok, YouTube followers, likes, views at cheapest price.',
     site_keywords: 'SMM Panel, Social Media Marketing, Buy Followers, Sri Lanka',
     site_logo: '',
     
-    // Alert
     alert_message: '',
     alert_enabled: '0',
     alert_type: 'info',
@@ -1406,4 +1403,5 @@ const PreviewItem = ({ icon, label }: any) => (
 );
 
 export default AdminConfigPage;
+
 
