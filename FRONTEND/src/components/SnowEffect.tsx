@@ -6,7 +6,6 @@ interface SnowEffectProps {
   intensity?: 'light' | 'medium' | 'heavy';
 }
 
-// Snowflake interface එක හදමු
 interface Snowflake {
   x: number;
   y: number;
@@ -23,10 +22,9 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
-  const animationRef = useRef<number | null>(null); // FIXED: null initial value
-  const snowflakesRef = useRef<Snowflake[]>([]); // FIXED: Proper interface
+  const animationRef = useRef<number | null>(null); 
+  const snowflakesRef = useRef<Snowflake[]>([]);
 
-  // Intensity settings
   const intensitySettings = {
     light: {
       count: 50,
@@ -59,7 +57,7 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
+
     const handleResize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -67,7 +65,7 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
     handleResize();
     window.addEventListener('resize', handleResize);
 
-    // Initialize snowflakes
+
     const initSnowflakes = () => {
       snowflakesRef.current = [];
       for (let i = 0; i < settings.count; i++) {
@@ -84,21 +82,18 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
     };
     initSnowflakes();
 
-    // Animation function
+
     const animate = () => {
       if (!ctx || !canvas) return;
 
-      // Clear canvas with transparent background
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Update and draw snowflakes
       snowflakesRef.current.forEach((flake) => {
-        // Update position
+
         flake.y += flake.speed;
         flake.x += Math.sin(flake.wobble) * 0.5;
         flake.wobble += flake.wobbleSpeed;
 
-        // Reset if out of bounds
         if (flake.y > canvas.height) {
           flake.y = 0;
           flake.x = Math.random() * canvas.width;
@@ -106,10 +101,10 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
         if (flake.x > canvas.width) flake.x = 0;
         if (flake.x < 0) flake.x = canvas.width;
 
-        // Draw snowflake
+      
         ctx.beginPath();
         
-        // Snow color based on theme
+     
         if (theme === 'dark') {
           ctx.fillStyle = `rgba(255, 255, 255, ${flake.opacity})`;
           ctx.shadowColor = 'rgba(255, 255, 255, 0.3)';
@@ -125,7 +120,6 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
         ctx.arc(flake.x, flake.y, flake.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Add sparkle effect for some snowflakes
         if (flake.radius > 4 && Math.random() < 0.01) {
           ctx.beginPath();
           ctx.arc(flake.x, flake.y, flake.radius * 1.5, 0, Math.PI * 2);
@@ -139,12 +133,12 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
 
     animate();
 
-    // Cleanup
+    
     return () => {
       window.removeEventListener('resize', handleResize);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
-        animationRef.current = null; // Good practice to reset
+        animationRef.current = null; 
       }
     };
   }, [enabled, intensity, theme, settings]);
@@ -162,5 +156,6 @@ const SnowEffect: React.FC<SnowEffectProps> = ({
     />
   );
 };
+
 
 export default SnowEffect;
