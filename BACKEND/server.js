@@ -112,8 +112,6 @@ app.use(helmet({
     }
 }));
 
-const seoMiddleware = require('./middleware/seo-middleware')(promisePool);
-app.use(seoMiddleware);
 
 // ============= BODY PARSERS =============
 app.use(express.json({ limit: '10mb' }));
@@ -301,3 +299,6 @@ app.listen(PORT, () => {
     console.log(`📝 Environment: ${process.env.NODE_ENV}`);
     console.log(`✅ Allowed CORS origins: ${allowedOrigins.join(', ')}`);
 });
+
+const seoMiddleware = require('./middleware/seo-middleware')(promisePool);
+app.use(seoMiddleware);
