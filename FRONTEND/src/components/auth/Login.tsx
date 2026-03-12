@@ -18,7 +18,7 @@ const Login: React.FC = () => {
   const [lockedOut, setLockedOut] = useState(false);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
 
-  // Countdown timer when locked out
+
   React.useEffect(() => {
     if (!lockedOut || lockoutSeconds <= 0) return;
     const timer = setInterval(() => {
@@ -67,7 +67,7 @@ const Login: React.FC = () => {
 
       const response = await authService.login({ email, password, rememberMe });
 
-      // Handle lockout returned as resolved response (some authService implementations)
+    
       if (response.tooManyAttempts) {
         setLoading(false);
         setLockedOut(true);
@@ -82,7 +82,7 @@ const Login: React.FC = () => {
       setTimeout(() => {
         setLoading(false);
 
-        // 1️⃣ Email not verified — go to verification page
+    
         if (response.requiresVerification || (response.user && !response.user.email_verified)) {
           sessionStorage.setItem('verificationToken', response.token || '');
           sessionStorage.setItem('verificationEmail', email);
@@ -90,13 +90,12 @@ const Login: React.FC = () => {
           return;
         }
 
-        // 2️⃣ Phone/WhatsApp missing — go to complete profile
+  
         if (response.requiresProfileCompletion) {
           navigate(`/complete-profile?token=${response.profileToken}`);
           return;
         }
 
-        // 3️⃣ All good — go to dashboard
         window.dispatchEvent(new Event('auth-change'));
         navigate('/dashboard');
 
@@ -106,7 +105,7 @@ const Login: React.FC = () => {
       setLoading(false);
       if (error.tooManyAttempts || (error.response?.status === 429)) {
         setLockedOut(true);
-        setLockoutSeconds(15 * 60); // 15 minutes
+        setLockoutSeconds(15 * 60);
         setErrors({ general: 'Too many failed login attempts. Please wait 15 minutes and try again.' });
       } else if (error.errors) {
         setErrors(error.errors);
@@ -126,7 +125,7 @@ const Login: React.FC = () => {
       animate={{ opacity: 1 }}
       className="min-h-screen flex items-center justify-center bg-white dark:bg-[#050505] transition-colors duration-300 pt-24 pb-12 relative overflow-hidden"
     >
-      {/* Background Decorative Elements */}
+  
       <div className="absolute top-1/4 -left-20 w-96 h-96 bg-brand/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-brand/5 rounded-full blur-[120px] pointer-events-none" />
 
@@ -142,7 +141,7 @@ const Login: React.FC = () => {
           </div>
         )}
 
-        {/* Left Side: Form */}
+     
         <div className="w-full lg:w-1/2 p-8 md:p-12 flex flex-col justify-center">
           <div className="mb-8">
             <Link to="/">
@@ -159,7 +158,7 @@ const Login: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
 
-            {/* Lockout banner */}
+ 
             {lockedOut && (
               <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/50">
                 <p className="text-sm font-semibold text-orange-800 dark:text-orange-300 mb-1">
@@ -172,7 +171,7 @@ const Login: React.FC = () => {
               </div>
             )}
 
-            {/* General error banner */}
+     
             {errors.general && !lockedOut && (
               <div className="p-4 rounded-xl flex items-start gap-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/50">
                 <p className="text-sm text-red-800 dark:text-red-300">{errors.general}</p>
@@ -216,7 +215,7 @@ const Login: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => {
-                    setPassword(e.target.value);
+                   setPassword(e.target.value);
                     if (errors.password) setErrors(prev => ({ ...prev, password: '' }));
                   }}
                   className={`block w-full pl-10 pr-10 py-3 border rounded-xl bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-brand focus:border-transparent transition-all outline-none ${
