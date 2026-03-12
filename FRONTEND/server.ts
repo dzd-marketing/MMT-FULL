@@ -10,7 +10,7 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-  // API routes FIRST
+
   app.post("/api/translate", async (req, res) => {
     try {
       const { texts, to } = req.body;
@@ -18,7 +18,7 @@ async function startServer() {
         return res.json({ translations: [] });
       }
 
-      // Filter out empty strings to avoid API errors, but keep track of their indices
+    
       const nonEmptyIndices = [];
       const textsToTranslate = [];
       
@@ -33,15 +33,14 @@ async function startServer() {
       if (textsToTranslate.length > 0) {
         try {
           const result: any = await translate(textsToTranslate, { to });
-          // result is an array if we pass an array
+    
           translatedResults = Array.isArray(result) ? result.map((r: any) => r.text) : [result.text];
         } catch (err) {
           console.error("Translation API error:", err);
-          return res.json({ translations: texts }); // Fallback to original texts
+          return res.json({ translations: texts }); 
         }
       }
 
-      // Reconstruct the full array with empty strings in their original places
       const finalTranslations = [...texts];
       nonEmptyIndices.forEach((originalIndex, i) => {
         finalTranslations[originalIndex] = translatedResults[i] || texts[originalIndex];
@@ -54,7 +53,6 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
