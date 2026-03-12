@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 module.exports = (pool) => {
-    // Get all blogs
+
     router.get('/all', async (req, res) => {
         try {
             const [blogs] = await pool.execute(
@@ -31,7 +31,6 @@ module.exports = (pool) => {
         }
     });
 
-    // Get single blog by slug
     router.get('/:slug', async (req, res) => {
         try {
             const { slug } = req.params;
