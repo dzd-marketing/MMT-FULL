@@ -653,7 +653,7 @@ const Signup: React.FC = () => {
                         </p>
                         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-2xl">
                             <img
-                                src="https://picsum.photos/seed/signup/800/600"
+                                src="https://res.cloudinary.com/dgb5a5fmm/image/upload/v1773330176/vector-influencer-social-media-marketing-mobile-concept-illustration_987561-10_dwtfwx.avif"
                                 alt="Signup Preview"
                                 className="rounded-lg shadow-inner"
                                 referrerPolicy="no-referrer"
