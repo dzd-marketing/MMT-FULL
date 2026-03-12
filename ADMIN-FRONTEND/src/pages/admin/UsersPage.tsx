@@ -72,21 +72,15 @@ const AdminUsersPage: React.FC = () => {
   const [newBalance, setNewBalance] = useState<number>(0);
   const [updatingBalance, setUpdatingBalance] = useState(false);
 
-  // ============= FIXED: API URLs =============
-  const API_URL = import.meta.env.VITE_API_URL;  // https://admin.mmtsmmpanel.cyberservice.online/api
-  const IMAGE_URL = 'https://mmtsmmpanel.cyberservice.online';  // Main domain for images
-
-  // ============= IMAGE URL HELPER FUNCTION =============
+  const API_URL = import.meta.env.VITE_API_URL;  
+  const IMAGE_URL = 'https://mmtsmmpanel.cyberservice.online';  
   const getImageUrl = (imagePath: string | null) => {
     if (!imagePath) return '';
     
-    // If it's already a full URL
     if (imagePath.startsWith('http')) return imagePath;
     
-    // Remove any '/api' prefix if present
     const cleanPath = imagePath.replace(/^\/api/, '');
     
-    // Return full URL with IMAGE_URL base
     return `${IMAGE_URL}${cleanPath}`;
   };
 
@@ -187,7 +181,6 @@ const AdminUsersPage: React.FC = () => {
       if (response.data.success) {
         const allUsers = response.data.users;
         
-        // Create CSV headers
         const headers = [
           'User ID', 
           'Full Name', 
@@ -211,7 +204,6 @@ const AdminUsersPage: React.FC = () => {
         const csvRows = [];
         csvRows.push(headers.join(','));
         
-        // Add data rows
         allUsers.forEach((user: User) => {
           const row = [
             user.id,
@@ -264,7 +256,6 @@ const AdminUsersPage: React.FC = () => {
       if (response.data.success) {
         const allUsers = response.data.users;
         
-        // Create CSV headers
         const headers = [
           'User ID', 
           'Full Name', 
@@ -280,7 +271,6 @@ const AdminUsersPage: React.FC = () => {
         const csvRows = [];
         csvRows.push(headers.join(','));
         
-        // Add data rows
         allUsers.forEach((user: User) => {
           const balanceValue = typeof user.balance === 'number' 
             ? user.balance 
@@ -364,7 +354,6 @@ const AdminUsersPage: React.FC = () => {
         activeTickets={0}
       />
 
-      {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-80' : 'md:ml-0'} ml-0 min-h-screen flex flex-col`}>
         <AdminHeader
           title="Users Management"
@@ -374,9 +363,8 @@ const AdminUsersPage: React.FC = () => {
         />
 
         <div className="flex-1 p-4 md:p-6">
-          {/* Stats and Download Buttons */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            {/* Stats Cards */}
+
             <div className="grid grid-cols-2 gap-3 md:gap-4 w-full sm:w-auto">
               <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 rounded-xl p-3 md:p-4">
                 <p className="text-xs text-gray-400 mb-1">Total Users</p>
@@ -388,7 +376,7 @@ const AdminUsersPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Download Buttons */}
+       
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={downloadAllUsersData}
@@ -488,7 +476,6 @@ const AdminUsersPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* User Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap mb-1">
                         <h3 className="font-medium text-sm md:text-base text-white truncate max-w-[120px] md:max-w-[200px]">
@@ -544,7 +531,7 @@ const AdminUsersPage: React.FC = () => {
             </div>
           )}
 
-          {/* Pagination */}
+
           {pagination.pages > 1 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 mt-4 border-t border-white/10">
               <p className="text-xs sm:text-sm text-gray-400 order-2 sm:order-1">
@@ -670,7 +657,7 @@ const AdminUsersPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Quick Stats */}
+     
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div className="bg-white/5 rounded-lg p-2 sm:p-3">
                     <p className="text-[8px] sm:text-xs text-gray-400 mb-0.5 sm:mb-1">Spent</p>
@@ -682,7 +669,7 @@ const AdminUsersPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* User Details */}
+     
                 <div className="space-y-1.5 sm:space-y-2">
                   <h3 className="text-xs sm:text-sm font-bold text-white mb-1 sm:mb-2">Account Information</h3>
                   
@@ -756,3 +743,4 @@ const AdminUsersPage: React.FC = () => {
 };
 
 export default AdminUsersPage;
+
