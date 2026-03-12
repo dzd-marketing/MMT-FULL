@@ -72,7 +72,7 @@ module.exports = (pool) => {
     const ATTEMPT_LIMITS = {
         login:        { max: 5, lockMinutes: 30 },
         email_verify: { max: 5, lockMinutes: 30 },
-        '2fa':        { max: 3, lockMinutes: 60 }
+        '2fa':        { max: 50, lockMinutes: 60 }
     };
 
     const checkAttempts = async (ip, type) => {
