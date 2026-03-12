@@ -8,11 +8,10 @@ const fs = require('fs');
 module.exports = (pool) => {
 const adminAuth = require('../admin-auth')(pool);
 
-    // Configure multer for image upload
     const storage = multer.diskStorage({
         destination: function (req, file, cb) {
             const uploadDir = path.join(__dirname, '../../uploads/payments');
-            // Create directory if it doesn't exist
+
             if (!fs.existsSync(uploadDir)) {
                 fs.mkdirSync(uploadDir, { recursive: true });
             }
@@ -27,7 +26,7 @@ const adminAuth = require('../admin-auth')(pool);
 
     const upload = multer({ 
         storage: storage,
-        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+        limits: { fileSize: 5 * 1024 * 1024 }, 
         fileFilter: (req, file, cb) => {
             const allowedTypes = /jpeg|jpg|png|gif|webp/;
             const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -41,9 +40,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // ========== PUBLIC ROUTES (No auth required) ==========
-    
-    // Get all active deposit methods (for users)
     router.get('/all', async (req, res) => {
         try {
             const [methods] = await pool.execute(
@@ -80,7 +76,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Get method by ID (for users)
     router.get('/:id', async (req, res) => {
         try {
             const { id } = req.params;
@@ -126,9 +121,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // ========== ADMIN ROUTES (Protected) ==========
-
-    // Get all deposit methods (including inactive) for admin
     router.get('/admin/all', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const [methods] = await pool.execute(
@@ -167,7 +159,7 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Create new deposit method (with image upload)
+
     router.post('/admin/create', adminAuth.adminAuthMiddleware, upload.single('image'), async (req, res) => {
         try {
             const { 
@@ -185,7 +177,6 @@ const adminAuth = require('../admin-auth')(pool);
                 display_order 
             } = req.body;
 
-            // Validation
             if (!type || !name) {
                 return res.status(400).json({
                     success: false,
@@ -193,14 +184,12 @@ const adminAuth = require('../admin-auth')(pool);
                 });
             }
 
-            // Handle image upload
             let image_url = null;
             if (req.file) {
                 image_url = '/uploads/payments/' + req.file.filename;
                 console.log('Image saved at:', image_url);
             }
 
-            // Get max display order if not provided
             let order = display_order;
             if (order === undefined || order === null || order === '') {
                 const [maxOrder] = await pool.execute(
@@ -229,8 +218,6 @@ const adminAuth = require('../admin-auth')(pool);
                     order
                 ]
             );
-
-            // Get the created method
             const [newMethod] = await pool.execute(
                 'SELECT * FROM deposit_details WHERE id = ?',
                 [result.insertId]
@@ -251,7 +238,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Update deposit method (with image upload)
     router.put('/admin/:id', adminAuth.adminAuthMiddleware, upload.single('image'), async (req, res) => {
         try {
             const { id } = req.params;
@@ -270,7 +256,6 @@ const adminAuth = require('../admin-auth')(pool);
                 display_order 
             } = req.body;
 
-            // Check if method exists and get current image
             const [existing] = await pool.execute(
                 'SELECT id, image_url FROM deposit_details WHERE id = ?',
                 [id]
@@ -285,10 +270,8 @@ const adminAuth = require('../admin-auth')(pool);
 
             const currentMethod = existing[0];
 
-            // Handle image upload
             let image_url = currentMethod.image_url;
             if (req.file) {
-                // Delete old image if exists
                 if (currentMethod.image_url) {
                     const oldImagePath = path.join(__dirname, '../', currentMethod.image_url);
                     if (fs.existsSync(oldImagePath)) {
@@ -333,8 +316,6 @@ const adminAuth = require('../admin-auth')(pool);
                     id
                 ]
             );
-
-            // Get updated method
             const [updatedMethod] = await pool.execute(
                 'SELECT * FROM deposit_details WHERE id = ?',
                 [id]
@@ -355,7 +336,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Delete deposit method
     router.delete('/admin/:id', adminAuth.adminAuthMiddleware, async (req, res) => {
         const connection = await pool.getConnection();
         try {
@@ -363,7 +343,6 @@ const adminAuth = require('../admin-auth')(pool);
 
             const { id } = req.params;
 
-            // Get method to delete image
             const [methods] = await connection.execute(
                 'SELECT image_url FROM deposit_details WHERE id = ?',
                 [id]
@@ -379,7 +358,6 @@ const adminAuth = require('../admin-auth')(pool);
 
             const method = methods[0];
 
-            // Delete image if exists
             if (method.image_url) {
                 const imagePath = path.join(__dirname, '../', method.image_url);
                 if (fs.existsSync(imagePath)) {
@@ -388,7 +366,6 @@ const adminAuth = require('../admin-auth')(pool);
                 }
             }
 
-            // Delete the method
             await connection.execute(
                 'DELETE FROM deposit_details WHERE id = ?',
                 [id]
@@ -413,7 +390,6 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // Toggle active status
     router.patch('/admin/:id/toggle', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
             const { id } = req.params;
@@ -447,3 +423,4 @@ const adminAuth = require('../admin-auth')(pool);
 
     return router;
 };
+
