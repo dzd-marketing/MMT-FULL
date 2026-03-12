@@ -1,4 +1,3 @@
-// pages/dashboard/TicketsPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -63,10 +62,9 @@ const TicketsPage: React.FC = () => {
         pages: 1
     });
 
-    // Refs for dropdown
+    
     const filterDropdownRef = useRef<HTMLDivElement>(null);
 
-    // New ticket modal state
     const [showNewTicketModal, setShowNewTicketModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({
@@ -77,14 +75,12 @@ const TicketsPage: React.FC = () => {
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-    // File upload state
     const [attachments, setAttachments] = useState<File[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const modalRef = useRef<HTMLDivElement>(null);
 
     const API_URL = import.meta.env.VITE_API_URL;
 
-    // Status tabs
     const statusTabs = [
         { id: 'all', label: 'All Tickets', icon: Ticket, color: 'text-blue-400' },
         { id: 'open', label: 'Open', icon: AlertCircle, color: 'text-green-400' },
@@ -94,7 +90,6 @@ const TicketsPage: React.FC = () => {
         { id: 'closed', label: 'Closed', icon: XCircle, color: 'text-gray-400' }
     ];
 
-    // Department options
     const departments = [
         { value: 'technical', label: 'Technical Support', icon: '💻' },
         { value: 'billing', label: 'Billing & Payments', icon: '💰' },
@@ -103,7 +98,6 @@ const TicketsPage: React.FC = () => {
         { value: 'api', label: 'API Support', icon: '🔌' }
     ];
 
-    // Priority options
     const priorities = [
         { value: 'low', label: 'Low', color: 'text-green-400 bg-green-500/20' },
         { value: 'medium', label: 'Medium', color: 'text-yellow-400 bg-yellow-500/20' },
@@ -111,7 +105,6 @@ const TicketsPage: React.FC = () => {
         { value: 'urgent', label: 'Urgent', color: 'text-red-400 bg-red-500/20' }
     ];
 
-    // Check authentication
     useEffect(() => {
         const checkAuth = async () => {
             try {
@@ -139,14 +132,13 @@ const TicketsPage: React.FC = () => {
         checkAuth();
     }, [navigate]);
 
-    // Load tickets
     useEffect(() => {
         if (!authLoading && user) {
             loadTickets();
         }
     }, [authLoading, user, selectedStatus, currentPage, searchQuery]);
 
-    // Close dropdown when clicking outside
+  
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
@@ -160,7 +152,7 @@ const TicketsPage: React.FC = () => {
         };
     }, []);
 
-    // Lock body scroll when modal is open
+    
     useEffect(() => {
         if (showNewTicketModal) {
             document.body.style.overflow = 'hidden';
@@ -210,8 +202,8 @@ const TicketsPage: React.FC = () => {
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
 
-        // Validate file size (max 5MB)
-        const maxSize = 5 * 1024 * 1024; // 5MB
+        
+        const maxSize = 5 * 1024 * 1024; 
         const validFiles = files.filter(file => {
             if (file.size > maxSize) {
                 toast.error(`File ${file.name} is too large. Max size is 5MB`);
@@ -222,7 +214,6 @@ const TicketsPage: React.FC = () => {
 
         setAttachments(prev => [...prev, ...validFiles]);
 
-        // Reset file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -271,7 +262,6 @@ const TicketsPage: React.FC = () => {
             formDataToSend.append('priority', formData.priority);
             formDataToSend.append('message', formData.message);
 
-            // Append attachments
             attachments.forEach((file) => {
                 formDataToSend.append('attachments', file);
             });
