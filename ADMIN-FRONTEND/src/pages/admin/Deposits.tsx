@@ -55,7 +55,7 @@ const AdminDepositsPage: React.FC = () => {
   });
 
   // ============= FIXED: API URLs =============
-  const API_URL = 'https://admin.mmtsmmpanel.cyberservice.online/api';
+  const API_URL = import.meta.env.VITE_API_URL;
   const IMAGE_URL = 'https://mmtsmmpanel.cyberservice.online';
 
   // Helper function to clean image URL
@@ -680,3 +680,4 @@ const AdminDepositsPage: React.FC = () => {
 };
 
 export default AdminDepositsPage;
+
