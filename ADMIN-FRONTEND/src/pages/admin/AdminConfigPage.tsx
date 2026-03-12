@@ -11,7 +11,9 @@ import {
   Key, Lock, Unlock, Link, 
   Info, AlertCircle, CheckCircle2, X,
   Share2, Send,
-  Database, Snowflake, PartyPopper
+  Database, Snowflake, PartyPopper,
+  Search, FileText, BarChart, Code,
+  FileJson, FileCode, Sitemap
 } from 'lucide-react';
 import axios from 'axios';
 import Sidebar from './Sidebar';
@@ -71,6 +73,37 @@ interface Config {
   facebook_pixel_id: string;
   recaptcha_site_key: string;
   recaptcha_secret_key: string;
+
+  // SEO Fields
+  seo_title: string;
+  seo_description: string;
+  seo_keywords: string;
+  seo_og_title: string;
+  seo_og_description: string;
+  seo_og_image: string;
+  seo_twitter_title: string;
+  seo_twitter_description: string;
+  seo_twitter_image: string;
+  seo_canonical_url: string;
+  seo_robots_txt: string;
+  seo_sitemap_url: string;
+  seo_structured_data: string;
+  seo_meta_author: string;
+  seo_meta_revisit_after: string;
+  seo_meta_rating: string;
+  seo_meta_distribution: string;
+  seo_meta_coverage: string;
+  seo_meta_category: string;
+  seo_hreflang_en: string;
+  seo_hreflang_si: string;
+  seo_hreflang_ta: string;
+  seo_google_verification: string;
+  seo_bing_verification: string;
+  seo_yandex_verification: string;
+  seo_baidu_verification: string;
+  seo_alexa_verification: string;
+  seo_pinterest_verification: string;
+  seo_norton_verification: string;
 }
 
 const AdminConfigPage: React.FC = () => {
@@ -82,6 +115,8 @@ const AdminConfigPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('maintenance');
   const [showPassword, setShowPassword] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [seoImagePreview, setSeoImagePreview] = useState<string | null>(null);
+  const [seoTwitterImagePreview, setSeoTwitterImagePreview] = useState<string | null>(null);
   
   const [config, setConfig] = useState<Config>({
     // Maintenance
@@ -137,7 +172,38 @@ const AdminConfigPage: React.FC = () => {
     google_analytics_id: '',
     facebook_pixel_id: '',
     recaptcha_site_key: '',
-    recaptcha_secret_key: ''
+    recaptcha_secret_key: '',
+
+    // SEO Fields
+    seo_title: 'MAKE ME TREND - Best SMM Panel in Sri Lanka | Buy Followers, Likes, Views',
+    seo_description: 'MAKE ME TREND is the best SMM panel in Sri Lanka. Buy Facebook followers, Instagram likes, TikTok views, YouTube subscribers at cheapest prices. Instant delivery, 24/7 support.',
+    seo_keywords: 'SMM panel Sri Lanka, buy followers Sri Lanka, buy Instagram likes, buy Facebook followers, buy TikTok views, social media marketing Sri Lanka, cheapest SMM panel',
+    seo_og_title: 'MAKE ME TREND - Best SMM Panel Sri Lanka',
+    seo_og_description: 'Grow your social media presence with MAKE ME TREND. Buy real followers, likes, views at cheapest rates in Sri Lanka.',
+    seo_og_image: '',
+    seo_twitter_title: 'MAKE ME TREND - SMM Panel Sri Lanka',
+    seo_twitter_description: 'Best SMM panel for buying followers, likes, views in Sri Lanka. Instant delivery, affordable prices.',
+    seo_twitter_image: '',
+    seo_canonical_url: 'https://makemetrend.lk',
+    seo_robots_txt: 'User-agent: *\nAllow: /\n\nSitemap: https://makemetrend.lk/sitemap.xml',
+    seo_sitemap_url: 'https://makemetrend.lk/sitemap.xml',
+    seo_structured_data: '{\n  "@context": "https://schema.org",\n  "@type": "Organization",\n  "name": "MAKE ME TREND",\n  "url": "https://makemetrend.lk",\n  "logo": "https://makemetrend.lk/logo.png",\n  "sameAs": [\n    "https://facebook.com/makemetrend",\n    "https://instagram.com/makemetrend",\n    "https://twitter.com/makemetrend"\n  ]\n}',
+    seo_meta_author: 'MAKE ME TREND',
+    seo_meta_revisit_after: '7 days',
+    seo_meta_rating: 'general',
+    seo_meta_distribution: 'global',
+    seo_meta_coverage: 'worldwide',
+    seo_meta_category: 'social media marketing',
+    seo_hreflang_en: 'https://makemetrend.lk/en',
+    seo_hreflang_si: 'https://makemetrend.lk/si',
+    seo_hreflang_ta: 'https://makemetrend.lk/ta',
+    seo_google_verification: '',
+    seo_bing_verification: '',
+    seo_yandex_verification: '',
+    seo_baidu_verification: '',
+    seo_alexa_verification: '',
+    seo_pinterest_verification: '',
+    seo_norton_verification: ''
   });
 
   const API_URL = import.meta.env.VITE_API_URL;
@@ -166,9 +232,14 @@ const AdminConfigPage: React.FC = () => {
       if (response.data.success) {
         setConfig(prev => ({ ...prev, ...response.data.config }));
         
-        // Set image preview for site_logo
         if (response.data.config.site_logo) {
           setImagePreview(getImageUrl(response.data.config.site_logo));
+        }
+        if (response.data.config.seo_og_image) {
+          setSeoImagePreview(getImageUrl(response.data.config.seo_og_image));
+        }
+        if (response.data.config.seo_twitter_image) {
+          setSeoTwitterImagePreview(getImageUrl(response.data.config.seo_twitter_image));
         }
       }
     } catch (error) {
@@ -220,7 +291,36 @@ const AdminConfigPage: React.FC = () => {
         google_analytics_id: config.google_analytics_id,
         facebook_pixel_id: config.facebook_pixel_id,
         recaptcha_site_key: config.recaptcha_site_key,
-        recaptcha_secret_key: config.recaptcha_secret_key
+        recaptcha_secret_key: config.recaptcha_secret_key,
+        seo_title: config.seo_title,
+        seo_description: config.seo_description,
+        seo_keywords: config.seo_keywords,
+        seo_og_title: config.seo_og_title,
+        seo_og_description: config.seo_og_description,
+        seo_og_image: config.seo_og_image,
+        seo_twitter_title: config.seo_twitter_title,
+        seo_twitter_description: config.seo_twitter_description,
+        seo_twitter_image: config.seo_twitter_image,
+        seo_canonical_url: config.seo_canonical_url,
+        seo_robots_txt: config.seo_robots_txt,
+        seo_sitemap_url: config.seo_sitemap_url,
+        seo_structured_data: config.seo_structured_data,
+        seo_meta_author: config.seo_meta_author,
+        seo_meta_revisit_after: config.seo_meta_revisit_after,
+        seo_meta_rating: config.seo_meta_rating,
+        seo_meta_distribution: config.seo_meta_distribution,
+        seo_meta_coverage: config.seo_meta_coverage,
+        seo_meta_category: config.seo_meta_category,
+        seo_hreflang_en: config.seo_hreflang_en,
+        seo_hreflang_si: config.seo_hreflang_si,
+        seo_hreflang_ta: config.seo_hreflang_ta,
+        seo_google_verification: config.seo_google_verification,
+        seo_bing_verification: config.seo_bing_verification,
+        seo_yandex_verification: config.seo_yandex_verification,
+        seo_baidu_verification: config.seo_baidu_verification,
+        seo_alexa_verification: config.seo_alexa_verification,
+        seo_pinterest_verification: config.seo_pinterest_verification,
+        seo_norton_verification: config.seo_norton_verification
       };
 
       const response = await axios.post(`${API_URL}/admin/config/update-multiple`, {
@@ -306,13 +406,13 @@ const AdminConfigPage: React.FC = () => {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const formData = new FormData();
     formData.append('image', file);
-    formData.append('key', 'site_logo');
+    formData.append('key', key);
 
     try {
       const response = await axios.post(`${API_URL}/admin/config/upload-image`, formData, {
@@ -323,8 +423,16 @@ const AdminConfigPage: React.FC = () => {
       });
 
       if (response.data.success) {
-        setConfig(prev => ({ ...prev, site_logo: response.data.path }));
-        setImagePreview(URL.createObjectURL(file));
+        setConfig(prev => ({ ...prev, [key]: response.data.path }));
+        
+        if (key === 'site_logo') {
+          setImagePreview(URL.createObjectURL(file));
+        } else if (key === 'seo_og_image') {
+          setSeoImagePreview(URL.createObjectURL(file));
+        } else if (key === 'seo_twitter_image') {
+          setSeoTwitterImagePreview(URL.createObjectURL(file));
+        }
+        
         setSaveSuccess(true);
       }
     } catch (error) {
@@ -354,6 +462,7 @@ const AdminConfigPage: React.FC = () => {
     { id: 'social', label: 'Social Links', icon: Share2 },
     { id: 'contact', label: 'Contact', icon: Mail },
     { id: 'effects', label: 'Site Effects', icon: Sparkles },
+    { id: 'seo', label: 'SEO Management', icon: Search },
   ];
 
   if (loading) {
@@ -378,7 +487,6 @@ const AdminConfigPage: React.FC = () => {
       />
 
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-80' : 'md:ml-0'} ml-0 min-h-screen flex flex-col`}>
-        {/* Header */}
         <header className="sticky top-0 z-40 bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/10">
           <div className="flex items-center justify-between px-4 py-3 md:px-8 md:py-4">
             <div className="flex items-center gap-2 md:gap-4">
@@ -437,12 +545,9 @@ const AdminConfigPage: React.FC = () => {
           </div>
         </header>
 
-        {/* Main Content */}
         <div className="flex-1 p-4 md:p-8">
           <div className="max-w-7xl mx-auto">
-            {/* Tabs */}
             <div className="mb-6">
-              {/* Mobile Dropdown */}
               <div className="md:hidden">
                 <select
                   value={activeTab}
@@ -455,8 +560,7 @@ const AdminConfigPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Desktop Tabs */}
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-2">
                 {tabs.map(tab => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
@@ -464,7 +568,7 @@ const AdminConfigPage: React.FC = () => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all ${
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
                         isActive ? 'bg-brand text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
                       }`}
                     >
@@ -476,7 +580,6 @@ const AdminConfigPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Tab Content */}
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, y: 10 }}
@@ -484,7 +587,6 @@ const AdminConfigPage: React.FC = () => {
               transition={{ duration: 0.3 }}
               className="space-y-6"
             >
-              {/* MAINTENANCE TAB */}
               {activeTab === 'maintenance' && (
                 <div className="space-y-6">
                   <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
@@ -530,15 +632,12 @@ const AdminConfigPage: React.FC = () => {
                         {saving ? <Loader className="w-4 h-4 animate-spin" /> : config.maintenance_mode === '1' ? 'Disable' : 'Enable'}
                       </button>
                     </div>
-
                   </div>
                 </div>
               )}
 
-              {/* GENERAL TAB */}
               {activeTab === 'general' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Site Info */}
                   <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
                     <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                       <Globe className="w-5 h-5 text-brand" />
@@ -553,7 +652,6 @@ const AdminConfigPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Site Logo */}
                   <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
                     <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                       <ImageIcon className="w-5 h-5 text-brand" />
@@ -564,7 +662,6 @@ const AdminConfigPage: React.FC = () => {
                       <div>
                         <label className="block text-xs text-gray-400 mb-2">Site Logo</label>
                         <div className="flex flex-col items-center gap-4 p-6 bg-black/30 rounded-xl border border-white/10">
-                          {/* Logo Preview */}
                           <div className="w-32 h-32 rounded-xl bg-black/50 border border-white/10 overflow-hidden flex items-center justify-center">
                             {imagePreview || config.site_logo ? (
                               <img 
@@ -583,12 +680,11 @@ const AdminConfigPage: React.FC = () => {
                             )}
                           </div>
 
-                          {/* Upload Button */}
                           <div className="w-full">
                             <input
                               type="file"
                               accept="image/*"
-                              onChange={handleImageUpload}
+                              onChange={(e) => handleImageUpload(e, 'site_logo')}
                               className="hidden"
                               id="logo-upload"
                             />
@@ -608,7 +704,6 @@ const AdminConfigPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Alert Settings */}
                   <div className="lg:col-span-2 bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
                     <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                       <Bell className="w-5 h-5 text-brand" />
@@ -652,7 +747,6 @@ const AdminConfigPage: React.FC = () => {
                 </div>
               )}
 
-              {/* SOCIAL LINKS TAB */}
               {activeTab === 'social' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
@@ -701,7 +795,6 @@ const AdminConfigPage: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Preview */}
                   <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
                     <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                       <Eye className="w-5 h-5 text-brand" />
@@ -737,7 +830,6 @@ const AdminConfigPage: React.FC = () => {
                 </div>
               )}
 
-              {/* CONTACT TAB */}
               {activeTab === 'contact' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
@@ -780,10 +872,8 @@ const AdminConfigPage: React.FC = () => {
                 </div>
               )}
 
-              {/* EFFECTS TAB - NEW */}
               {activeTab === 'effects' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Snow Effect Card */}
                   <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
                     <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                       <Snowflake className="w-5 h-5 text-blue-400" />
@@ -816,7 +906,6 @@ const AdminConfigPage: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Preview */}
                       <div className="relative h-32 rounded-xl bg-gradient-to-b from-blue-900/20 to-transparent border border-white/10 overflow-hidden">
                         <div className="absolute inset-0 flex items-center justify-center">
                           <Snowflake className="w-6 h-6 text-blue-400 animate-bounce" />
@@ -828,7 +917,6 @@ const AdminConfigPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Festival Effect Card */}
                   <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
                     <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                       <PartyPopper className="w-5 h-5 text-pink-400" />
@@ -861,7 +949,6 @@ const AdminConfigPage: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Festival Type Selector */}
                       {config.festival_effect === '1' && (
                         <div className="space-y-2">
                           <label className="text-xs text-gray-400">Festival Type</label>
@@ -881,7 +968,6 @@ const AdminConfigPage: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Preview */}
                       <div className="relative h-32 rounded-xl bg-gradient-to-b from-pink-900/20 to-transparent border border-white/10 overflow-hidden">
                         <div className="absolute inset-0 flex items-center justify-center">
                           <PartyPopper className="w-6 h-6 text-pink-400 animate-bounce" />
@@ -893,7 +979,6 @@ const AdminConfigPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Info Card */}
                   <div className="lg:col-span-2 bg-gradient-to-br from-blue-500/10 to-pink-500/10 border border-white/10 rounded-2xl p-6">
                     <div className="flex items-start gap-3">
                       <Info className="w-5 h-5 text-brand shrink-0 mt-0.5" />
@@ -909,12 +994,364 @@ const AdminConfigPage: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {activeTab === 'seo' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                        <Search className="w-5 h-5 text-brand" />
+                        Basic SEO
+                      </h2>
+                      
+                      <div className="space-y-4">
+                        <InputField 
+                          label="SEO Title (60-70 characters)" 
+                          value={config.seo_title} 
+                          onChange={(v) => handleSave('seo_title', v)} 
+                        />
+                        <div className="text-xs text-right">
+                          <span className={config.seo_title.length > 70 ? 'text-red-400' : config.seo_title.length > 50 ? 'text-green-400' : 'text-yellow-400'}>
+                            {config.seo_title.length} characters
+                          </span>
+                        </div>
+                        
+                        <TextAreaField 
+                          label="SEO Description (150-160 characters)" 
+                          value={config.seo_description} 
+                          onChange={(v) => handleSave('seo_description', v)} 
+                          rows={3}
+                        />
+                        <div className="text-xs text-right">
+                          <span className={config.seo_description.length > 160 ? 'text-red-400' : config.seo_description.length > 140 ? 'text-green-400' : 'text-yellow-400'}>
+                            {config.seo_description.length} characters
+                          </span>
+                        </div>
+                        
+                        <InputField 
+                          label="SEO Keywords (comma separated)" 
+                          value={config.seo_keywords} 
+                          onChange={(v) => handleSave('seo_keywords', v)} 
+                        />
+                        
+                        <InputField 
+                          label="Meta Author" 
+                          value={config.seo_meta_author} 
+                          onChange={(v) => handleSave('seo_meta_author', v)} 
+                        />
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <InputField 
+                            label="Revisit After" 
+                            value={config.seo_meta_revisit_after} 
+                            onChange={(v) => handleSave('seo_meta_revisit_after', v)} 
+                          />
+                          <InputField 
+                            label="Meta Rating" 
+                            value={config.seo_meta_rating} 
+                            onChange={(v) => handleSave('seo_meta_rating', v)} 
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <InputField 
+                            label="Distribution" 
+                            value={config.seo_meta_distribution} 
+                            onChange={(v) => handleSave('seo_meta_distribution', v)} 
+                          />
+                          <InputField 
+                            label="Coverage" 
+                            value={config.seo_meta_coverage} 
+                            onChange={(v) => handleSave('seo_meta_coverage', v)} 
+                          />
+                        </div>
+                        
+                        <InputField 
+                          label="Category" 
+                          value={config.seo_meta_category} 
+                          onChange={(v) => handleSave('seo_meta_category', v)} 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                        <Eye className="w-5 h-5 text-brand" />
+                        Google Preview
+                      </h2>
+                      
+                      <div className="bg-white rounded-xl p-4">
+                        <p className="text-xs text-green-700 mb-1">https://makemetrend.lk</p>
+                        <p className="text-blue-600 text-sm font-medium hover:underline cursor-pointer mb-1 line-clamp-1">
+                          {config.seo_title || config.site_title}
+                        </p>
+                        <p className="text-gray-600 text-xs line-clamp-2">
+                          {config.seo_description || config.site_description}
+                        </p>
+                      </div>
+                      
+                      <div className="mt-4 bg-[#15202B] rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-brand to-purple-600 rounded-lg shrink-0"></div>
+                          <div>
+                            <p className="text-white text-sm font-medium">{config.seo_twitter_title || config.site_name}</p>
+                            <p className="text-gray-400 text-xs line-clamp-2">{config.seo_twitter_description || config.site_description}</p>
+                            <p className="text-gray-500 text-xs mt-1">makemetrend.lk</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                        <Share2 className="w-5 h-5 text-brand" />
+                        Open Graph (Facebook)
+                      </h2>
+                      
+                      <div className="space-y-4">
+                        <InputField 
+                          label="OG Title" 
+                          value={config.seo_og_title} 
+                          onChange={(v) => handleSave('seo_og_title', v)} 
+                        />
+                        <TextAreaField 
+                          label="OG Description" 
+                          value={config.seo_og_description} 
+                          onChange={(v) => handleSave('seo_og_description', v)} 
+                          rows={2}
+                        />
+                        
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-2">OG Image</label>
+                          <div className="flex flex-col items-center gap-4 p-4 bg-black/30 rounded-xl border border-white/10">
+                            <div className="w-full h-32 rounded-lg bg-black/50 border border-white/10 overflow-hidden flex items-center justify-center">
+                              {seoImagePreview || config.seo_og_image ? (
+                                <img 
+                                  src={seoImagePreview || getImageUrl(config.seo_og_image)} 
+                                  alt="OG Image" 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="text-center">
+                                  <ImageIcon className="w-8 h-8 text-gray-600 mx-auto" />
+                                  <p className="text-xs text-gray-500 mt-1">No image</p>
+                                </div>
+                              )}
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleImageUpload(e, 'seo_og_image')}
+                              className="hidden"
+                              id="og-image-upload"
+                            />
+                            <label
+                              htmlFor="og-image-upload"
+                              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm text-white cursor-pointer transition-colors"
+                            >
+                              <ImageIcon className="w-4 h-4" />
+                              Upload OG Image
+                            </label>
+                            <p className="text-xs text-gray-500">Recommended: 1200x630px</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                        <Twitter className="w-5 h-5 text-brand" />
+                        Twitter Card
+                      </h2>
+                      
+                      <div className="space-y-4">
+                        <InputField 
+                          label="Twitter Title" 
+                          value={config.seo_twitter_title} 
+                          onChange={(v) => handleSave('seo_twitter_title', v)} 
+                        />
+                        <TextAreaField 
+                          label="Twitter Description" 
+                          value={config.seo_twitter_description} 
+                          onChange={(v) => handleSave('seo_twitter_description', v)} 
+                          rows={2}
+                        />
+                        
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-2">Twitter Image</label>
+                          <div className="flex flex-col items-center gap-4 p-4 bg-black/30 rounded-xl border border-white/10">
+                            <div className="w-full h-32 rounded-lg bg-black/50 border border-white/10 overflow-hidden flex items-center justify-center">
+                              {seoTwitterImagePreview || config.seo_twitter_image ? (
+                                <img 
+                                  src={seoTwitterImagePreview || getImageUrl(config.seo_twitter_image)} 
+                                  alt="Twitter Image" 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="text-center">
+                                  <ImageIcon className="w-8 h-8 text-gray-600 mx-auto" />
+                                  <p className="text-xs text-gray-500 mt-1">No image</p>
+                                </div>
+                              )}
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleImageUpload(e, 'seo_twitter_image')}
+                              className="hidden"
+                              id="twitter-image-upload"
+                            />
+                            <label
+                              htmlFor="twitter-image-upload"
+                              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm text-white cursor-pointer transition-colors"
+                            >
+                              <ImageIcon className="w-4 h-4" />
+                              Upload Twitter Image
+                            </label>
+                            <p className="text-xs text-gray-500">Recommended: 800x418px</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                        <Link className="w-5 h-5 text-brand" />
+                        Technical SEO
+                      </h2>
+                      
+                      <div className="space-y-4">
+                        <InputField 
+                          label="Canonical URL" 
+                          value={config.seo_canonical_url} 
+                          onChange={(v) => handleSave('seo_canonical_url', v)} 
+                          placeholder="https://makemetrend.lk"
+                        />
+                        <InputField 
+                          label="Sitemap URL" 
+                          value={config.seo_sitemap_url} 
+                          onChange={(v) => handleSave('seo_sitemap_url', v)} 
+                          placeholder="https://makemetrend.lk/sitemap.xml"
+                        />
+                        <TextAreaField 
+                          label="robots.txt" 
+                          value={config.seo_robots_txt} 
+                          onChange={(v) => handleSave('seo_robots_txt', v)} 
+                          rows={4}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                        <Globe className="w-5 h-5 text-brand" />
+                        hreflang (Multi-language)
+                      </h2>
+                      
+                      <div className="space-y-4">
+                        <InputField 
+                          label="English (en)" 
+                          value={config.seo_hreflang_en} 
+                          onChange={(v) => handleSave('seo_hreflang_en', v)} 
+                          placeholder="https://makemetrend.lk/en"
+                        />
+                        <InputField 
+                          label="Sinhala (si)" 
+                          value={config.seo_hreflang_si} 
+                          onChange={(v) => handleSave('seo_hreflang_si', v)} 
+                          placeholder="https://makemetrend.lk/si"
+                        />
+                        <InputField 
+                          label="Tamil (ta)" 
+                          value={config.seo_hreflang_ta} 
+                          onChange={(v) => handleSave('seo_hreflang_ta', v)} 
+                          placeholder="https://makemetrend.lk/ta"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                      <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                        <Shield className="w-5 h-5 text-brand" />
+                        Site Verification
+                      </h2>
+                      
+                      <div className="space-y-4">
+                        <InputField 
+                          label="Google Search Console" 
+                          value={config.seo_google_verification} 
+                          onChange={(v) => handleSave('seo_google_verification', v)} 
+                        />
+                        <InputField 
+                          label="Bing Webmaster" 
+                          value={config.seo_bing_verification} 
+                          onChange={(v) => handleSave('seo_bing_verification', v)} 
+                        />
+                        <InputField 
+                          label="Yandex Webmaster" 
+                          value={config.seo_yandex_verification} 
+                          onChange={(v) => handleSave('seo_yandex_verification', v)} 
+                        />
+                        <InputField 
+                          label="Pinterest" 
+                          value={config.seo_pinterest_verification} 
+                          onChange={(v) => handleSave('seo_pinterest_verification', v)} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-6">
+                    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                      <FileJson className="w-5 h-5 text-brand" />
+                      Structured Data (JSON-LD)
+                    </h2>
+                    
+                    <div className="space-y-4">
+                      <TextAreaField 
+                        value={config.seo_structured_data} 
+                        onChange={(v) => handleSave('seo_structured_data', v)} 
+                        rows={10}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Schema.org structured data for rich snippets in search results
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-white/10 rounded-2xl p-6">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-5 h-5 text-brand shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="text-sm font-bold text-white mb-1">SEO Best Practices for #1 Ranking</h3>
+                        <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
+                          <li>Title: 50-60 characters, include primary keyword at the beginning</li>
+                          <li>Description: 150-160 characters, include call-to-action and primary keywords</li>
+                          <li>Use descriptive URLs with keywords</li>
+                          <li>Add structured data (JSON-LD) for rich snippets</li>
+                          <li>Submit sitemap to Google Search Console</li>
+                          <li>Optimize images with descriptive alt text</li>
+                          <li>Ensure mobile-friendly responsive design</li>
+                          <li>Improve page speed (Core Web Vitals)</li>
+                          <li>Build quality backlinks from relevant sites</li>
+                          <li>Create fresh, valuable content regularly</li>
+                          <li>Use social media to amplify content</li>
+                          <li>Monitor and fix crawl errors in Search Console</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>
       </div>
 
-      {/* Footer Badge */}
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/50 backdrop-blur-xl border border-white/10 rounded-full z-50">
         <span className="text-[10px] font-bold text-white">MAKE ME TREND</span>
       </div>
@@ -922,7 +1359,6 @@ const AdminConfigPage: React.FC = () => {
   );
 };
 
-// Helper Components (unchanged)
 const InputField = ({ label, value, onChange, icon, type = 'text', placeholder }: any) => (
   <div>
     <label className="block text-xs text-gray-400 mb-1">{label}</label>
@@ -971,4 +1407,3 @@ const PreviewItem = ({ icon, label }: any) => (
 );
 
 export default AdminConfigPage;
-
