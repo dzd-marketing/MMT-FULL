@@ -36,11 +36,11 @@ const DailyUpdatesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('7'); // 7 days, 30 days, all
+  const [dateFilter, setDateFilter] = useState('7'); 
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-  // Check authentication
+  
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -88,21 +88,18 @@ const API_URL = import.meta.env.VITE_API_URL;
     }
   };
 
-  // Refresh data when date filter changes
   useEffect(() => {
     if (!authLoading) {
       loadNewServices();
     }
   }, [dateFilter]);
 
-  // Filter services based on search
   const filteredServices = newServices.filter(service => 
     service.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     service.service_id.toString().includes(searchTerm) ||
     (service.service_description?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
-  // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -114,7 +111,6 @@ const API_URL = import.meta.env.VITE_API_URL;
     });
   };
 
-  // Get time ago
   const getTimeAgo = (dateString: string) => {
     const now = new Date();
     const past = new Date(dateString);
@@ -162,9 +158,9 @@ const API_URL = import.meta.env.VITE_API_URL;
         </button>
       </div>
 
-      {/* Filters */}
+    
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        {/* Search */}
+  
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
@@ -366,7 +362,6 @@ const API_URL = import.meta.env.VITE_API_URL;
             </table>
           </div>
 
-          {/* Footer with count */}
           <div className="px-4 py-3 border-t border-white/10 bg-white/5">
             <p className="text-xs text-gray-400">
               Showing {filteredServices.length} of {newServices.length} new services
