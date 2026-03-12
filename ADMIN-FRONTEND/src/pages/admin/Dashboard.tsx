@@ -157,7 +157,7 @@ const AdminDashboard: React.FC = () => {
   });
   const [chartLoading, setChartLoading] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   // Column resize handlers
   const initResize = (e: React.MouseEvent, index: number) => {
