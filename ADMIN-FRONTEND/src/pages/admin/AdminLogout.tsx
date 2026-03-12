@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 
-// ── Particle background (matches login page) ──────────────────────────────
 const ParticleBg = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -61,7 +60,6 @@ const ParticleBg = () => {
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" />;
 };
 
-// ── Farewell messages — picks one randomly each logout ────────────────────
 const FAREWELL_MESSAGES = [
   { title: "See you soon!", sub: "Your empire awaits your return." },
   { title: "Rest well!", sub: "The panel will be here when you're back." },
@@ -70,7 +68,6 @@ const FAREWELL_MESSAGES = [
   { title: "Mission complete!", sub: "Your work today made a difference." },
 ];
 
-// ── Countdown ring ────────────────────────────────────────────────────────
 const CountdownRing = ({ seconds, total }: { seconds: number; total: number }) => {
   const r = 28;
   const circ = 2 * Math.PI * r;
@@ -78,9 +75,7 @@ const CountdownRing = ({ seconds, total }: { seconds: number; total: number }) =
 
   return (
     <svg width="72" height="72" className="absolute inset-0 -rotate-90">
-      {/* Track */}
       <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="3" />
-      {/* Progress */}
       <motion.circle
         cx="36" cy="36" r={r}
         fill="none"
@@ -95,34 +90,28 @@ const CountdownRing = ({ seconds, total }: { seconds: number; total: number }) =
   );
 };
 
-// ── Main Logout Page ──────────────────────────────────────────────────────
 export default function AdminLogoutPage() {
   const navigate = useNavigate();
   const COUNTDOWN = 5;
   const [seconds, setSeconds] = useState(COUNTDOWN);
   const adminName = import.meta.env.VITE_ADMIN_NAME || 'Admin';
 
-  // Pick farewell message once on mount
   const farewell = FAREWELL_MESSAGES[Math.floor(Math.random() * FAREWELL_MESSAGES.length)];
 
-  // Typewriter effect
   const fullText = `Goodbye, ${adminName}`;
   const [displayed, setDisplayed] = useState('');
   const [typeDone, setTypeDone] = useState(false);
 
-  // Stats from session
   const sessionStart = sessionStorage.getItem('adminSessionStart');
   const sessionDuration = sessionStart
     ? Math.floor((Date.now() - parseInt(sessionStart)) / 60000)
     : null;
 
   useEffect(() => {
-    // Set session start if not already set (for duration tracking)
     if (!sessionStorage.getItem('adminSessionStart')) {
       sessionStorage.setItem('adminSessionStart', Date.now().toString());
     }
 
-    // Typewriter
     let i = 0;
     const typeInterval = setInterval(() => {
       setDisplayed(fullText.slice(0, i + 1));
@@ -130,7 +119,6 @@ export default function AdminLogoutPage() {
       if (i >= fullText.length) { clearInterval(typeInterval); setTypeDone(true); }
     }, 65);
 
-    // Countdown
     const countInterval = setInterval(() => {
       setSeconds(s => {
         if (s <= 1) {
@@ -157,7 +145,6 @@ export default function AdminLogoutPage() {
     <div className="min-h-screen bg-[#080808] flex items-center justify-center relative overflow-hidden">
       <ParticleBg />
 
-      {/* Background glows — red tinted for logout mood */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-500/4 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/3 rounded-full blur-3xl" />
@@ -195,7 +182,6 @@ export default function AdminLogoutPage() {
           </div>
 
           <div className="text-center">
-            {/* Wave emoji */}
             <motion.div
               animate={{ rotate: [0, 20, -10, 20, 0] }}
               transition={{ delay: 0.4, duration: 1.2, ease: 'easeInOut' }}
@@ -204,13 +190,11 @@ export default function AdminLogoutPage() {
               👋
             </motion.div>
 
-            {/* Typewriter goodbye */}
             <h2 className="text-white text-2xl font-black tracking-tight mb-1 min-h-[36px]">
               {displayed}
               {!typeDone && <span className="animate-pulse text-red-400">|</span>}
             </h2>
 
-            {/* Farewell subtitle */}
             <motion.p
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -219,8 +203,6 @@ export default function AdminLogoutPage() {
             >
               {farewell.sub}
             </motion.p>
-
-            {/* Time emoji */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -230,7 +212,6 @@ export default function AdminLogoutPage() {
               {timeEmoji} {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} — {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
             </motion.p>
 
-            {/* Session duration card */}
             {sessionDuration !== null && sessionDuration > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
@@ -247,10 +228,8 @@ export default function AdminLogoutPage() {
               </motion.div>
             )}
 
-            {/* Divider */}
             <div className="h-px bg-gradient-to-r from-transparent via-white/8 to-transparent mb-6" />
 
-            {/* Countdown + button */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
