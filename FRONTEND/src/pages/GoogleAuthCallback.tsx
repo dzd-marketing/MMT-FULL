@@ -20,7 +20,7 @@ const GoogleAuthCallback: React.FC = () => {
                 return;
             }
 
-            // If requiresVerification flag is present, this is a verification redirect
+        
             if (requiresVerification === 'true' && token) {
                 sessionStorage.setItem('verificationToken', token);
                 navigate('/verify-email');
@@ -44,17 +44,15 @@ const GoogleAuthCallback: React.FC = () => {
             }
 
             try {
-                // 🔥 STORE TOKEN IN LOCALSTORAGE 🔥
+           
                 localStorage.setItem('token', token);
                 
-                // 🔥 DISPATCH EVENT FOR NAVBAR 🔥
+             
                 window.dispatchEvent(new Event('auth-change'));
-                
-                // For normal login (already verified users)
                 const result = await authService.handleGoogleCallback(token);
                 
                 if (result.success) {
-                    // Redirect to homepage instead of dashboard
+                   
                     navigate('/');
                 } else {
                     navigate('/login?error=auth_failed');
