@@ -97,7 +97,7 @@ const NewOrder: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // previewCurrency — display only, all internal charges stay in LKR
+  
   const [previewCurrency, setPreviewCurrency] = useState<Currency>('LKR');
   const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
 
@@ -107,16 +107,16 @@ const NewOrder: React.FC = () => {
   });
   const [ratesLoading, setRatesLoading] = useState(true);
 
-  // Form fields
+  
   const [link, setLink] = useState('');
   const [quantity, setQuantity] = useState<number>(0);
   const [comments, setComments] = useState('');
-  const [charge, setCharge] = useState<number>(0); // always LKR
+  const [charge, setCharge] = useState<number>(0); 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
-  // Dripfeed
+
   const [dripfeedEnabled, setDripfeedEnabled] = useState(false);
   const [dripfeedRunsInput, setDripfeedRunsInput] = useState<string>('2');
   const [dripfeedIntervalInput, setDripfeedIntervalInput] = useState<string>('10');
@@ -136,7 +136,7 @@ const NewOrder: React.FC = () => {
     return map[backendCurrency] || 'LKR';
   };
 
-  // Fetch live rates from hexarate — INR/LKR direct endpoint
+ 
   useEffect(() => {
     const fetchConversionRates = async () => {
       setRatesLoading(true);
@@ -255,7 +255,7 @@ const NewOrder: React.FC = () => {
     setFilteredServices(filtered);
   }, [services, selectedCategory, searchQuery]);
 
-  // ── Currency helpers ─────────────────────────────────────────────────────
+ 
 
   const getCurrencySymbol = () => currencySymbols[previewCurrency] || 'LKR ';
 
@@ -277,7 +277,7 @@ const NewOrder: React.FC = () => {
     return lkrToPreview(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  // ── Platform helpers ─────────────────────────────────────────────────────
+ 
 
   const getPlatformIcon = (platform: string) => {
     const icons: Record<string, any> = {
@@ -298,7 +298,7 @@ const NewOrder: React.FC = () => {
     return colors[platform.toLowerCase()] || 'text-gray-400';
   };
 
-  // ── Data loading ─────────────────────────────────────────────────────────
+
 
   const loadData = async () => {
     try {
@@ -325,7 +325,7 @@ const NewOrder: React.FC = () => {
     }
   };
 
-  // charge always stored in LKR
+
   const calculateCharge = () => {
     if (!selectedService || !quantity) return;
     const pricePerUnit = parseFloat(selectedService.service_price) / 1000;
@@ -348,7 +348,7 @@ const NewOrder: React.FC = () => {
     setDripfeedIntervalInput('10');
   };
 
-  // FIX: when dripfeed is enabled, minimum per-run = ceil(service_min / runs)
+ 
   const effectiveMin = (service: SelectedService | null): number => {
     if (!service) return 0;
     if (dripfeedEnabled && dripfeedRuns >= 2) {
@@ -455,7 +455,7 @@ const NewOrder: React.FC = () => {
     }
   };
 
-  // ── Guards ───────────────────────────────────────────────────────────────
+ 
 
   if (authLoading || loading) {
     return <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center"><LoadingScreen2 /></div>;
@@ -480,7 +480,7 @@ const NewOrder: React.FC = () => {
   const walletBalanceLkr = parseFloat(walletData.available_balance);
   const insufficientBalance = charge > 0 && charge > walletBalanceLkr;
 
-  // ── Render ───────────────────────────────────────────────────────────────
+ 
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
