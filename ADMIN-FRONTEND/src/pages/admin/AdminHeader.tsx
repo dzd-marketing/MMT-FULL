@@ -1,15 +1,4 @@
-// components/admin/AdminHeader.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Drop-in replacement for the hardcoded header on every admin page.
-// Usage:
-//   import AdminHeader from './AdminHeader';
-//   <AdminHeader
-//     title="Page Title"
-//     onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-//     onMobileMenuClick={() => setMobileSidebarOpen(true)}
-//     activeTickets={stats.activeTickets}   // optional — shows red dot on bell
-//   />
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 import React, { useMemo } from 'react';
 import { Menu, Bell, Shield, LogOut } from 'lucide-react';
