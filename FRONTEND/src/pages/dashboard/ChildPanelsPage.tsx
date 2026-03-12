@@ -63,7 +63,7 @@ const ChildPanelsPage: React.FC = () => {
   const [renewingId, setRenewingId] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
   // Complete worldwide currencies list
   const currencies = [
