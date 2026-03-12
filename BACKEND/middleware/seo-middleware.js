@@ -16,7 +16,7 @@ module.exports = (pool) => {
             configs.forEach(config => {
                 seoData[config.config_key] = config.config_value;
             });
-            const indexPath = path.join(__dirname, '../../frontend/dist/index.html');
+            const indexPath = path.join(__dirname, '../../FRONTEND/dist/index.html');
             if (!fs.existsSync(indexPath)) {
                 console.error('index.html not found at:', indexPath);
                 return next();
