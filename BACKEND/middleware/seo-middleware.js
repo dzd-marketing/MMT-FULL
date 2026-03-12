@@ -2,10 +2,10 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports = (pool) => {
-    return async (req, res, next) => {
+    return async (req, res) => {
         // Only apply to HTML requests
         if (!req.accepts('html')) {
-            return next();
+            return res.status(404).send('Not found');
         }
 
         try {
@@ -24,6 +24,13 @@ module.exports = (pool) => {
 
             // Read the index.html file
             const indexPath = path.join(__dirname, '../../frontend/dist/index.html');
+            
+            // Check if file exists
+            if (!fs.existsSync(indexPath)) {
+                console.error('index.html not found at:', indexPath);
+                return res.status(500).send('index.html not found');
+            }
+            
             let html = fs.readFileSync(indexPath, 'utf8');
 
             // Generate meta tags from database
@@ -37,8 +44,15 @@ module.exports = (pool) => {
         } catch (error) {
             console.error('SEO middleware error:', error);
             // If error, serve original index.html
-            const indexPath = path.join(__dirname, '../../frontend/dist/index.html');
-            res.sendFile(indexPath);
+            try {
+                const indexPath = path.join(__dirname, '../../frontend/dist/index.html');
+                if (fs.existsSync(indexPath)) {
+                    return res.sendFile(indexPath);
+                }
+            } catch (e) {
+                console.error('Failed to serve index.html:', e);
+            }
+            res.status(500).send('Server error');
         }
     };
 };
