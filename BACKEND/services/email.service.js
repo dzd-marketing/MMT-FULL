@@ -19,11 +19,11 @@ class EmailService {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
             },
-            debug: true, // Enable debug logs
-            logger: true  // Log 
+            debug: true, 
+            logger: true  
         });
 
-        // Test connection on initialization
+  
         this.verifyConnection();
     }
 
@@ -211,7 +211,7 @@ async sendWelcomeEmail(to, name) {
     }
 }
 
-// email.service.js එකට මේ methods එකතු කරන්න
+
 
 async sendDepositNotification(depositData, userData) {
     const { id, amount, receipt_url, created_at } = depositData;
@@ -219,7 +219,7 @@ async sendDepositNotification(depositData, userData) {
 
     const mailOptions = {
         from: process.env.EMAIL_FROM,
-        to: process.env.ADMIN_EMAIL, // Admin ට යන mail
+        to: process.env.ADMIN_EMAIL,
         subject: `💰 New Deposit Request - LKR ${amount}`,
         html: `
             <!DOCTYPE html>
@@ -302,7 +302,7 @@ async sendDepositConfirmationToUser(depositData, userData) {
 
     const mailOptions = {
         from: process.env.EMAIL_FROM,
-        to: email, // User ට යන mail
+        to: email, 
         subject: `✅ Deposit Request Received - LKR ${amount}`,
         html: `
             <!DOCTYPE html>
@@ -385,7 +385,7 @@ async sendDepositConfirmationToUser(depositData, userData) {
     }
 }
 
-// Deposit Approved Email
+
 async sendDepositApprovedEmail(depositData, userData) {
     const { id, amount, approved_at } = depositData;
     const { name, email } = userData;
@@ -446,7 +446,7 @@ async sendDepositApprovedEmail(depositData, userData) {
     }
 }
 
-// Deposit Rejected Email
+
 async sendDepositRejectedEmail(depositData, userData, reason) {
     const { id, amount } = depositData;
     const { name, email } = userData;
@@ -804,7 +804,6 @@ async sendTicketNotification(ticketData, userData) {
     }
 }
 
-// Also send confirmation to user
 async sendTicketConfirmationToUser(ticketData, userData) {
     const { ticket_number, subject, department, priority, message } = ticketData;
     const { name, email } = userData;
@@ -990,7 +989,6 @@ async sendTicketConfirmationToUser(ticketData, userData) {
     }
 }
 
-// Add this method to your existing EmailService class in email.service.js
 
 async sendChildPanelNotification(panelData, userData) {
     const { domain, panel_currency, admin_username, admin_password, price } = panelData;
@@ -998,7 +996,7 @@ async sendChildPanelNotification(panelData, userData) {
 
     const mailOptions = {
         from: process.env.EMAIL_FROM,
-        to: process.env.ADMIN_EMAIL, // Make sure to add ADMIN_EMAIL to your .env
+        to: process.env.ADMIN_EMAIL,
         subject: '🆕 New Child Panel Order',
         html: `
             <!DOCTYPE html>
@@ -1219,7 +1217,7 @@ async sendChildPanelNotification(panelData, userData) {
     }
 }
 
-// Optional: Send confirmation to user as well
+
 async sendChildPanelConfirmationToUser(panelData, userData) {
     const { domain, panel_currency, admin_username, admin_password, price } = panelData;
     const { name, email } = userData;
