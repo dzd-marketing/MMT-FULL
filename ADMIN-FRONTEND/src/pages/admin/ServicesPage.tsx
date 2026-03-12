@@ -22,8 +22,6 @@ import { format } from 'date-fns';
 import Sidebar from './Sidebar';
 import AdminHeader from './AdminHeader';
 
-// ============= Type Definitions =============
-
 interface Service {
   service_id: number;
   service_name: string;
@@ -126,7 +124,6 @@ interface ServiceStats {
   by_package: Array<{ service_package: string; count: number }>;
 }
 
-// ============= Custom Dropdown Components =============
 
 interface DropdownOption {
   value: string;
@@ -230,8 +227,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   );
 };
 
-// ============= Package Type Badge Component =============
-
 const PackageTypeBadge: React.FC<{ type: string }> = ({ type }) => {
   const getPackageInfo = () => {
     switch (type) {
@@ -274,7 +269,6 @@ const PackageTypeBadge: React.FC<{ type: string }> = ({ type }) => {
   );
 };
 
-// ============= Speed Badge Component =============
 
 const SpeedBadge: React.FC<{ speed: '1' | '2' | '3' | '4' }> = ({ speed }) => {
   const speeds = {
@@ -292,8 +286,6 @@ const SpeedBadge: React.FC<{ speed: '1' | '2' | '3' | '4' }> = ({ speed }) => {
     </span>
   );
 };
-
-// ============= Platform Icon Component =============
 
 const PlatformIcon: React.FC<{ categoryName: string }> = ({ categoryName }) => {
   const name = categoryName.toLowerCase();
@@ -315,15 +307,12 @@ const PlatformIcon: React.FC<{ categoryName: string }> = ({ categoryName }) => {
   }
 };
 
-// ============= Main Component =============
-
 const AdminServicesPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Data states
   const [allServices, setAllServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [displayedServices, setDisplayedServices] = useState<Service[]>([]);
@@ -341,7 +330,6 @@ const AdminServicesPage: React.FC = () => {
     by_package: []
   });
 
-  // UI states
   const [loading, setLoading] = useState(true);
   const [loadingCache, setLoadingCache] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -355,12 +343,10 @@ const AdminServicesPage: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Selection states
   const [selectedServices, setSelectedServices] = useState<number[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [bulkAction, setBulkAction] = useState<string>('');
 
-  // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -368,7 +354,6 @@ const AdminServicesPage: React.FC = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  // Import states
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [providerServices, setProviderServices] = useState<ImportService[]>([]);
   const [selectedImportServices, setSelectedImportServices] = useState<Record<string, boolean>>({});
@@ -377,7 +362,6 @@ const AdminServicesPage: React.FC = () => {
   const [fetchingProviderServices, setFetchingProviderServices] = useState(false);
   const [autoCreateCategories, setAutoCreateCategories] = useState(false);
 
-  // Form states
   const [formData, setFormData] = useState<any>({});
   const [categoryForm, setCategoryForm] = useState({
     name: '',
@@ -387,28 +371,23 @@ const AdminServicesPage: React.FC = () => {
     position: 'bottom'
   });
 
-  // Multi-language states
   const [serviceNames, setServiceNames] = useState<Record<string, string>>({ en: '' });
   const [serviceDescriptions, setServiceDescriptions] = useState<Record<string, string>>({ en: '' });
   const [serviceTimes, setServiceTimes] = useState<Record<string, string>>({ en: 'Not enough data' });
 
-  // Action states
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
 
-  // Cache constants
   const CACHE_KEY = 'admin_services_cache';
   const CACHE_TIMESTAMP_KEY = 'admin_services_cache_timestamp';
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const CACHE_DURATION = 5 * 60 * 1000; 
 
-  // Refs
   const dropdownRef = useRef<HTMLDivElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const API_URL = import.meta.env.VITE_API_URL;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Sync states
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResults, setSyncResults] = useState<any>(null);
@@ -416,9 +395,7 @@ const AdminServicesPage: React.FC = () => {
   const [selectedUpdates, setSelectedUpdates] = useState<Record<number, boolean>>({});
   const [applyingUpdates, setApplyingUpdates] = useState(false);
 
-  // ============= useEffect Hooks =============
 
-  // Load URL params on initial mount
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const category = params.get('category');
@@ -1366,7 +1343,6 @@ const AdminServicesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-8">
             <StatCard
               label="Total Services"
@@ -1578,7 +1554,6 @@ const AdminServicesPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Advanced Filters */}
                 <AnimatePresence>
                   {showFilters && (
                     <motion.div
