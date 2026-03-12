@@ -14,8 +14,39 @@ dotenv.config();
 
 const app = express();
 
-// Trust proxy — required for correct IP and protocol detection behind LiteSpeed
+// Trust proxy — required for correct IP/protocol detection behind LiteSpeed
 app.set('trust proxy', 1);
+
+// ============= ALLOWED ORIGINS =============
+// Must be defined before anything else so corsOptions is available
+const allowedOrigins = [
+    'https://mmtsmmpanel.cyberservice.online',
+    'https://admin.mmtsmmpanel.cyberservice.online',
+    'http://localhost:3000',
+    'http://localhost:5173',
+];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (Postman, curl, mobile apps)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.warn(`CORS blocked request from: ${origin}`);
+            callback(new Error(`CORS blocked: ${origin}`));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['Set-Cookie'],
+    optionsSuccessStatus: 200
+};
+
+// ============= CORS — MUST BE FIRST =============
+// Handle preflight OPTIONS requests before helmet, rate limiters, or anything else
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 // ============= UPLOAD FOLDER SETUP =============
 const uploadDirs = [
@@ -28,31 +59,6 @@ const uploadDirs = [
 uploadDirs.forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
-
-// ============= ALLOWED ORIGINS =============
-const allowedOrigins = [
-    'https://mmtsmmpanel.cyberservice.online',
-    'https://admin.mmtsmmpanel.cyberservice.online',
-    'http://localhost:3000',
-    'http://localhost:5173',
-];
-
-const corsOptions = {
-    origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, curl, Postman)
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            console.warn(`CORS blocked request from: ${origin}`);
-            callback(new Error(`CORS blocked: ${origin}`));
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    exposedHeaders: ['Set-Cookie'],
-    optionsSuccessStatus: 200 // Some browsers (IE11) choke on 204
-};
 
 // ============= SECURITY MIDDLEWARE =============
 app.use(helmet({
@@ -84,11 +90,6 @@ app.use(helmet({
         preload: true
     }
 }));
-
-// ============= CORS =============
-// Handle OPTIONS preflight FIRST before any other middleware
-app.options('*', cors(corsOptions));
-app.use(cors(corsOptions));
 
 // ============= BODY PARSERS =============
 app.use(express.json({ limit: '10mb' }));
@@ -252,7 +253,6 @@ app.get('/api/health', (req, res) => {
 
 // ============= ERROR HANDLER =============
 app.use((err, req, res, next) => {
-    // Handle CORS errors specifically
     if (err.message && err.message.startsWith('CORS blocked')) {
         return res.status(403).json({
             success: false,
