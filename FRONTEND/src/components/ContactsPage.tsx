@@ -48,8 +48,8 @@ const ContactsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
+const API_URL = import.meta.env.VITE_API_URL;
+  
   useEffect(() => {
     fetchContactData();
   }, []);
@@ -411,5 +411,6 @@ const ContactsPage: React.FC = () => {
     </div>
   );
 };
+
 
 export default ContactsPage;
