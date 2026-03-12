@@ -28,8 +28,13 @@ const allowedOrigins = [
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Allow requests with no origin (Postman, curl, mobile apps)
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin) return callback(null, true);
+        
+        // ✅ Fix: LiteSpeed sometimes duplicates the origin header
+        // Clean it by taking only the first value
+        const cleanOrigin = origin.split(',')[0].trim();
+        
+        if (allowedOrigins.includes(cleanOrigin)) {
             callback(null, true);
         } else {
             console.warn(`CORS blocked request from: ${origin}`);
