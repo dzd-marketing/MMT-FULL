@@ -285,7 +285,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
                     <img
                       src={user.profilePicture.startsWith('http') 
                         ? user.profilePicture 
-                        : `http://localhost:5000${user.profilePicture}`
+                        : `https://mmtsmmpanel.cyberservice.online${user.profilePicture}`
                       }
                       alt={user.name}
                       className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border-2 border-brand"
@@ -507,7 +507,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user: propUser }) => {
                         <img
                           src={user.profilePicture.startsWith('http') 
                             ? user.profilePicture 
-                            : `http://localhost:5000${user.profilePicture}`
+                            : `https://mmtsmmpanel.cyberservice.online{user.profilePicture}`
                           }
                           alt={user.name}
                           className="w-12 h-12 rounded-full object-cover border-2 border-brand"
