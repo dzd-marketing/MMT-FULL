@@ -291,11 +291,24 @@ const AdminTicketsPage: React.FC = () => {
     return `${BASE_URL}${cleanPath}`;
   };
 
-  // For ticket attachments
+  // ============= FIXED: For ticket attachments =============
   const getAttachmentUrl = (attachment: TicketAttachment) => {
     if (attachment.file_url) return attachment.file_url;
     if (attachment.file_path) {
-      return getImageUrl(attachment.file_path);
+      // If it's already a full URL
+      if (attachment.file_path.startsWith('http')) return attachment.file_path;
+      
+      // Remove any '/api' prefix if present
+      const cleanPath = attachment.file_path.replace(/^\/api/, '');
+      
+      // If path doesn't start with /uploads, add it
+      if (!cleanPath.startsWith('/uploads')) {
+        // Extract filename from path
+        const filename = cleanPath.split('/').pop();
+        return `${BASE_URL}/uploads/tickets/${filename}`;
+      }
+      
+      return `${BASE_URL}${cleanPath}`;
     }
     return '';
   };
@@ -723,7 +736,6 @@ const AdminTicketsPage: React.FC = () => {
                       <td className="py-3 px-3"><span className="text-sm font-mono font-medium text-brand">#{ticket.ticket_number}</span></td>
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-2">
-                          {/* ✅ FIXED: Using Avatar component that handles images correctly */}
                           <Avatar src={ticket.profile_picture} name={ticket.full_name || 'User'} size="sm" />
                           <div>
                             <p className="text-sm text-white truncate max-w-[150px]">{ticket.full_name}</p>
@@ -895,7 +907,6 @@ const AdminTicketsPage: React.FC = () => {
                 <div className="bg-white/5 rounded-xl p-4">
                   <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><User className="w-4 h-4 text-brand" />User Information</h3>
                   <div className="flex items-center gap-3">
-                    {/* ✅ FIXED: Using Avatar component */}
                     <Avatar src={selectedTicket.profile_picture} name={selectedTicket.full_name || 'User'} size="lg" />
                     <div>
                       <p className="text-white font-medium">{selectedTicket.full_name}</p>
@@ -911,7 +922,7 @@ const AdminTicketsPage: React.FC = () => {
                   <div className="bg-black/30 rounded-lg p-4 text-sm text-gray-300 whitespace-pre-wrap">{selectedTicket.message}</div>
                 </div>
 
-                {/* Attachments */}
+                {/* Attachments - FIXED */}
                 {ticketAttachments.length > 0 && (
                   <div className="bg-white/5 rounded-xl p-4">
                     <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2"><Paperclip className="w-4 h-4 text-brand" />Attachments ({ticketAttachments.length})</h3>
@@ -922,7 +933,15 @@ const AdminTicketsPage: React.FC = () => {
                           <a key={att.id} href={fileUrl} target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-2 p-2 bg-black/30 rounded-lg hover:bg-black/50 transition-colors">
                             {att.mime_type?.startsWith('image/') ? (
-                              <img src={fileUrl} alt={att.file_name} className="w-8 h-8 object-cover rounded" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                              <img 
+                                src={fileUrl} 
+                                alt={att.file_name} 
+                                className="w-8 h-8 object-cover rounded" 
+                                onError={(e) => { 
+                                  console.log('Image failed to load:', fileUrl);
+                                  e.currentTarget.style.display = 'none'; 
+                                }} 
+                              />
                             ) : (
                               <Paperclip className="w-4 h-4 text-gray-400" />
                             )}
@@ -945,7 +964,6 @@ const AdminTicketsPage: React.FC = () => {
                     <div className="space-y-4">
                       {ticketReplies.map(reply => (
                         <div key={reply.id} className={`flex gap-3 ${reply.is_staff ? 'flex-row' : 'flex-row-reverse'}`}>
-                          {/* ✅ FIXED: Using Avatar component */}
                           <Avatar src={reply.profile_picture} name={reply.full_name || (reply.is_staff ? 'Admin' : 'User')} size="md" />
                           <div className={`flex-1 max-w-[80%] ${reply.is_staff ? '' : 'text-right'}`}>
                             <div className={`inline-block max-w-full rounded-xl p-3 ${reply.is_staff ? 'bg-brand/20 text-white' : 'bg-white/5 text-gray-300'}`}>
