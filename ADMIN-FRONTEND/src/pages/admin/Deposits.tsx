@@ -32,17 +32,14 @@ const AdminDepositsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDeposit, setSelectedDeposit] = useState<Deposit | null>(null);
   
-  // Modal states
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   
-  // Form states
   const [approveAmount, setApproveAmount] = useState<number>(0);
   const [rejectReason, setRejectReason] = useState('');
   const [processingId, setProcessingId] = useState<number | null>(null);
   
-  // Filter states
   const [filterStatus, setFilterStatus] = useState<string>('pending');
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -54,21 +51,16 @@ const AdminDepositsPage: React.FC = () => {
     total_approved_amount: 0
   });
 
-  // ============= FIXED: API URLs =============
   const API_URL = import.meta.env.VITE_API_URL;
   const IMAGE_URL = 'https://mmtsmmpanel.cyberservice.online';
 
-  // Helper function to clean image URL
   const getImageUrl = (imagePath: string | null) => {
     if (!imagePath) return '';
     
-    // If it's already a full URL
     if (imagePath.startsWith('http')) return imagePath;
     
-    // Remove any '/api' prefix if present
     const cleanPath = imagePath.replace(/^\/api/, '');
     
-    // Return full URL with IMAGE_URL base
     return `${IMAGE_URL}${cleanPath}`;
   };
 
@@ -121,8 +113,6 @@ const AdminDepositsPage: React.FC = () => {
     fetchDeposits();
     fetchStats();
   }, [filterStatus]);
-
-  // ============= FIXED: Handle approve =============
   const handleApprove = async () => {
     if (!selectedDeposit) return;
     
@@ -133,7 +123,6 @@ const AdminDepositsPage: React.FC = () => {
 
     setProcessingId(selectedDeposit.id);
     try {
-      // FIXED: Use correct endpoint
       const response = await axios.post(
         `${API_URL}/admin/deposits/${selectedDeposit.id}/approve`,
         { amount: approveAmount },
@@ -151,11 +140,8 @@ const AdminDepositsPage: React.FC = () => {
         setSelectedDeposit(null);
         setApproveAmount(0);
         
-        // Refresh data
         await fetchDeposits();
         await fetchStats();
-        
-        // Delete receipt after successful approval
         try {
           await axios.post(
             `${API_URL}/admin/deposits/${selectedDeposit.id}/delete-receipt`,
@@ -181,13 +167,11 @@ const AdminDepositsPage: React.FC = () => {
     }
   };
 
-  // ============= FIXED: Handle reject =============
   const handleReject = async () => {
     if (!selectedDeposit) return;
 
     setProcessingId(selectedDeposit.id);
     try {
-      // FIXED: Use correct endpoint
       const response = await axios.post(
         `${API_URL}/admin/deposits/${selectedDeposit.id}/reject`, 
         { reason: rejectReason },
@@ -205,11 +189,9 @@ const AdminDepositsPage: React.FC = () => {
         setRejectReason('');
         setSelectedDeposit(null);
         
-        // Refresh data
         await fetchDeposits();
         await fetchStats();
         
-        // Delete receipt after successful rejection
         try {
           await axios.post(
             `${API_URL}/admin/deposits/${selectedDeposit.id}/delete-receipt`,
@@ -234,15 +216,11 @@ const AdminDepositsPage: React.FC = () => {
       setProcessingId(null);
     }
   };
-
-  // Open approve modal
   const openApproveModal = (deposit: Deposit) => {
     setSelectedDeposit(deposit);
     setApproveAmount(deposit.amount);
     setShowApproveModal(true);
   };
-
-  // Filter deposits by search
   const filteredDeposits = deposits.filter(deposit => 
     deposit.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     deposit.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -355,8 +333,6 @@ const AdminDepositsPage: React.FC = () => {
               </button>
             ))}
           </div>
-
-          {/* Deposits Grid */}
           {loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 text-brand animate-spin" />
@@ -410,7 +386,6 @@ const AdminDepositsPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Receipt Preview */}
                   <div className="mb-4">
                     <button
                       onClick={() => {
@@ -426,8 +401,6 @@ const AdminDepositsPage: React.FC = () => {
                       <Eye className="w-4 h-4 text-gray-400" />
                     </button>
                   </div>
-
-                  {/* Actions */}
                   {deposit.status === 'pending' && (
                     <div className="flex gap-3">
                       <button
@@ -462,7 +435,6 @@ const AdminDepositsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Receipt Modal */}
       <AnimatePresence>
         {showReceiptModal && selectedDeposit && (
           <>
@@ -680,4 +652,5 @@ const AdminDepositsPage: React.FC = () => {
 };
 
 export default AdminDepositsPage;
+
 
