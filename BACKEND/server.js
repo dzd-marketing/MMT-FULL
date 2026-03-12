@@ -18,6 +18,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 // ============= ALLOWED ORIGINS =============
+// Must be defined before anything else so corsOptions is available
 const allowedOrigins = [
     'https://mmtsmmpanel.cyberservice.online',
     'https://admin.mmtsmmpanel.cyberservice.online',
@@ -29,7 +30,8 @@ const corsOptions = {
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
         
-        // Fix: LiteSpeed sometimes duplicates the origin header
+        // ✅ Fix: LiteSpeed sometimes duplicates the origin header
+        // Clean it by taking only the first value
         const cleanOrigin = origin.split(',')[0].trim();
         
         if (allowedOrigins.includes(cleanOrigin)) {
@@ -47,6 +49,7 @@ const corsOptions = {
 };
 
 // ============= CORS — MUST BE FIRST =============
+// Handle preflight OPTIONS requests before helmet, rate limiters, or anything else
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
@@ -61,14 +64,6 @@ const uploadDirs = [
 uploadDirs.forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
-
-// ============= STATIC FILES (uploads) =============
-// FIXED: Remove manual CORS header, let CORS middleware handle it
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-    setHeaders: (res) => {
-        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    }
-}));
 
 // ============= SECURITY MIDDLEWARE =============
 app.use(helmet({
@@ -122,6 +117,13 @@ app.use(session({
 // ============= PASSPORT =============
 app.use(passport.initialize());
 app.use(passport.session());
+
+// ============= STATIC FILES (uploads) =============
+app.use('/uploads', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+}, express.static(path.join(__dirname, 'uploads')));
 
 // ============= DATABASE =============
 const pool = mysql.createPool({
