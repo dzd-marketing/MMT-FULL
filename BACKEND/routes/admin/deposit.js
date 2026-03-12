@@ -262,13 +262,8 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    // ===========================================
-    // 6. APPROVE DEPOSIT (WITH EDITABLE AMOUNT AND EMAIL)
-    // ===========================================
-    // routes/admin/deposit.js එකේ approve route එක
 router.post('/:id/approve', adminAuth.adminAuthMiddleware, async (req, res) => {
     console.log('🟢 Approve endpoint hit!');
-    console.log('📌 req.admin:', req.admin); // මෙතනින් බලන්න
     
     const connection = await pool.getConnection();
     
@@ -276,7 +271,6 @@ router.post('/:id/approve', adminAuth.adminAuthMiddleware, async (req, res) => {
         await connection.beginTransaction();
 
         const depositId = req.params.id;
-        const adminId = req.admin?.id || req.admin?.userId; // ✅ admin object එකෙන් id එක ගන්න
         
         // amount එක req.body එකෙන් ගන්න
         const { amount } = req.body;
@@ -292,7 +286,7 @@ router.post('/:id/approve', adminAuth.adminAuthMiddleware, async (req, res) => {
             });
         }
 
-        // Get deposit details with user info
+        // Get deposit details with user info (reject එකේ වගේම)
         const [deposits] = await connection.execute(
             'SELECT d.*, u.full_name as user_name, u.email as user_email FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = ? AND d.status = "pending"',
             [depositId]
@@ -313,15 +307,14 @@ router.post('/:id/approve', adminAuth.adminAuthMiddleware, async (req, res) => {
         console.log(`💰 Original amount: ${deposit.amount}`);
         console.log(`💰 New amount: ${amount}`);
 
-        // Update deposit with NEW amount - adminId දාන්න
+        // Update deposit with NEW amount (approved_by අයින් කළා - reject එකේ වගේම)
         await connection.execute(
             `UPDATE deposits 
             SET status = 'approved', 
                 amount = ?,
-                approved_by = ?, 
                 approved_at = NOW() 
             WHERE id = ?`,
-            [amount, adminId, depositId]  // ✅ adminId එක දාන්න
+            [amount, depositId]
         );
 
         // Check if wallet exists
@@ -357,6 +350,31 @@ router.post('/:id/approve', adminAuth.adminAuthMiddleware, async (req, res) => {
             'SELECT available_balance FROM wallets WHERE user_id = ?',
             [userId]
         );
+
+        // ===========================================
+        // SEND APPROVED EMAIL TO USER (reject එකේ වගේම)
+        // ===========================================
+        try {
+            const depositData = {
+                id: deposit.id,
+                amount: parseFloat(amount),
+                receipt_url: deposit.receipt_url,
+                approved_at: new Date()
+            };
+
+            const userData = {
+                name: deposit.user_name || deposit.full_name,
+                email: deposit.user_email || deposit.email,
+                id: userId
+            };
+
+            await emailService.sendDepositApprovedEmail(depositData, userData);
+            console.log(`✅ Approval email sent to user ${userId}`);
+        } catch (emailError) {
+            console.error('❌ Error sending approval email:', emailError.message);
+            // Don't fail the request if email fails
+        }
+        // ===========================================
 
         res.json({
             success: true,
