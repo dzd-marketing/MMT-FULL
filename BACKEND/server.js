@@ -51,6 +51,17 @@ const corsOptions = {
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
+app.use((req, res, next) => {
+    const _setHeader = res.setHeader.bind(res);
+    res.setHeader = function(name, value) {
+        if (name.toLowerCase() === 'access-control-allow-origin') {
+            res.removeHeader('Access-Control-Allow-Origin');
+        }
+        return _setHeader(name, value);
+    };
+    next();
+});
+
 // ============= UPLOAD FOLDER SETUP =============
 const uploadDirs = [
     './uploads/receipts',
