@@ -14,7 +14,7 @@ import {
     CountryCode
 } from 'libphonenumber-js';
 
-// ─── Country data ─────────────────────────────────────────────────────────────
+
 
 const COUNTRY_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
 
@@ -36,7 +36,7 @@ const ALL_COUNTRIES: Country[] = getCountries()
 
 const DEFAULT_COUNTRY = ALL_COUNTRIES.find(c => c.code === 'LK')!;
 
-// ─── Inline PhoneField ────────────────────────────────────────────────────────
+
 
 interface PhoneFieldProps {
     value: string;
@@ -98,7 +98,7 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
     return (
         <div className="relative" ref={dropdownRef}>
             <div className={`flex items-center border rounded-xl bg-zinc-50 dark:bg-zinc-900 transition-all ${borderClass}`}>
-                {/* Country button */}
+           
                 <button
                     type="button"
                     onClick={() => setOpen(o => !o)}
@@ -109,7 +109,7 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
                     <ChevronDown className={`h-3 w-3 text-zinc-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Number input */}
+              
                 <input
                     type="tel"
                     value={raw}
@@ -119,7 +119,7 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
                 />
             </div>
 
-            {/* Dropdown */}
+      
             <AnimatePresence>
                 {open && (
                     <motion.div
@@ -129,7 +129,7 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
                         transition={{ duration: 0.15 }}
                         className="absolute top-full left-0 mt-1.5 w-72 z-50 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl overflow-hidden"
                     >
-                        {/* Search */}
+                      
                         <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
@@ -144,7 +144,7 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
                             </div>
                         </div>
 
-                        {/* Country list */}
+                 
                         <ul className="max-h-52 overflow-y-auto py-1">
                             {filtered.length === 0 ? (
                                 <li className="px-4 py-3 text-sm text-zinc-400 text-center">No countries found</li>
@@ -173,7 +173,7 @@ const PhoneField: React.FC<PhoneFieldProps> = ({
     );
 };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+
 
 interface FieldErrors {
     name?: string;
@@ -185,7 +185,7 @@ interface FieldErrors {
     general?: string;
 }
 
-// ─── Signup Component ─────────────────────────────────────────────────────────
+
 
 const Signup: React.FC = () => {
     const navigate = useNavigate();
@@ -211,7 +211,7 @@ const Signup: React.FC = () => {
     const [waCountry, setWaCountry] = useState<Country>(DEFAULT_COUNTRY);
     const [waE164, setWaE164] = useState('');
 
-    // ── Password strength ────────────────────────────────────────────────────
+ 
 
     const checkPassword = (pass: string) => {
         const errs: string[] = [];
@@ -228,8 +228,6 @@ const Signup: React.FC = () => {
         setPasswordErrors(formData.password ? checkPassword(formData.password) : []);
     }, [formData.password]);
 
-    // ── Handlers ────────────────────────────────────────────────────────────
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -237,7 +235,7 @@ const Signup: React.FC = () => {
             setErrors(prev => ({ ...prev, [name]: undefined }));
     };
 
-    // ── Validation ───────────────────────────────────────────────────────────
+ 
 
     const validateForm = (): boolean => {
         const e: FieldErrors = {};
@@ -272,7 +270,7 @@ const Signup: React.FC = () => {
         return Object.keys(e).length === 0;
     };
 
-    // ── Submit ───────────────────────────────────────────────────────────────
+   
 
     const handleSubmit = async (ev: React.FormEvent) => {
         ev.preventDefault();
@@ -290,8 +288,8 @@ const Signup: React.FC = () => {
                 body: JSON.stringify({
                     name: formData.name,
                     email: formData.email,
-                    phone: phoneE164,        // E.164 e.g. "+94776121326"
-                    whatsapp: waE164,        // E.164
+                    phone: phoneE164,        
+                    whatsapp: waE164,        
                     password: formData.password,
                     confirmPassword: formData.confirmPassword,
                 })
@@ -303,7 +301,7 @@ const Signup: React.FC = () => {
                 setSuccessMessage('Account created! Redirecting to verification...');
                 window.dispatchEvent(new Event('auth-change'));
 
-                // Store verification token so verify-email page can use it
+       
                 if (data.requiresVerification && data.token) {
                     sessionStorage.setItem('verificationToken', data.token);
                     sessionStorage.setItem('verificationEmail', formData.email);
@@ -314,7 +312,7 @@ const Signup: React.FC = () => {
                     navigate(data.requiresVerification ? '/verify-email' : '/dashboard');
                 }, 1500);
             } else {
-                // Map backend field errors directly onto inputs
+         
                 if (data.errors && typeof data.errors === 'object') {
                     setErrors(data.errors);
                 } else {
@@ -333,7 +331,7 @@ const Signup: React.FC = () => {
         authService.googleLogin();
     };
 
-    // ── UI helpers ───────────────────────────────────────────────────────────
+
 
     const FieldError = ({ error }: { error?: string }) =>
         error ? (
@@ -356,7 +354,7 @@ const Signup: React.FC = () => {
                 : 'border-zinc-200 dark:border-zinc-800 focus:ring-brand'
         }`;
 
-    // ── Render ───────────────────────────────────────────────────────────────
+ 
 
     return (
         <motion.div
@@ -374,14 +372,13 @@ const Signup: React.FC = () => {
                 className="w-full max-w-[1100px] flex shadow-2xl rounded-[2.5rem] m-4 border border-black/5 dark:border-white/5 bg-white dark:bg-zinc-950 relative"
                 style={{ overflow: 'visible' }}
             >
-                {/* Loading overlay */}
                 {loading && (
                     <div className="absolute inset-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-[2.5rem]">
                         <Loader1 />
                     </div>
                 )}
 
-                {/* ── Left: Form ──────────────────────────────────────────── */}
+      
                 <div className="w-full lg:w-1/2 p-8 md:p-12 flex flex-col justify-center">
 
                     <div className="mb-8">
@@ -399,7 +396,6 @@ const Signup: React.FC = () => {
                         </p>
                     </div>
 
-                    {/* General error banner */}
                     <AnimatePresence>
                         {errors.general && (
                             <motion.div
@@ -414,7 +410,7 @@ const Signup: React.FC = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Success banner */}
+           
                     <AnimatePresence>
                         {successMessage && (
                             <motion.div
@@ -431,7 +427,7 @@ const Signup: React.FC = () => {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
 
-                        {/* Username */}
+                 
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
                                 Username <span className="text-red-500">*</span>
@@ -452,7 +448,7 @@ const Signup: React.FC = () => {
                             <FieldError error={errors.name} />
                         </div>
 
-                        {/* Email */}
+                 
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
                                 Email <span className="text-red-500">*</span>
@@ -473,9 +469,9 @@ const Signup: React.FC = () => {
                             <FieldError error={errors.email} />
                         </div>
 
-                        {/* Phone + WhatsApp side by side */}
+                
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Phone */}
+                       
                             <div>
                                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
                                     Phone Number <span className="text-red-500">*</span>
@@ -494,7 +490,7 @@ const Signup: React.FC = () => {
                                 <FieldError error={errors.phone} />
                             </div>
 
-                            {/* WhatsApp */}
+                     
                             <div>
                                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
                                     WhatsApp Number <span className="text-red-500">*</span>
@@ -514,7 +510,7 @@ const Signup: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Password */}
+                 
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
                                 Password <span className="text-red-500">*</span>
@@ -538,7 +534,7 @@ const Signup: React.FC = () => {
                             </div>
                             <FieldError error={errors.password} />
 
-                            {/* Live password checklist */}
+                     
                             {formData.password && (
                                 <div className="mt-3 p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg border border-zinc-100 dark:border-zinc-800">
                                     <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-2">Password must contain:</p>
@@ -560,7 +556,7 @@ const Signup: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Confirm Password */}
+              
                         <div>
                             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
                                 Retype Password <span className="text-red-500">*</span>
@@ -608,7 +604,7 @@ const Signup: React.FC = () => {
                         </button>
                     </form>
 
-                    {/* Divider */}
+              
                     <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-zinc-200 dark:border-zinc-800" />
@@ -618,7 +614,7 @@ const Signup: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Google */}
+             
                     <button
                         onClick={handleGoogleSignup} type="button"
                         className="w-full py-3 px-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -640,7 +636,6 @@ const Signup: React.FC = () => {
                     </div>
                 </div>
 
-                {/* ── Right: Branding ──────────────────────────────────────── */}
                 <div className="hidden lg:flex lg:w-1/2 bg-brand p-12 flex-col justify-center relative overflow-hidden rounded-r-[2.5rem]">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full -ml-32 -mb-32 blur-3xl" />
