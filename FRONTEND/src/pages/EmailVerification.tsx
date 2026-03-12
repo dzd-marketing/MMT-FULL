@@ -29,7 +29,7 @@ useEffect(() => {
             setVerificationToken(urlToken);
             sessionStorage.setItem('verificationToken', urlToken);
             
-            // Fetch user email from backend using token
+            
             try {
                 const response = await fetch(`${API_URL}/auth/get-user-from-token?token=${urlToken}`);
                 const data = await response.json();
@@ -47,7 +47,7 @@ useEffect(() => {
             return;
         }
         
-        // Fallback to sessionStorage
+      
         const token = sessionStorage.getItem('verificationToken');
         if (token) {
             setVerificationToken(token);
@@ -148,16 +148,16 @@ const handleVerify = async () => {
             setMessageType('success');
             setMessage('Email verified successfully! Please login to continue.');
             
-            // Clear verification token
+   
             sessionStorage.removeItem('verificationToken');
             
-            // Calculate elapsed time
+        
             const elapsedTime = Date.now() - startTime;
-            const remainingTime = Math.max(0, 2000 - elapsedTime); // 2 second minimum
+            const remainingTime = Math.max(0, 2000 - elapsedTime);
             
-            // Check if profile completion is needed
+  
             if (data.requiresProfileCompletion && data.profileToken) {
-                // Store profile token
+          
                 sessionStorage.setItem('profileToken', data.profileToken);
                 if (data.email) {
                     sessionStorage.setItem('googleUserEmail', data.email);
@@ -168,7 +168,7 @@ const handleVerify = async () => {
                     navigate('/complete-profile');
                 }, remainingTime);
             } else {
-                // For regular signup users, redirect to login page
+               
                 setTimeout(() => {
                     setLoading(false);
                     navigate('/login', { 
@@ -203,7 +203,7 @@ const handleVerify = async () => {
 
     const handleRetry = async () => {
     if (!verificationToken) {
-        // If token is lost, redirect to Google login to restart
+  
         authService.googleLogin();
         return;
     }
