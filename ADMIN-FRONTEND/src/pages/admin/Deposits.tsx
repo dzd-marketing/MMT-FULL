@@ -54,6 +54,7 @@ const AdminDepositsPage: React.FC = () => {
     total_approved_amount: 0
   });
 
+  // ============= FIXED: API URLs =============
   const API_URL = 'https://admin.mmtsmmpanel.cyberservice.online/api';
   const IMAGE_URL = 'https://mmtsmmpanel.cyberservice.online';
 
@@ -121,7 +122,7 @@ const AdminDepositsPage: React.FC = () => {
     fetchStats();
   }, [filterStatus]);
 
-  // Handle approve with amount editing
+  // ============= FIXED: Handle approve =============
   const handleApprove = async () => {
     if (!selectedDeposit) return;
     
@@ -132,10 +133,16 @@ const AdminDepositsPage: React.FC = () => {
 
     setProcessingId(selectedDeposit.id);
     try {
+      // FIXED: Use correct endpoint
       const response = await axios.post(
         `${API_URL}/admin/deposits/${selectedDeposit.id}/approve`,
         { amount: approveAmount },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
 
       if (response.data.success) {
@@ -143,18 +150,28 @@ const AdminDepositsPage: React.FC = () => {
         setShowApproveModal(false);
         setSelectedDeposit(null);
         setApproveAmount(0);
-        fetchDeposits();
-        fetchStats();
         
+        // Refresh data
+        await fetchDeposits();
+        await fetchStats();
+        
+        // Delete receipt after successful approval
         try {
           await axios.post(
             `${API_URL}/admin/deposits/${selectedDeposit.id}/delete-receipt`,
             {},
-            { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }
+            { 
+              headers: { 
+                Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
+                'Content-Type': 'application/json'
+              } 
+            }
           );
         } catch (deleteError) {
           console.error('Error deleting receipt:', deleteError);
         }
+      } else {
+        showNotification(response.data.message || 'Failed to approve deposit', 'error');
       }
     } catch (error: any) {
       console.error('Error approving deposit:', error);
@@ -164,15 +181,22 @@ const AdminDepositsPage: React.FC = () => {
     }
   };
 
+  // ============= FIXED: Handle reject =============
   const handleReject = async () => {
     if (!selectedDeposit) return;
 
     setProcessingId(selectedDeposit.id);
     try {
+      // FIXED: Use correct endpoint
       const response = await axios.post(
         `${API_URL}/admin/deposits/${selectedDeposit.id}/reject`, 
         { reason: rejectReason },
-        { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
+            'Content-Type': 'application/json'
+          } 
+        }
       );
 
       if (response.data.success) {
@@ -180,18 +204,28 @@ const AdminDepositsPage: React.FC = () => {
         setShowRejectModal(false);
         setRejectReason('');
         setSelectedDeposit(null);
-        fetchDeposits();
-        fetchStats();
         
+        // Refresh data
+        await fetchDeposits();
+        await fetchStats();
+        
+        // Delete receipt after successful rejection
         try {
           await axios.post(
             `${API_URL}/admin/deposits/${selectedDeposit.id}/delete-receipt`,
             {},
-            { headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } }
+            { 
+              headers: { 
+                Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
+                'Content-Type': 'application/json'
+              } 
+            }
           );
         } catch (deleteError) {
           console.error('Error deleting receipt:', deleteError);
         }
+      } else {
+        showNotification(response.data.message || 'Failed to reject deposit', 'error');
       }
     } catch (error: any) {
       console.error('Error rejecting deposit:', error);
@@ -428,7 +462,7 @@ const AdminDepositsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Receipt Modal with IMAGE_URL */}
+      {/* Receipt Modal */}
       <AnimatePresence>
         {showReceiptModal && selectedDeposit && (
           <>
@@ -460,7 +494,6 @@ const AdminDepositsPage: React.FC = () => {
                 </button>
               </div>
               <div className="p-6 max-h-[80vh] overflow-y-auto">
-                {/* Image using IMAGE_URL */}
                 <img
                   src={getImageUrl(selectedDeposit.receipt_url)}
                   alt="Receipt"
@@ -485,7 +518,7 @@ const AdminDepositsPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Approve Modal (unchanged) */}
+      {/* Approve Modal */}
       <AnimatePresence>
         {showApproveModal && selectedDeposit && (
           <>
@@ -578,7 +611,7 @@ const AdminDepositsPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Reject Modal (unchanged) */}
+      {/* Reject Modal */}
       <AnimatePresence>
         {showRejectModal && selectedDeposit && (
           <>
@@ -647,4 +680,3 @@ const AdminDepositsPage: React.FC = () => {
 };
 
 export default AdminDepositsPage;
-
