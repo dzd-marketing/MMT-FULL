@@ -13,9 +13,11 @@ const fs = require('fs');
 dotenv.config();
 
 const app = express();
+
+// Trust proxy — required for correct IP and protocol detection behind LiteSpeed
 app.set('trust proxy', 1);
 
-// --- UPLOAD FOLDER SETUP ---
+// ============= UPLOAD FOLDER SETUP =============
 const uploadDirs = [
     './uploads/receipts',
     './uploads/config',
@@ -27,8 +29,32 @@ uploadDirs.forEach(dir => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
+// ============= ALLOWED ORIGINS =============
+const allowedOrigins = [
+    'https://mmtsmmpanel.cyberservice.online',
+    'https://admin.mmtsmmpanel.cyberservice.online',
+    'http://localhost:3000',
+    'http://localhost:5173',
+];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, Postman)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.warn(`CORS blocked request from: ${origin}`);
+            callback(new Error(`CORS blocked: ${origin}`));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['Set-Cookie'],
+    optionsSuccessStatus: 200 // Some browsers (IE11) choke on 204
+};
+
 // ============= SECURITY MIDDLEWARE =============
-// Single helmet call — configured to allow cross-origin images and uploads
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     contentSecurityPolicy: {
@@ -36,9 +62,20 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             styleSrc:   ["'self'", "'unsafe-inline'"],
             scriptSrc:  ["'self'"],
-            imgSrc:     ["'self'", "data:", "blob:", "https://mmtsmmpanel.cyberservice.online", "https://res.cloudinary.com", process.env.API_URL || "http://localhost:5000"],
-            connectSrc: ["'self'", process.env.FRONTEND_URL || "http://localhost:3000"],
-            fontSrc:    ["'self'", "data:"],
+            imgSrc: [
+                "'self'", "data:", "blob:",
+                "https://mmtsmmpanel.cyberservice.online",
+                "https://admin.mmtsmmpanel.cyberservice.online",
+                "https://res.cloudinary.com",
+                process.env.API_URL || "http://localhost:5000"
+            ],
+            connectSrc: [
+                "'self'",
+                "https://mmtsmmpanel.cyberservice.online",
+                "https://admin.mmtsmmpanel.cyberservice.online",
+                process.env.FRONTEND_URL || "http://localhost:3000"
+            ],
+            fontSrc: ["'self'", "data:"],
         },
     },
     hsts: {
@@ -48,29 +85,12 @@ app.use(helmet({
     }
 }));
 
-// ============= CORS ============
+// ============= CORS =============
+// Handle OPTIONS preflight FIRST before any other middleware
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
-// With this — allow both frontend and admin frontend:
-const allowedOrigins = [
-    'https://mmtsmmpanel.cyberservice.online',
-    'https://admin.mmtsmmpanel.cyberservice.online',
-    'http://localhost:3000',
-    'http://localhost:5173',
-];
-
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error(`CORS blocked: ${origin}`));
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
+// ============= BODY PARSERS =============
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -83,6 +103,7 @@ app.use(session({
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 24 * 60 * 60 * 1000
     }
 }));
@@ -92,7 +113,6 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // ============= STATIC FILES (uploads) =============
-// Single definition with CORS + cross-origin headers so profile pics load from frontend
 app.use('/uploads', (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -232,6 +252,13 @@ app.get('/api/health', (req, res) => {
 
 // ============= ERROR HANDLER =============
 app.use((err, req, res, next) => {
+    // Handle CORS errors specifically
+    if (err.message && err.message.startsWith('CORS blocked')) {
+        return res.status(403).json({
+            success: false,
+            message: err.message
+        });
+    }
     console.error('Server Error:', err);
     res.status(500).json({
         success: false,
@@ -251,4 +278,5 @@ app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
     console.log(`📝 Environment: ${process.env.NODE_ENV}`);
+    console.log(`✅ Allowed CORS origins: ${allowedOrigins.join(', ')}`);
 });
