@@ -23,7 +23,7 @@ import {
 import LoadingScreen2 from '../../components/LoadingScreen2';
 import authService from '../../services/auth';
 import axios from 'axios';
-import bcrypt from 'bcryptjs'; // Add this for frontend hashing (optional)
+import bcrypt from 'bcryptjs'; 
 
 interface ChildPanel {
   id: number;
@@ -45,10 +45,10 @@ const ChildPanelsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Form states
+
   const [showForm, setShowForm] = useState(false);
   const [domain, setDomain] = useState('');
-  const [currency, setCurrency] = useState('LKR'); // Changed default to LKR
+  const [currency, setCurrency] = useState('LKR');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -59,13 +59,13 @@ const ChildPanelsPage: React.FC = () => {
   const [currencySearch, setCurrencySearch] = useState('');
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   
-  // Renewal state
+ 
   const [renewingId, setRenewingId] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-  // Complete worldwide currencies list
+
   const currencies = [
     { code: 'LKR', name: 'Sri Lankan Rupee', symbol: 'Rs', flag: '🇱🇰' },
     { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
@@ -100,22 +100,18 @@ const API_URL = import.meta.env.VITE_API_URL;
     { code: 'QAR', name: 'Qatari Riyal', symbol: 'ر.ق', flag: '🇶🇦' }
   ].sort((a, b) => a.name.localeCompare(b.name));
 
-  // Filter currencies based on search
   const filteredCurrencies = currencies.filter(c => 
     c.name.toLowerCase().includes(currencySearch.toLowerCase()) ||
     c.code.toLowerCase().includes(currencySearch.toLowerCase())
   );
 
-  // Get selected currency details
   const selectedCurrency = currencies.find(c => c.code === currency) || currencies[0];
 
-  // Nameservers from settings
   const nameservers = {
     ns1: import.meta.env.VITE_NS1 || 'mmt.ns1.com',
     ns2: import.meta.env.VITE_NS2 || 'mmt.ns2.com'
   };
 
-  // Check authentication
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -144,7 +140,6 @@ const API_URL = import.meta.env.VITE_API_URL;
     checkAuth();
   }, [navigate]);
 
-  // Close currency dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (!(e.target as Element).closest('.currency-dropdown')) {
@@ -191,8 +186,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
+ 
     const errors: Record<string, string> = {};
     
     if (!domain) errors.domain = 'Domain is required';
@@ -218,28 +212,24 @@ const API_URL = import.meta.env.VITE_API_URL;
     setFormErrors({});
 
     try {
-      // Hash password before sending (optional - backend should also hash)
-      // const salt = await bcrypt.genSalt(10);
-      // const hashedPassword = await bcrypt.hash(password, salt);
       
-      // Save to database
       const response = await axios.post(`${API_URL}/child-panels`, {
         domain,
         panel_currency: currency,
         admin_username: username,
-        admin_password: password // Send plain password, backend will hash it
+        admin_password: password 
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
 
       if (response.data.success) {
-        // Send email notification to admin
+        
         try {
           await axios.post(`${API_URL}/child-panels/send-email`, {
             domain,
             panel_currency: currency,
             admin_username: username,
-            admin_password: password, // Send plain for email notification
+            admin_password: password, 
             user_name: user?.name || 'User',
             user_email: user?.email || '',
             user_id: user?.id
@@ -247,7 +237,7 @@ const API_URL = import.meta.env.VITE_API_URL;
           console.log('Email notification sent to admin');
         } catch (emailErr) {
           console.error('Failed to send email:', emailErr);
-          // Don't block success if email fails
+        
         }
 
         setSuccessMessage('Child panel created successfully! Admin has been notified.');
@@ -258,7 +248,7 @@ const API_URL = import.meta.env.VITE_API_URL;
         setConfirmPassword('');
         loadPanels();
         
-        // Refresh user balance
+       
         const userData = await authService.getCurrentUser();
         setUser(userData);
         
@@ -284,11 +274,10 @@ const API_URL = import.meta.env.VITE_API_URL;
       });
 
       if (response.data.success) {
-        // Refresh user balance
+       
         const userData = await authService.getCurrentUser();
         setUser(userData);
         
-        // Update panel in list
         setPanels(prev => prev.map(panel => 
           panel.id === panelId 
             ? { ...panel, renewal_date: response.data.new_renewal_date, status: 'active' }
