@@ -101,14 +101,14 @@ const SERVICE_TYPES = {
 async function updateCategories() {
     console.log('🔄 Updating categories based on services...');
     
-    // First, get all services
+
     const [services] = await promisePool.execute(
         'SELECT service_id, service_name FROM services'
     );
     
     console.log(`📊 Found ${services.length} services`);
     
-    // Clear existing categories
+ 
     await promisePool.execute('DELETE FROM categories');
     
     const categorySet = new Set();
@@ -117,7 +117,7 @@ async function updateCategories() {
     for (const service of services) {
         const name = service.service_name.toLowerCase();
         
-        // Detect platform
+   
         let detectedPlatform = 'other';
         for (const [platform, data] of Object.entries(PLATFORMS)) {
             if (data.patterns.some(p => name.includes(p))) {
@@ -157,8 +157,7 @@ async function updateCategories() {
             type: detectedType
         });
     }
-    
-    // Create categories table if not exists
+
     await promisePool.execute(`
         CREATE TABLE IF NOT EXISTS categories (
             id int(11) NOT NULL AUTO_INCREMENT,
@@ -175,7 +174,7 @@ async function updateCategories() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
     `);
     
-    // Insert categories
+
     console.log('\n📁 Categories to be created:');
     let sortOrder = 0;
     for (const categoryKey of Array.from(categorySet).sort()) {
@@ -190,7 +189,7 @@ async function updateCategories() {
         );
     }
     
-    // Add category_id column to services if not exists
+
     try {
         await promisePool.execute(`
             ALTER TABLE services 
@@ -201,7 +200,6 @@ async function updateCategories() {
         console.log('ℹ️ category_id column already exists');
     }
     
-    // Update services with category_id
     console.log('\n🔄 Updating services with category IDs...');
     for (const update of updates) {
         const [categoryRows] = await promisePool.execute(
