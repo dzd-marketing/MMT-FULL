@@ -26,8 +26,6 @@ import { format, formatDistance } from 'date-fns';
 import Sidebar from './Sidebar';
 import AdminHeader from './AdminHeader';
 
-// ============= Type Definitions =============
-
 interface Ticket {
   id: number;
   ticket_number: string;
@@ -94,8 +92,6 @@ interface Pagination {
   pages: number;
 }
 
-// ============= Custom Select =============
-
 interface DropdownOption { value: string; label: string; }
 interface CustomSelectProps {
   value: string;
@@ -159,8 +155,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, p
   );
 };
 
-// ============= Badge Components =============
-
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const info: Record<string, { label: string; color: string; icon: JSX.Element }> = {
     open:        { label: 'Open',        color: 'bg-green-500/20 text-green-400 border-green-500/30',   icon: <CheckCircle className="w-3 h-3" /> },
@@ -196,7 +190,6 @@ const DepartmentBadge: React.FC<{ department: string }> = ({ department }) => {
   return <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${d.color}`}>{d.icon}{d.label}</span>;
 };
 
-// ============= Avatar Helper =============
 
 const getInitials = (name: string) =>
   name.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2);
@@ -205,7 +198,6 @@ const Avatar: React.FC<{ src?: string | null; name: string; size?: 'sm' | 'md' |
   const [imgError, setImgError] = useState(false);
   const sizeClass = size === 'sm' ? 'w-6 h-6 text-[10px]' : size === 'md' ? 'w-8 h-8 text-xs' : 'w-12 h-12 text-lg';
 
-  // Get image URL with proper base
   const getImageUrl = (imagePath: string | null) => {
     if (!imagePath) return '';
     if (imagePath.startsWith('http')) return imagePath;
@@ -236,7 +228,6 @@ const Avatar: React.FC<{ src?: string | null; name: string; size?: 'sm' | 'md' |
   );
 };
 
-// ============= Attachment Preview Component =============
 
 const AttachmentPreview: React.FC<{ attachment: TicketAttachment }> = ({ attachment }) => {
   const [imageError, setImageError] = useState(false);
@@ -244,24 +235,18 @@ const AttachmentPreview: React.FC<{ attachment: TicketAttachment }> = ({ attachm
   const API_URL = import.meta.env.VITE_API_URL;
   const BASE_URL ='https://mmtsmmpanel.cyberservice.online';
 
-  // Get attachment URL from file_path
   const getAttachmentUrl = () => {
     if (!attachment.file_path) return '';
     
-    // If it's already a full URL
     if (attachment.file_path.startsWith('http')) return attachment.file_path;
     
-    // Extract just the filename from the full system path
-    // Example: "/home/user/.../uploads/tickets/filename.png" -> "filename.png"
     const filename = attachment.file_path.split('/').pop();
     
-    // Return the public URL
     return `${BASE_URL}/uploads/tickets/${filename}`;
   };
 
   const fileUrl = getAttachmentUrl();
 
-  // Get appropriate icon based on file type
   const getFileIcon = () => {
     if (attachment.mime_type?.startsWith('image/')) return <FileImage className="w-4 h-4 text-brand" />;
     if (attachment.mime_type?.includes('pdf')) return <FileText className="w-4 h-4 text-red-400" />;
@@ -272,7 +257,6 @@ const AttachmentPreview: React.FC<{ attachment: TicketAttachment }> = ({ attachm
     return <File className="w-4 h-4 text-gray-400" />;
   };
 
-  // Format file size
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -308,7 +292,6 @@ const AttachmentPreview: React.FC<{ attachment: TicketAttachment }> = ({ attachm
   );
 };
 
-// ============= Main Component =============
 
 const AdminTicketsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -355,7 +338,6 @@ const AdminTicketsPage: React.FC = () => {
 
   const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('adminToken')}` });
 
-  // ============= Helper Functions =============
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
