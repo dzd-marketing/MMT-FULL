@@ -10,7 +10,6 @@ const emailService = require('../services/email.service');
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = path.join(__dirname, '../uploads/tickets');
-        // Create directory if it doesn't exist
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
@@ -46,26 +45,26 @@ module.exports = (pool) => {
     const authMiddleware = async (req, res, next) => {
         try {
             const token = req.header('Authorization')?.replace('Bearer ', '');
-            
+
             if (!token) {
-                return res.status(401).json({ 
-                    success: false, 
-                    message: 'No token provided' 
+                return res.status(401).json({
+                    success: false,
+                    message: 'No token provided'
                 });
             }
 
             const jwt = require('jsonwebtoken');
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            
+
             const [users] = await pool.execute(
                 'SELECT id, full_name as name, email FROM users WHERE id = ?',
                 [decoded.userId]
             );
 
             if (users.length === 0) {
-                return res.status(401).json({ 
-                    success: false, 
-                    message: 'User not found' 
+                return res.status(401).json({
+                    success: false,
+                    message: 'User not found'
                 });
             }
 
@@ -73,9 +72,9 @@ module.exports = (pool) => {
             next();
         } catch (error) {
             console.error('Auth middleware error:', error);
-            res.status(401).json({ 
-                success: false, 
-                message: 'Please authenticate' 
+            res.status(401).json({
+                success: false,
+                message: 'Please authenticate'
             });
         }
     };
@@ -86,28 +85,26 @@ module.exports = (pool) => {
         const year = date.getFullYear().toString().slice(-2);
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const day = date.getDate().toString().padStart(2, '0');
-        
-        // Get count of tickets created today
+
         const [result] = await pool.execute(
             'SELECT COUNT(*) as count FROM tickets WHERE DATE(created_at) = CURDATE()'
         );
-        
+
         const count = (result[0].count + 1).toString().padStart(4, '0');
-        
+
         return `TKT-${year}${month}${day}-${count}`;
     };
 
-    // Create new ticket
+    // ============= CREATE NEW TICKET =============
     router.post('/', authMiddleware, upload.array('attachments', 5), async (req, res) => {
         const connection = await pool.getConnection();
-        
+
         try {
             await connection.beginTransaction();
 
             const { subject, department, priority, message } = req.body;
             const user_id = req.user.id;
 
-            // Validate required fields
             if (!subject || !department || !priority || !message) {
                 return res.status(400).json({
                     success: false,
@@ -115,38 +112,36 @@ module.exports = (pool) => {
                 });
             }
 
-            // Generate ticket number
             const ticketNumber = await generateTicketNumber();
 
-            // Process attachments
+            // ✅ FIXED: Use relative path with backticks
             let attachments = [];
             if (req.files && req.files.length > 0) {
                 attachments = req.files.map(file => ({
                     file_name: file.originalname,
-                    file_path: /uploads/tickets/${file.filename},
+                    file_path: `/uploads/tickets/${file.filename}`,
                     file_size: file.size,
                     mime_type: file.mimetype
                 }));
             }
 
-            // Insert ticket
             const [ticketResult] = await connection.execute(
                 `INSERT INTO tickets (
-                    user_id, ticket_number, subject, department, priority, 
+                    user_id, ticket_number, subject, department, priority,
                     status, message, attachments
                 ) VALUES (?, ?, ?, ?, ?, 'open', ?, ?)`,
                 [
-                    user_id, 
-                    ticketNumber, 
-                    subject, 
-                    department, 
-                    priority, 
+                    user_id,
+                    ticketNumber,
+                    subject,
+                    department,
+                    priority,
                     message,
                     attachments.length > 0 ? JSON.stringify(attachments) : null
                 ]
             );
 
-            // Insert attachments into ticket_attachments table
+            // ✅ FIXED: Use attachment.file_path correctly
             if (attachments.length > 0) {
                 for (const attachment of attachments) {
                     await connection.execute(
@@ -156,7 +151,7 @@ module.exports = (pool) => {
                         [
                             ticketResult.insertId,
                             attachment.file_name,
-                            attachment./uploads/tickets/${file.filename},
+                            attachment.file_path,
                             attachment.file_size,
                             attachment.mime_type,
                             user_id
@@ -167,9 +162,7 @@ module.exports = (pool) => {
 
             await connection.commit();
 
-            // Send email notifications
             try {
-                // Send email to admin
                 await emailService.sendTicketNotification({
                     ticket_number: ticketNumber,
                     subject,
@@ -178,7 +171,6 @@ module.exports = (pool) => {
                     message
                 }, req.user);
 
-                // Send confirmation to user
                 await emailService.sendTicketConfirmationToUser({
                     ticket_number: ticketNumber,
                     subject,
@@ -190,7 +182,6 @@ module.exports = (pool) => {
                 console.log('Ticket emails sent successfully');
             } catch (emailError) {
                 console.error('Error sending ticket emails:', emailError);
-                // Don't fail the request if email fails
             }
 
             res.json({
@@ -218,7 +209,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Get user's tickets
+    // ============= GET USER'S TICKETS =============
     router.get('/my-tickets', authMiddleware, async (req, res) => {
         try {
             const user_id = req.user.id;
@@ -239,7 +230,7 @@ module.exports = (pool) => {
                 FROM tickets 
                 WHERE user_id = ?
             `;
-            
+
             const params = [user_id];
 
             if (status && status !== 'all') {
@@ -257,7 +248,6 @@ module.exports = (pool) => {
 
             const [tickets] = await pool.execute(query, params);
 
-            // Get total count
             const [countResult] = await pool.execute(
                 'SELECT COUNT(*) as total FROM tickets WHERE user_id = ?',
                 [user_id]
@@ -283,7 +273,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Get single ticket details with replies
+    // ============= GET SINGLE TICKET WITH REPLIES =============
     router.get('/:ticketNumber', authMiddleware, async (req, res) => {
         try {
             const { ticketNumber } = req.params;
@@ -309,7 +299,6 @@ module.exports = (pool) => {
 
             const ticket = tickets[0];
 
-            // Get replies
             const [replies] = await pool.execute(
                 `SELECT 
                     r.*,
@@ -322,18 +311,26 @@ module.exports = (pool) => {
                 [ticket.id]
             );
 
-            // Get attachments
             const [attachments] = await pool.execute(
                 'SELECT * FROM ticket_attachments WHERE ticket_id = ?',
                 [ticket.id]
             );
+
+            // ✅ Fix attachment URLs for response
+            const baseUrl = process.env.API_URL || 'https://mmtsmmpanel.cyberservice.online';
+            const formattedAttachments = attachments.map(att => ({
+                ...att,
+                file_url: att.file_path?.startsWith('http')
+                    ? att.file_path
+                    : `${baseUrl}${att.file_path}`
+            }));
 
             res.json({
                 success: true,
                 ticket: {
                     ...ticket,
                     replies,
-                    attachments
+                    attachments: formattedAttachments
                 }
             });
 
@@ -346,10 +343,10 @@ module.exports = (pool) => {
         }
     });
 
-    // Reply to ticket
+    // ============= REPLY TO TICKET =============
     router.post('/:ticketNumber/reply', authMiddleware, upload.array('attachments', 5), async (req, res) => {
         const connection = await pool.getConnection();
-        
+
         try {
             await connection.beginTransaction();
 
@@ -364,7 +361,6 @@ module.exports = (pool) => {
                 });
             }
 
-            // Get ticket
             const [tickets] = await connection.execute(
                 'SELECT id, status FROM tickets WHERE ticket_number = ? AND user_id = ?',
                 [ticketNumber, user_id]
@@ -379,7 +375,6 @@ module.exports = (pool) => {
 
             const ticket = tickets[0];
 
-            // Insert reply
             const [replyResult] = await connection.execute(
                 `INSERT INTO ticket_replies (
                     ticket_id, user_id, message, is_staff
@@ -387,12 +382,12 @@ module.exports = (pool) => {
                 [ticket.id, user_id, message, false]
             );
 
-            // Process attachments for reply
+            // ✅ FIXED: Use relative path with backticks
             if (req.files && req.files.length > 0) {
                 for (const file of req.files) {
                     await connection.execute(
                         `INSERT INTO ticket_attachments (
-                            ticket_id, reply_id, file_name, file_path, 
+                            ticket_id, reply_id, file_name, file_path,
                             file_size, mime_type, uploaded_by
                         ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
                         [
@@ -408,7 +403,6 @@ module.exports = (pool) => {
                 }
             }
 
-            // Update ticket status and last_reply
             await connection.execute(
                 `UPDATE tickets 
                  SET status = 'waiting', 
