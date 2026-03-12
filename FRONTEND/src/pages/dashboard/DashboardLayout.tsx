@@ -425,7 +425,7 @@ export default function DashboardLayout() {
                     <div className="w-full h-full animate-pulse bg-gray-800 rounded-[10px]" />
                   ) : userData.profile_picture ? (
                     <img 
-                      src={userData.profile_picture.startsWith('http') ? userData.profile_picture : `http://localhost:5000${userData.profile_picture}`}
+                      src={userData.profile_picture.startsWith('http') ? userData.profile_picture : `https://mmtsmmpanel.cyberservice.online${userData.profile_picture}`}
                       alt={userData.full_name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -529,7 +529,7 @@ export default function DashboardLayout() {
                 <div className="flex items-center space-x-3">
                   {userData.profile_picture ? (
                     <img 
-                      src={userData.profile_picture.startsWith('http') ? userData.profile_picture : `http://localhost:5000${userData.profile_picture}`}
+                      src={userData.profile_picture.startsWith('http') ? userData.profile_picture : `https://mmtsmmpanel.cyberservice.online${userData.profile_picture}`}
                       alt={userData.full_name}
                       className="w-12 h-12 rounded-full object-cover border-2 border-brand group-hover:scale-105 transition-transform"
                       onError={(e) => {
@@ -626,4 +626,5 @@ export default function DashboardLayout() {
     </div>
   );
 }
+
 
