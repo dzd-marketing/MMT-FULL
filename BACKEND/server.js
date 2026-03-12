@@ -244,6 +244,7 @@ app.use('/api/deposit-details', depositDetailsRoutes(promisePool));
 app.use('/api/admin/deposits',  adminDepositRoutes(promisePool));
 app.use('/api/admin/users',     usersViewRoute(promisePool));
 app.use('/api/admin/blogs',     blogsUpdateRoute(promisePool));
+app.use('/api/config', configRoutes(promisePool));
 app.use('/api/admin/config',    configRoutes(promisePool));
 app.use('/api/admin/auth',      adminAuthRouter(promisePool));
 app.use('/api/admin/tickets',   adminTicketsRoutes(promisePool));
