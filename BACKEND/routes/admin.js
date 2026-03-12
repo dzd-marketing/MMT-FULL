@@ -1,10 +1,8 @@
-// routes/admin.js
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
 module.exports = (pool) => {
-    // ============= ADMIN AUTH MIDDLEWARE =============
     const adminAuth = async (req, res, next) => {
         try {
             const token = req.cookies.adminToken
@@ -14,20 +12,16 @@ module.exports = (pool) => {
                 return res.status(401).json({ success: false, message: 'No token provided' });
             }
 
-            // Use JWT_ADMIN_SECRET — same secret used to SIGN the token in admin-auth.js
             const decoded = jwt.verify(token, process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET);
 
-            // New token has role + step, NOT userId + admin_type
             if (decoded.role !== 'admin') {
                 return res.status(403).json({ success: false, message: 'Admin access required' });
             }
 
-            // Block temp tokens (email_verify / 2fa steps)
             if (decoded.step !== 'complete') {
                 return res.status(403).json({ success: false, message: 'Authentication incomplete' });
             }
 
-            // Check token not revoked
             const [revoked] = await pool.execute(
                 'SELECT id FROM admin_revoked_tokens WHERE token_jti = ?',
                 [decoded.jti]
@@ -44,12 +38,10 @@ module.exports = (pool) => {
         }
     };
 
-    // ============= TEST ROUTE =============
     router.get('/test', adminAuth, async (req, res) => {
         res.json({ success: true, message: 'Admin routes are working' });
     });
 
-    // ============= DASHBOARD STATS =============
     router.get('/dashboard/stats', adminAuth, async (req, res) => {
         try {
             const [ordersCount] = await pool.execute('SELECT COUNT(*) as total FROM orders');
@@ -123,8 +115,6 @@ module.exports = (pool) => {
             });
         }
     });
-
-    // ============= ORDERS MANAGEMENT =============
     router.get('/orders', adminAuth, async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
@@ -529,7 +519,6 @@ module.exports = (pool) => {
         }
     });
 
-    // GET ALL SERVICES with filters
     router.get('/services', adminAuth, async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
@@ -543,7 +532,6 @@ module.exports = (pool) => {
             const cancel = req.query.cancel;
             const offset = (page - 1) * limit;
 
-            // Base query
             let query = `
             SELECT 
                 s.*,
@@ -557,11 +545,9 @@ module.exports = (pool) => {
             WHERE s.service_deleted = '0'
         `;
 
-            // Array for WHERE conditions
             const conditions = [];
             const params = [];
 
-            // Category filter
             if (category && category !== 'all' && category !== 'null' && category !== 'undefined') {
                 const categoryId = parseInt(category);
                 if (!isNaN(categoryId)) {
@@ -570,67 +556,54 @@ module.exports = (pool) => {
                 }
             }
 
-            // Status filter
             if (status === 'active') {
                 conditions.push(`s.service_type = '2'`);
             } else if (status === 'inactive') {
                 conditions.push(`s.service_type = '1'`);
             }
-
-            // Package filter
             if (packageType && packageType !== 'all') {
                 conditions.push(`s.service_package = ?`);
                 params.push(packageType);
             }
 
-            // Secret filter
             if (secret === 'secret') {
                 conditions.push(`s.service_secret = '1'`);
             } else if (secret === 'public') {
                 conditions.push(`s.service_secret = '2'`);
             }
 
-            // Refill filter
             if (refill === 'true') {
                 conditions.push(`s.show_refill = 'true'`);
             } else if (refill === 'false') {
                 conditions.push(`s.show_refill = 'false'`);
             }
 
-            // Cancel filter
             if (cancel === '1') {
                 conditions.push(`s.cancelbutton = '1'`);
             } else if (cancel === '2') {
                 conditions.push(`s.cancelbutton = '2'`);
             }
 
-            // SEARCH - THIS IS THE IMPORTANT PART
             if (search && search.trim() !== '') {
                 const searchTerm = `%${search.trim()}%`;
-
-                // Check if search is numeric (for ID)
                 if (!isNaN(parseInt(search)) && search.trim().match(/^\d+$/)) {
-                    // Search by ID OR name
+             
                     conditions.push(`(s.service_id = ? OR s.service_name LIKE ?)`);
                     params.push(parseInt(search), searchTerm);
                 } else {
-                    // Search by name only
                     conditions.push(`s.service_name LIKE ?`);
                     params.push(searchTerm);
                 }
             }
 
-            // Add all conditions to query
             if (conditions.length > 0) {
                 query += ' AND ' + conditions.join(' AND ');
             }
 
-            // Debug: Log the query and params
             console.log('Search Query:', search);
             console.log('Conditions:', conditions);
             console.log('Params:', params);
 
-            // Get total count for pagination
             const countQuery = query.replace(
                 'SELECT s.*, c.category_name, c.category_name_lang, sa.api_name as provider_name, sa.currency as provider_currency',
                 'SELECT COUNT(*) as total'
@@ -641,7 +614,6 @@ module.exports = (pool) => {
             const [countResult] = await pool.execute(countQuery, params);
             const total = countResult && countResult[0] ? countResult[0].total : 0;
 
-            // Add pagination
             query += ` ORDER BY c.category_line ASC, s.service_line ASC LIMIT ? OFFSET ?`;
             const queryParams = [...params, limit, offset];
 
@@ -754,7 +726,6 @@ module.exports = (pool) => {
                 services = response.data.services;
             }
 
-            // CLEAN THE RATES HERE - remove commas and convert to number
             services = services.map(service => ({
                 ...service,
                 rate: typeof service.rate === 'string'
@@ -1390,8 +1361,6 @@ module.exports = (pool) => {
             connection.release();
         }
     });
-
-    // ============= CATEGORIES MANAGEMENT =============
     router.get('/categories', adminAuth, async (req, res) => {
         try {
             const [categories] = await pool.execute(`
@@ -1548,7 +1517,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= COUNTS & STATS =============
     router.get('/orders/count', adminAuth, async (req, res) => {
         try {
             const [result] = await pool.execute('SELECT COUNT(*) as total FROM orders');
@@ -1603,7 +1571,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= SECURITY & ANALYTICS =============
     router.get('/security/analytics', adminAuth, async (req, res) => {
         try {
             const limit = parseInt(req.query.limit) || 50;
@@ -1707,7 +1674,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= PLATFORM DISTRIBUTION =============
     router.get('/platforms/distribution', adminAuth, async (req, res) => {
         try {
             const [serviceCounts] = await pool.execute(`
@@ -1785,7 +1751,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= REVENUE =============
     router.get('/revenue/daily', adminAuth, async (req, res) => {
         try {
             const [revenue] = await pool.execute(`
@@ -1811,7 +1776,6 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= SETTINGS =============
     router.get('/settings/units', adminAuth, async (req, res) => {
         try {
             const [tableExists] = await pool.execute(`
@@ -1846,12 +1810,10 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= ORDER ANALYTICS FOR DASHBOARD =============
     router.get('/analytics/orders', adminAuth, async (req, res) => {
         try {
             const { range = '30days' } = req.query;
 
-            // Calculate date range based on filter
             let intervalDays = 30;
             let intervalSQL = '';
 
@@ -1881,13 +1843,11 @@ module.exports = (pool) => {
                     intervalSQL = '30 DAY';
             }
 
-            // Build query based on range
             let whereClause = '';
             if (intervalSQL) {
                 whereClause = `AND order_create >= DATE_SUB(NOW(), INTERVAL ${intervalSQL})`;
             }
 
-            // Get chart data (daily breakdown) - ONLY COMPLETED ORDERS
             const chartQuery = `
             SELECT 
                 DATE(order_create) as date,
@@ -1903,7 +1863,6 @@ module.exports = (pool) => {
 
             const [chartData] = await pool.execute(chartQuery);
 
-            // Get summary totals - ONLY COMPLETED ORDERS
             let summaryQuery = `
             SELECT 
                 COUNT(*) as totalOrders,
@@ -1919,8 +1878,6 @@ module.exports = (pool) => {
 
             const [summaryResult] = await pool.execute(summaryQuery);
             const summary = summaryResult[0];
-
-            // Calculate average order value and profit margin
             const totalOrders = summary.totalOrders || 0;
             const totalRevenue = parseFloat(summary.totalRevenue || 0);
             const totalProfit = parseFloat(summary.totalProfit || 0);
@@ -1928,7 +1885,6 @@ module.exports = (pool) => {
             const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
             const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
-            // Format the response
             const formattedChartData = chartData.map(item => ({
                 date: item.date,
                 formattedDate: new Date(item.date).toLocaleDateString('en-US', {
@@ -1963,15 +1919,14 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= SYNC SERVICES PRICES FROM PROVIDERS =============
+  
     router.post('/services/sync-prices', adminAuth, async (req, res) => {
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
 
-            const { auto_update = false } = req.body; // Option to auto-update or just preview
+            const { auto_update = false } = req.body;
 
-            // Get all active providers
             const [providers] = await connection.execute(
                 'SELECT * FROM service_api WHERE status = "2"'
             );
@@ -1982,15 +1937,13 @@ module.exports = (pool) => {
                 unchanged: 0,
                 failed: 0,
                 errors: [],
-                updates: [] // For preview mode
+                updates: [] 
             };
 
             const axios = require('axios');
 
-            // Loop through each provider
             for (const provider of providers) {
                 try {
-                    // Fetch current services from provider API
                     const formData = new URLSearchParams();
                     formData.append('key', provider.api_key);
                     formData.append('action', 'services');
@@ -2009,7 +1962,6 @@ module.exports = (pool) => {
                         providerServices = response.data.services;
                     }
 
-                    // Clean the rates (remove commas)
                     providerServices = providerServices.map(s => ({
                         ...s,
                         rate: typeof s.rate === 'string'
@@ -2017,7 +1969,6 @@ module.exports = (pool) => {
                             : s.rate
                     }));
 
-                    // Get all services from this provider in your database
                     const [dbServices] = await connection.execute(
                         'SELECT * FROM services WHERE service_api = ? AND service_deleted = "0"',
                         [provider.id]
@@ -2025,16 +1976,13 @@ module.exports = (pool) => {
 
                     results.total_services += dbServices.length;
 
-                    // Compare each service
                     for (const dbService of dbServices) {
                         try {
-                            // Find matching service in provider data by api_service ID
                             const providerService = providerServices.find(
                                 ps => ps.service && ps.service.toString() === dbService.api_service.toString()
                             );
 
                             if (!providerService) {
-                                // Service no longer exists in provider
                                 results.failed++;
                                 results.errors.push({
                                     service_id: dbService.service_id,
@@ -2044,20 +1992,16 @@ module.exports = (pool) => {
                                 continue;
                             }
 
-                            // Calculate what the price SHOULD be based on provider rate + profit margin
                             const profitPercent = parseFloat(dbService.service_profit) || 0;
                             const providerRate = providerService.rate;
                             const calculatedPrice = providerRate * (1 + profitPercent / 100);
 
-                            // Compare with current price (allow small floating point difference)
                             const currentPrice = parseFloat(dbService.service_price);
                             const priceDifference = Math.abs(calculatedPrice - currentPrice);
-                            const hasPriceChanged = priceDifference > 0.001; // Small threshold for floating point
+                            const hasPriceChanged = priceDifference > 0.001; 
 
                             if (hasPriceChanged) {
-                                // Price has changed
                                 if (auto_update) {
-                                    // Auto-update the price and mark as updated
                                     await connection.execute(
                                         `UPDATE services SET 
                     service_price = ?,
@@ -2082,7 +2026,7 @@ module.exports = (pool) => {
                                         status: 'updated'
                                     });
                                 } else {
-                                    // Preview mode - just mark as new without updating
+             
                                     await connection.execute(
                                         'UPDATE services SET is_new = 1 WHERE service_id = ?',
                                         [dbService.service_id]
@@ -2099,7 +2043,7 @@ module.exports = (pool) => {
                                     });
                                 }
                             } else {
-                                // Price unchanged, but still update API details maybe
+                        
                                 await connection.execute(
                                     'UPDATE services SET api_detail = ? WHERE service_id = ?',
                                     [JSON.stringify(providerService), dbService.service_id]
@@ -2149,20 +2093,19 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= RESET NEW FLAGS FOR SERVICES =============
     router.post('/services/reset-new-flags', adminAuth, async (req, res) => {
         try {
             const { service_ids } = req.body;
 
             if (service_ids && service_ids.length > 0) {
-                // Reset specific services
+ 
                 const placeholders = service_ids.map(() => '?').join(',');
                 await pool.execute(
                     `UPDATE services SET is_new = 0 WHERE service_id IN (${placeholders})`,
                     service_ids
                 );
             } else {
-                // Reset all new flags
+   
                 await pool.execute('UPDATE services SET is_new = 0');
             }
 
@@ -2180,7 +2123,7 @@ module.exports = (pool) => {
         }
     });
 
-    // ============= APPLY PRICE UPDATES =============
+
     router.post('/services/apply-price-updates', adminAuth, async (req, res) => {
         const connection = await pool.getConnection();
         try {
