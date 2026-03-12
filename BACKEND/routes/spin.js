@@ -1,9 +1,9 @@
-// routes/spin.js
+
 const express = require('express');
 const router = express.Router();
 
 module.exports = (pool) => {
-    // Auth middleware
+
     const authMiddleware = async (req, res, next) => {
         try {
             const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -18,7 +18,7 @@ module.exports = (pool) => {
             const jwt = require('jsonwebtoken');
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            // Get user data with wallet info
+       
             const [users] = await pool.execute(`
                 SELECT 
                     u.id,
@@ -52,13 +52,13 @@ module.exports = (pool) => {
         }
     };
 
-    // Check if user can spin today
+
     router.get('/can-spin', authMiddleware, async (req, res) => {
         try {
             const user_id = req.user.id;
             const today = new Date().toISOString().split('T')[0];
 
-            // Check if user already spun today
+   
             const [todaySpin] = await pool.execute(`
                 SELECT prize_value, prize_amount, result_type 
                 FROM spin_history 
@@ -83,12 +83,12 @@ module.exports = (pool) => {
         }
     });
 
-    // Get spin statistics
+
     router.get('/stats', authMiddleware, async (req, res) => {
         try {
             const user_id = req.user.id;
 
-            // Get today's spin
+         
             const today = new Date().toISOString().split('T')[0];
             const [todaySpin] = await pool.execute(`
                 SELECT prize_value, prize_amount, result_type 
@@ -96,7 +96,7 @@ module.exports = (pool) => {
                 WHERE user_id = ? AND spin_date = ?
             `, [user_id, today]);
 
-            // Get total stats
+     
             const [totalStats] = await pool.execute(`
                 SELECT 
                     COUNT(*) as total_spins,
@@ -106,7 +106,7 @@ module.exports = (pool) => {
                 WHERE user_id = ?
             `, [user_id]);
 
-            // Get last 10 spins for history
+ 
             const [recentSpins] = await pool.execute(`
                 SELECT 
                     prize_value,
@@ -145,7 +145,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Process spin result (one per day)
+
     router.post('/spin-result', authMiddleware, async (req, res) => {
         const connection = await pool.getConnection();
         
@@ -162,10 +162,10 @@ module.exports = (pool) => {
                 });
             }
 
-            // Get today's date
+  
             const today = new Date().toISOString().split('T')[0];
 
-            // Check if user already spun today
+    
             const [existingSpin] = await connection.execute(`
                 SELECT id FROM spin_history 
                 WHERE user_id = ? AND spin_date = ?
@@ -180,11 +180,11 @@ module.exports = (pool) => {
                 });
             }
 
-            // Determine if it's a win or loss
+       
             const isWin = !result.includes('Luck');
             const prizeAmount = isWin ? parseFloat(amount) || 0 : 0;
 
-            // Insert into spin history
+ 
             await connection.execute(`
                 INSERT INTO spin_history (
                     user_id,
@@ -202,7 +202,7 @@ module.exports = (pool) => {
                 today
             ]);
 
-            // Update user's total spins and last spin date
+   
             await connection.execute(`
                 UPDATE users 
                 SET 
@@ -211,7 +211,7 @@ module.exports = (pool) => {
                 WHERE id = ?
             `, [today, user_id]);
 
-            // If win, add to wallet balance
+
             if (isWin && prizeAmount > 0) {
                 await connection.execute(`
                     UPDATE wallets 
@@ -222,7 +222,7 @@ module.exports = (pool) => {
                     WHERE user_id = ?
                 `, [prizeAmount, prizeAmount, user_id]);
 
-                // Also update users table balance (for consistency)
+ 
                 await connection.execute(`
                     UPDATE users 
                     SET balance = balance + ?
@@ -232,7 +232,6 @@ module.exports = (pool) => {
 
             await connection.commit();
 
-            // Get updated wallet balance
             const [updatedWallet] = await connection.execute(`
                 SELECT available_balance, currency 
                 FROM wallets 
@@ -249,7 +248,7 @@ module.exports = (pool) => {
                 },
                 new_balance: updatedWallet[0]?.available_balance || 0,
                 currency: updatedWallet[0]?.currency || 'LKR',
-                can_spin: false // Already spun today
+                can_spin: false 
             });
 
         } catch (error) {
@@ -264,7 +263,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Get spin leaderboard (top winners)
+  
     router.get('/leaderboard', async (req, res) => {
         try {
             const [leaderboard] = await pool.execute(`
