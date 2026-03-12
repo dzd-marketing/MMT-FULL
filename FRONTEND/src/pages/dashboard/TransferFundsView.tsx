@@ -34,7 +34,7 @@ export default function TransferFundsView() {
   const { userData }: any = useOutletContext();
   
   // API URL
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const API_URL = import.meta.env.VITE_API_URL;
   
   // Form states
   const [receiverIdentifier, setReceiverIdentifier] = useState('');
