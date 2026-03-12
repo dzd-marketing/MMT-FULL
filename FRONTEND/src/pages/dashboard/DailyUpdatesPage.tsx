@@ -38,7 +38,7 @@ const DailyUpdatesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('7'); // 7 days, 30 days, all
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
   // Check authentication
   useEffect(() => {
