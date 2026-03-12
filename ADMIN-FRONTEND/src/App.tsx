@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { Toaster } from 'react-hot-toast';
-import AdminDashboard from './pages/admin/Dashboard';
+
+// Pages
 import AdminAuthPage from './pages/admin/AdminAuth';
 import AdminLogoutPage from './pages/admin/AdminLogout';
-import axios from 'axios';
-
-//dashboard
+import AdminDashboard from './pages/admin/Dashboard';
 import AdminOrdersPage from './pages/admin/OrdersPage';
 import PaymentDetails from './pages/admin/Payments';
 import AdminDeposits from './pages/admin/Deposits';
@@ -17,6 +16,7 @@ import BlogsUpdate from './pages/admin/BlogsPage';
 import ConfigView from './pages/admin/AdminConfigPage';
 import AdminTicketsPage from './pages/admin/TicketsPage';
 
+// ============= Admin Guard =============
 const AdminGuard = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
@@ -33,43 +33,41 @@ const AdminGuard = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// ============= App Content =============
 function AppContent() {
   const location = useLocation();
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-    const showNavbar = !location.pathname.startsWith('/dashboard') && !location.pathname.startsWith('/admin');
 
   return (
     <AnimatePresence mode="wait">
-      <>
-        <Routes location={location} key={location.pathname}>
+      <Routes location={location} key={location.pathname}>
 
-          <Route path='/admin/login' element={<AdminAuthPage />} />
-          <Route path='/admin/logout' element={<AdminLogoutPage />} />
+        {/* Root redirect */}
+        <Route path='/' element={<Navigate to='/admin/login' replace />} />
 
-          <Route path='/admin/dashboard' element={<AdminGuard><AdminDashboard /></AdminGuard>} />
-          <Route path='/admin/orders'    element={<AdminGuard><AdminOrdersPage /></AdminGuard>} />
-          <Route path='/admin/payments'  element={<AdminGuard><PaymentDetails /></AdminGuard>} />
-          <Route path='/admin/deposits'  element={<AdminGuard><AdminDeposits /></AdminGuard>} />
-          <Route path='/admin/users'     element={<AdminGuard><UsersView /></AdminGuard>} />
-          <Route path='/admin/services'  element={<AdminGuard><AdminServicesPage /></AdminGuard>} />
-          <Route path='/admin/blogs'     element={<AdminGuard><BlogsUpdate /></AdminGuard>} />
-          <Route path='/admin/configs'   element={<AdminGuard><ConfigView /></AdminGuard>} />
-          <Route path='/admin/tickets'   element={<AdminGuard><AdminTicketsPage /></AdminGuard>} />
+        {/* Public routes */}
+        <Route path='/admin/login'  element={<AdminAuthPage />} />
+        <Route path='/admin/logout' element={<AdminLogoutPage />} />
 
-        </Routes>
-      </>
+        {/* Protected routes */}
+        <Route path='/admin/dashboard' element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+        <Route path='/admin/orders'    element={<AdminGuard><AdminOrdersPage /></AdminGuard>} />
+        <Route path='/admin/payments'  element={<AdminGuard><PaymentDetails /></AdminGuard>} />
+        <Route path='/admin/deposits'  element={<AdminGuard><AdminDeposits /></AdminGuard>} />
+        <Route path='/admin/users'     element={<AdminGuard><UsersView /></AdminGuard>} />
+        <Route path='/admin/services'  element={<AdminGuard><AdminServicesPage /></AdminGuard>} />
+        <Route path='/admin/blogs'     element={<AdminGuard><BlogsUpdate /></AdminGuard>} />
+        <Route path='/admin/configs'   element={<AdminGuard><ConfigView /></AdminGuard>} />
+        <Route path='/admin/tickets'   element={<AdminGuard><AdminTicketsPage /></AdminGuard>} />
+
+        {/* Catch all → redirect to login */}
+        <Route path='*' element={<Navigate to='/admin/login' replace />} />
+
+      </Routes>
     </AnimatePresence>
   );
 }
 
+// ============= Root App =============
 export default function App() {
   return (
     <Router>
