@@ -9,14 +9,12 @@ import {
   Search, ArrowRight, ShoppingCart
 } from 'lucide-react';
 
-// Currency symbols
 const currencySymbols = {
   USD: '$ ',
   LKR: 'LKR ',
   INR: '₹ '
 };
 
-// Helper function to map backend currency to frontend
 const mapBackendCurrency = (backendCurrency: string): 'USD' | 'LKR' | 'INR' => {
   if (backendCurrency === 'USD' || backendCurrency === 'LKR' || backendCurrency === 'INR') {
     return backendCurrency;
@@ -43,10 +41,8 @@ export default function DashboardHomeView() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   
-  // DashboardLayout එකෙන් එන userData (මූලික user තොරතුරු)
   const { userData: layoutUserData } = useOutletContext<{ userData: any }>();
   
-  // Local state for wallet and stats
   const [walletData, setWalletData] = useState({
     available_balance: '0.00',
     spent_balance: '0.00',
@@ -66,7 +62,6 @@ export default function DashboardHomeView() {
 
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // Fetch conversion rates
   useEffect(() => {
     const fetchConversionRates = async () => {
       setRatesLoading(true);
@@ -99,8 +94,6 @@ export default function DashboardHomeView() {
 
     fetchConversionRates();
   }, []);
-
-  // Fetch user currency from profile
   const fetchUserCurrency = async () => {
     try {
       const profileResponse = await axios.get(`${API_URL}/user/profiles`, { withCredentials: true });
@@ -117,10 +110,8 @@ export default function DashboardHomeView() {
     }
   };
 
-// Fetch total orders count
 const fetchTotalOrders = async () => {
   try {
-    // Get ALL orders count (no limit)
     const response = await axios.get(`${API_URL}/orders/my-orders?limit=1000&page=1`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -132,12 +123,12 @@ const fetchTotalOrders = async () => {
     }
   } catch (error) {
     console.error('Error fetching total orders:', error);
-    // Fallback to demo data
+ 
     setTotalOrders('24');
   }
 };
 
-  // Fetch recent orders (last 5)
+
   const fetchRecentOrders = async () => {
     setOrdersLoading(true);
     try {
@@ -163,10 +154,10 @@ const fetchTotalOrders = async () => {
       try {
         setLoading(true);
         
-        // Fetch user currency
+
         await fetchUserCurrency();
         
-        // 1. Wallet details
+  
         const walletResponse = await axios.get(`${API_URL}/wallet/details`);
         if (walletResponse.data.success) {
           setWalletData({
@@ -176,10 +167,10 @@ const fetchTotalOrders = async () => {
           });
         }
         
-        // 2. Total orders count
+     
         await fetchTotalOrders();
         
-        // 3. Recent orders
+      
         await fetchRecentOrders();
         
       } catch (error) {
@@ -198,7 +189,7 @@ const fetchTotalOrders = async () => {
     fetchDashboardData();
   }, []);
 
-  // Listen for currency updates from profile
+
   useEffect(() => {
     const handleCurrencyUpdate = (event: CustomEvent) => {
       const { currency } = event.detail;
@@ -213,12 +204,12 @@ const fetchTotalOrders = async () => {
     };
   }, []);
 
-  // Get currency symbol
+
   const getCurrencySymbol = () => {
     return currencySymbols[userCurrency] || 'LKR ';
   };
 
-  // Get converted balance based on user currency
+ 
   const getConvertedBalance = (balance: string) => {
     const numBalance = parseFloat(balance);
     
@@ -239,12 +230,11 @@ const fetchTotalOrders = async () => {
     return numBalance.toFixed(2);
   };
 
-  // Format balance with currency symbol
+
   const formatBalance = (balance: string) => {
     return `${getCurrencySymbol()}${getConvertedBalance(balance)}`;
   };
 
-  // Get status badge component
   const getStatusBadge = (status: string) => {
     switch(status) {
       case 'completed':
@@ -264,7 +254,7 @@ const fetchTotalOrders = async () => {
     }
   };
 
-  // Format date
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -275,14 +265,13 @@ const fetchTotalOrders = async () => {
     });
   };
 
-  // Format currency for orders
   const formatOrderCurrency = (amount: number) => {
     return `Rs ${amount.toFixed(2)}`;
   };
 
   return (
     <div className="space-y-8">
-      {/* Welcome Section */}
+     
       <section className="relative glass rounded-[3rem] p-8 md:p-14 overflow-hidden border border-black/5 dark:border-white/10 group shadow-inner bg-white/50 dark:bg-black/20 transition-colors">
         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-brand/10 rounded-full blur-[120px] -mr-40 -mt-40 group-hover:bg-brand/20 transition-all duration-1000" />
         <div className="relative z-10 space-y-4">
@@ -476,3 +465,4 @@ const fetchTotalOrders = async () => {
   );
 
 }
+
