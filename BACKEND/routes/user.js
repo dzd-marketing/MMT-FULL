@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
-// Authentication middleware
+
 const authenticateToken = async (req, res, next) => {
     try {
         const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
@@ -54,7 +54,7 @@ module.exports = (pool) => {
         }
     });
 
-    // Update user profile
+
     router.put('/profile', authenticateToken, async (req, res) => {
         try {
             const { name, phone, whatsapp } = req.body;
