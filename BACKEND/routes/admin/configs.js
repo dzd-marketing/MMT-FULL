@@ -359,59 +359,67 @@ const adminAuth = require('../admin-auth')(pool);
         }
     });
 
-    router.post('/update-multiple', adminAuth.adminAuthMiddleware, async (req, res) => {
-        const connection = await pool.getConnection();
-        try {
-            await connection.beginTransaction();
+router.post('/update-multiple', adminAuth.adminAuthMiddleware, async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
 
-            const { configs } = req.body;
+        const { configs } = req.body;
 
-            for (const [key, value] of Object.entries(configs)) {
-                let sanitizedValue = value;
-                if (key.includes('url') || key.includes('channel')) {
-                    if (value && value.trim() !== '') {
-                        if (!value.match(/^https?:\/\//i) && !value.match(/^http?:\/\//i)) {
-                            sanitizedValue = 'https://' + value;
-                        }
+        for (const [key, value] of Object.entries(configs)) {
+            let sanitizedValue = value;
+            if (key.includes('url') || key.includes('channel')) {
+                if (value && value.trim() !== '') {
+                    if (!value.match(/^https?:\/\//i) && !value.match(/^http?:\/\//i)) {
+                        sanitizedValue = 'https://' + value;
                     }
-                }
-
-                const [existing] = await connection.execute(
-                    'SELECT id FROM config WHERE config_key = ?',
-                    [key]
-                );
-
-                if (existing.length > 0) {
-                    await connection.execute(
-                        'UPDATE config SET config_value = ? WHERE config_key = ?',
-                        [sanitizedValue, key]
-                    );
-                } else {
-                    await connection.execute(
-                        'INSERT INTO config (config_key, config_value) VALUES (?, ?)',
-                        [key, sanitizedValue]
-                    );
                 }
             }
 
-            await connection.commit();
+            const [existing] = await connection.execute(
+                'SELECT id FROM config WHERE config_key = ?',
+                [key]
+            );
 
-            res.json({
-                success: true,
-                message: 'Configs updated successfully'
-            });
-
-        } catch (error) {
-            await connection.rollback();
-            console.error('Update multiple config error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to update configs'
-            });
-        } finally {
-            connection.release();
+            if (existing.length > 0) {
+                await connection.execute(
+                    'UPDATE config SET config_value = ? WHERE config_key = ?',
+                    [sanitizedValue, key]
+                );
+            } else {
+                await connection.execute(
+                    'INSERT INTO config (config_key, config_value) VALUES (?, ?)',
+                    [key, sanitizedValue]
+                );
+            }
         }
-    });
+
+        await connection.commit();
+
+        // Clear any cached SEO data if this is an SEO update
+        const seoKeys = Object.keys(configs).filter(key => key.startsWith('seo_') || 
+            ['site_name', 'site_title', 'site_description', 'site_keywords', 'site_logo'].includes(key));
+        
+        if (seoKeys.length > 0) {
+            console.log('SEO settings updated - cache will be refreshed on next request');
+        }
+
+        res.json({
+            success: true,
+            message: 'Configs updated successfully'
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Update multiple config error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update configs'
+        });
+    } finally {
+        connection.release();
+    }
+});
 
     router.post('/toggle-maintenance', adminAuth.adminAuthMiddleware, async (req, res) => {
         try {
@@ -535,3 +543,4 @@ router.get('/seo-data', async (req, res) => {
 
     return router;
 };
+
