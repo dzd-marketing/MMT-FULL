@@ -1,4 +1,3 @@
-// routes/services.js
 const express = require('express');
 const router = express.Router();
 
@@ -40,7 +39,7 @@ module.exports = (pool) => {
             });
         }
     };
-    // Get all services - PUBLIC (no auth required)
+ 
     router.get('/', async (req, res) => {
         try {
             const [services] = await pool.execute(
@@ -79,7 +78,7 @@ module.exports = (pool) => {
         }
     });
 
-// Get new services for daily updates (only where is_new = 1)
+
 router.get('/new', authMiddleware, async (req, res) => {
     try {
         const { days = '7' } = req.query;
@@ -122,7 +121,7 @@ const [services] = await pool.execute(`
     }
 });
 
-    // Get single service by ID - PUBLIC
+
     router.get('/:id', async (req, res) => {
         try {
             const { id } = req.params;
