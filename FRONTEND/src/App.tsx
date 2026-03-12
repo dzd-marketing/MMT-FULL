@@ -22,7 +22,7 @@ import FestivalEffect from './components/FestivalEffect';
 import SEOHead from './components/SEOHead';
 import axios from 'axios';
 
-// Dashboard Components
+// Dashboard 
 import DashboardLayout from './pages/dashboard/DashboardLayout'; 
 import DashboardHomeView from './pages/dashboard/DashboardHomeView';
 import TermsView from './pages/dashboard/TermsView';
@@ -88,7 +88,7 @@ function AppContent() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Show maintenance page while checking
+ 
   if (checkingMaintenance) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] text-white flex items-center justify-center">
@@ -100,12 +100,12 @@ function AppContent() {
     );
   }
 
-  // If maintenance mode is ON, show maintenance page for ALL routes
+  
   if (maintenanceMode) {
     return <MaintenancePage />;
   }
 
-  // Hide navbar for both dashboard and admin routes
+  
   const showNavbar = !location.pathname.startsWith('/dashboard') && !location.pathname.startsWith('/admin');
 
   return (
