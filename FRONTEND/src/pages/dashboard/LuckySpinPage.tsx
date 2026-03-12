@@ -68,7 +68,7 @@ const LuckySpin: React.FC = () => {
   const [recentSpins, setRecentSpins] = useState<RecentSpin[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   // ===== SEGMENTS WITH EQUAL VISUAL SIZE =====
   // All segments have equal min/max (60 degrees each) for equal visual appearance
