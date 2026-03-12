@@ -196,6 +196,8 @@ const Signup: React.FC = () => {
     const [errors, setErrors] = useState<FieldErrors>({});
     const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
+    const API_URL = import.meta.env.VITE_API_URL;
+
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -281,7 +283,7 @@ const Signup: React.FC = () => {
         setSuccessMessage('');
 
         try {
-            const response = await fetch('VITE_API_URL=https://mmtsmmpanel.cyberservice.online/api/auth/signup', {
+            const response = await fetch(`${API_URL}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
