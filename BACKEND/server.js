@@ -110,6 +110,9 @@ app.use(helmet({
     }
 }));
 
+app.use(express.static(path.join(__dirname, '../FRONTEND/dist')));
+
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -288,6 +291,14 @@ app.use((err, req, res, next) => {
         message: 'Internal server error',
         ...(process.env.NODE_ENV === 'development' && { error: err.message })
     });
+});
+
+const seoMiddleware = require('./middleware/seo-middleware')(promisePool);
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+        return next();
+    }
+    return seoMiddleware(req, res, next);
 });
 
 app.use('*', (req, res) => {
