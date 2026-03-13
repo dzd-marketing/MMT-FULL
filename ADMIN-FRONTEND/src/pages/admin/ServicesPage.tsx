@@ -313,6 +313,11 @@ const AdminServicesPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  const [providerCurrency, setProviderCurrency] = useState<string>('USD');
+const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+const [loadingRates, setLoadingRates] = useState(false);
+const [conversionPreview, setConversionPreview] = useState<number | null>(null);
+
   const [allServices, setAllServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [displayedServices, setDisplayedServices] = useState<Service[]>([]);
@@ -596,6 +601,30 @@ const AdminServicesPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const fetchExchangeRates = async () => {
+    setLoadingRates(true);
+    try {
+        const response = await axios.get(
+            'https://v6.exchangerate-api.com/v6/589b3a17cd9c92626adef6dc/latest/USD'
+        );
+        if (response.data.result === 'success') {
+            setExchangeRates(response.data.conversion_rates);
+        }
+    } catch (error) {
+        console.error('Error fetching exchange rates:', error);
+    } finally {
+        setLoadingRates(false);
+    }
+};
+
+const convertToLKR = (price: number, fromCurrency: string): number => {
+    if (fromCurrency === 'LKR') return price;
+    if (!exchangeRates['LKR'] || !exchangeRates[fromCurrency]) return price;
+    // Convert to USD first, then to LKR
+    const priceInUSD = price / exchangeRates[fromCurrency];
+    return priceInUSD * exchangeRates['LKR'];
+};
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -885,57 +914,64 @@ const AdminServicesPage: React.FC = () => {
     }
   };
 
-  const handleImportServices = async () => {
+const handleImportServices = async () => {
     const selectedIds = Object.keys(selectedImportServices).filter(id => selectedImportServices[id]);
     if (selectedIds.length === 0) {
-      alert('Please select at least one service to import');
-      return;
+        alert('Please select at least one service to import');
+        return;
     }
 
     if (!autoCreateCategories && !importCategory) {
-      alert('Please select a category or enable auto-create categories');
-      return;
+        alert('Please select a category or enable auto-create categories');
+        return;
     }
 
-    const servicesToImport = providerServices.filter(s => selectedImportServices[s.service]);
+    // ✅ Convert prices to LKR before importing
+    const servicesToImport = providerServices
+        .filter(s => selectedImportServices[s.service])
+        .map(s => ({
+            ...s,
+            rate: convertToLKR(s.rate, providerCurrency), // 💱 Convert here
+            original_rate: s.rate,
+            original_currency: providerCurrency
+        }));
 
     setActionLoading(0);
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await axios.post(`${API_URL}/admin/services/import-from-provider`,
-        {
-          provider_id: parseInt(selectedProvider),
-          services: servicesToImport,
-          category_id: autoCreateCategories ? null : parseInt(importCategory),
-          profit_percentage: importProfitPercentage,
-          auto_create_categories: autoCreateCategories
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        const token = localStorage.getItem('adminToken');
+        const response = await axios.post(`${API_URL}/admin/services/import-from-provider`,
+            {
+                provider_id: parseInt(selectedProvider),
+                services: servicesToImport,
+                category_id: autoCreateCategories ? null : parseInt(importCategory),
+                profit_percentage: importProfitPercentage,
+                auto_create_categories: autoCreateCategories,
+                source_currency: providerCurrency // ✅ Send currency info to backend
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      if (response.data.success) {
-        setShowImportModal(false);
-        setSelectedProvider('');
-        setProviderServices([]);
-        setSelectedImportServices({});
-        setAutoCreateCategories(false);
-        await loadServices(); 
-        fetchStats();
-        fetchCategories();
+        if (response.data.success) {
+            setShowImportModal(false);
+            setSelectedProvider('');
+            setProviderServices([]);
+            setSelectedImportServices({});
+            setAutoCreateCategories(false);
+            setProviderCurrency('USD');
+            setConversionPreview(null);
+            await loadServices();
+            fetchStats();
+            fetchCategories();
 
-        if (response.data.categories_created) {
-          alert(`Successfully imported ${selectedIds.length} services and created ${response.data.categories_created} new categories!`);
-        } else {
-          alert(`Successfully imported ${selectedIds.length} services!`);
+            alert(`Successfully imported ${selectedIds.length} services! Prices converted from ${providerCurrency} to LKR.`);
         }
-      }
     } catch (error) {
-      console.error('Error importing services:', error);
-      alert('Failed to import services. Check console for details.');
+        console.error('Error importing services:', error);
+        alert('Failed to import services.');
     } finally {
-      setActionLoading(null);
+        setActionLoading(null);
     }
-  };
+};
 
   const handleCreateCategory = async () => {
     if (!categoryForm.name) {
@@ -2660,7 +2696,11 @@ const AdminServicesPage: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-            onClick={() => setShowImportModal(false)}
+            onClick={() => {
+    setShowImportModal(false);
+    setProviderCurrency('USD');
+    setConversionPreview(null);
+}}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -2679,7 +2719,11 @@ const AdminServicesPage: React.FC = () => {
                     <h2 className="text-xl font-bold text-white">Import Services from Provider</h2>
                   </div>
                   <button
-                    onClick={() => setShowImportModal(false)}
+                                onClick={() => {
+    setShowImportModal(false);
+    setProviderCurrency('USD');
+    setConversionPreview(null);
+}}
                     className="p-2 hover:bg-white/10 rounded-xl transition-colors"
                   >
                     <X className="w-5 h-5 text-gray-400" />
@@ -2716,6 +2760,68 @@ const AdminServicesPage: React.FC = () => {
                     />
                   </div>
                 </div>
+
+  {/* Currency Selector */}
+<div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
+    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+        <DollarSign className="w-4 h-4 text-brand" />
+        Provider Currency
+        {loadingRates && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+    </h3>
+
+    <div className="grid grid-cols-2 gap-4">
+        <div>
+            <label className="block text-xs text-gray-400 mb-2">Provider prices are in</label>
+            <CustomSelect
+                value={providerCurrency}
+                onChange={(value) => {
+                    setProviderCurrency(value);
+                    // Show preview rate
+                    if (exchangeRates['LKR'] && exchangeRates[value]) {
+                        const rate = exchangeRates['LKR'] / exchangeRates[value];
+                        setConversionPreview(rate);
+                    }
+                }}
+                options={[
+                    { value: 'LKR', label: '🇱🇰 LKR - Sri Lankan Rupee' },
+                    { value: 'USD', label: '🇺🇸 USD - US Dollar' },
+                    { value: 'INR', label: '🇮🇳 INR - Indian Rupee' },
+                    { value: 'EUR', label: '🇪🇺 EUR - Euro' },
+                    { value: 'GBP', label: '🇬🇧 GBP - British Pound' },
+                    { value: 'AED', label: '🇦🇪 AED - UAE Dirham' },
+                    { value: 'SGD', label: '🇸🇬 SGD - Singapore Dollar' },
+                    { value: 'MYR', label: '🇲🇾 MYR - Malaysian Ringgit' },
+                    { value: 'BDT', label: '🇧🇩 BDT - Bangladeshi Taka' },
+                    { value: 'PKR', label: '🇵🇰 PKR - Pakistani Rupee' },
+                ]}
+            />
+        </div>
+
+        {/* Live Rate Preview */}
+        <div className="flex flex-col justify-end">
+            {conversionPreview && providerCurrency !== 'LKR' ? (
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-xl">
+                    <p className="text-xs text-gray-400 mb-1">Live Rate</p>
+                    <p className="text-sm font-bold text-green-400">
+                        1 {providerCurrency} = Rs {conversionPreview.toFixed(2)} LKR
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                        All prices will be converted automatically
+                    </p>
+                </div>
+            ) : providerCurrency === 'LKR' ? (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                    <p className="text-xs text-blue-400">No conversion needed</p>
+                    <p className="text-[10px] text-gray-500 mt-1">Prices stored as-is in LKR</p>
+                </div>
+            ) : (
+                <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
+                    <p className="text-xs text-gray-500">Select a currency to see rate</p>
+                </div>
+            )}
+        </div>
+    </div>
+</div>
 
                 {/* Category Options */}
                 <div className="space-y-3 bg-white/5 rounded-xl p-5 border border-white/10">
@@ -2825,7 +2931,14 @@ const AdminServicesPage: React.FC = () => {
                               <PackageTypeBadge type={service.type || '1'} />
                             </div>
                             <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500">
-                              <span className="px-2 py-1 bg-white/5 rounded-full">Rate: {service.rate}</span>
+                              <span className="px-2 py-1 bg-white/5 rounded-full">
+    Rate: {service.rate} {providerCurrency}
+</span>
+{providerCurrency !== 'LKR' && exchangeRates['LKR'] && (
+    <span className="px-2 py-1 bg-green-500/10 text-green-400 rounded-full">
+        ≈ Rs {convertToLKR(service.rate, providerCurrency).toFixed(2)} LKR
+    </span>
+)}
                               <span className="px-2 py-1 bg-white/5 rounded-full">Min: {service.min}</span>
                               <span className="px-2 py-1 bg-white/5 rounded-full">Max: {service.max}</span>
                               <span className="px-2 py-1 bg-white/5 rounded-full">Refill: {service.refill === '1' ? 'Yes' : 'No'}</span>
@@ -2851,7 +2964,11 @@ const AdminServicesPage: React.FC = () => {
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4 border-t border-white/10">
                   <button
-                    onClick={() => setShowImportModal(false)}
+                                onClick={() => {
+    setShowImportModal(false);
+    setProviderCurrency('USD');
+    setConversionPreview(null);
+}}
                     className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-sm font-medium transition-colors"
                   >
                     Cancel
