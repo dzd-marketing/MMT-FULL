@@ -1,4 +1,3 @@
-console.log('✅✅✅ ORDERS.JS LOADED! Route file is running!');
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
@@ -50,10 +49,114 @@ module.exports = (pool) => {
         }
     };
 
+    // ============================================================
+    // QUEUE PROCESSOR — called when an order completes/cancels
+    // Finds the next queued order for the same link+service+user
+    // and sends it to the provider
+    // ============================================================
+    const processQueue = async (completedOrderUrl, completedServiceId, userId) => {
+        try {
+            // Find next queued order for same link + service + user
+            const [queuedOrders] = await pool.execute(`
+                SELECT o.*, sa.api_key, sa.api_url
+                FROM orders o
+                LEFT JOIN service_api sa ON o.order_api = sa.id
+                WHERE o.order_url = ?
+                AND o.service_id = ?
+                AND o.user_id = ?
+                AND o.order_status = 'queued'
+                ORDER BY o.order_create ASC
+                LIMIT 1
+            `, [completedOrderUrl, completedServiceId, userId]);
+
+            if (queuedOrders.length === 0) {
+                console.log(`Queue: No queued orders for ${completedOrderUrl}`);
+                return;
+            }
+
+            const nextOrder = queuedOrders[0];
+            let apiOrderId = 0;
+            let apiResponse = null;
+            let orderError = '-';
+
+            console.log(`Queue: Processing queued order #${nextOrder.order_id}`);
+
+            // Send to provider API
+            if (nextOrder.order_api > 0 && nextOrder.api_key && nextOrder.api_url) {
+                try {
+                    const apiData = new URLSearchParams();
+                    apiData.append('key', nextOrder.api_key);
+                    apiData.append('action', 'add');
+                    apiData.append('service', nextOrder.api_serviceid);
+                    apiData.append('link', nextOrder.order_url);
+
+                    // Handle dripfeed
+                    if (nextOrder.dripfeed === '2') {
+                        apiData.append('quantity', nextOrder.dripfeed_totalquantity || nextOrder.order_quantity);
+                        if (nextOrder.dripfeed_runs) apiData.append('runs', nextOrder.dripfeed_runs);
+                        if (nextOrder.dripfeed_interval) apiData.append('interval', nextOrder.dripfeed_interval);
+                    } else {
+                        apiData.append('quantity', nextOrder.order_quantity);
+                    }
+
+                    // Handle comments if stored in extras
+                    if (nextOrder.order_extras) {
+                        try {
+                            const extras = JSON.parse(nextOrder.order_extras);
+                            if (extras.comments && extras.comments.length > 0) {
+                                apiData.append('comments', extras.comments.join("\n"));
+                            }
+                        } catch (e) { /* ignore parse errors */ }
+                    }
+
+                    const response = await axios.post(nextOrder.api_url, apiData, {
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        timeout: 30000
+                    });
+
+                    apiResponse = JSON.stringify(response.data);
+
+                    if (response.data?.order) {
+                        apiOrderId = response.data.order;
+                    } else if (response.data?.error) {
+                        orderError = response.data.error;
+                    }
+
+                    console.log(`Queue: Order #${nextOrder.order_id} sent to provider, API order ID: ${apiOrderId}`);
+
+                } catch (apiErr) {
+                    console.error(`Queue: API error for order #${nextOrder.order_id}:`, apiErr.message);
+                    orderError = apiErr.message;
+                    apiResponse = JSON.stringify({ error: apiErr.message });
+                }
+            }
+
+            // Update queued order to active status
+            await pool.execute(`
+                UPDATE orders 
+                SET order_status = ?,
+                    api_orderid = ?,
+                    order_detail = ?,
+                    order_error = ?,
+                    last_check = NOW()
+                WHERE order_id = ?
+            `, [
+                apiOrderId > 0 ? 'processing' : 'pending',
+                apiOrderId || 0,
+                apiResponse || '',
+                orderError,
+                nextOrder.order_id
+            ]);
+
+            console.log(`Queue: Order #${nextOrder.order_id} status updated to ${apiOrderId > 0 ? 'processing' : 'pending'}`);
+
+        } catch (err) {
+            console.error('Queue processor error:', err.message);
+        }
+    };
+
     router.get('/categories', async (req, res) => {
         try {
-       
-     
             const [services] = await pool.execute(`
                 SELECT DISTINCT service_name FROM services WHERE service_deleted = '0'
             `);
@@ -72,9 +175,7 @@ module.exports = (pool) => {
             };
 
             const platformOrder = ['tiktok', 'instagram', 'youtube', 'facebook', 'twitter', 'telegram', 'whatsapp', 'linkedin', 'other'];
-
             const platformSet = new Set(services.map(s => detectPlatform(s.service_name)));
-
             const categories = platformOrder
                 .filter(p => platformSet.has(p))
                 .map((p, i) => ({ id: i + 1, platform: p, name: p, slug: p }));
@@ -82,10 +183,7 @@ module.exports = (pool) => {
             res.json(categories);
         } catch (error) {
             console.error('Error fetching categories:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to fetch categories'
-            });
+            res.status(500).json({ success: false, message: 'Failed to fetch categories' });
         }
     });
 
@@ -120,12 +218,10 @@ module.exports = (pool) => {
             `;
 
             const params = [];
-
             if (platform && platform !== 'all') {
                 query += ` AND LOWER(c.platform) = LOWER(?)`;
                 params.push(platform);
             }
-
             query += ` ORDER BY c.platform, s.service_line ASC`;
 
             const [services] = await pool.execute(query, params);
@@ -152,17 +248,11 @@ module.exports = (pool) => {
                 platform: detectPlatform(service.service_name)
             }));
 
-            res.json({
-                success: true,
-                services: formattedServices
-            });
+            res.json({ success: true, services: formattedServices });
 
         } catch (error) {
             console.error('Error fetching services:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to fetch services'
-            });
+            res.status(500).json({ success: false, message: 'Failed to fetch services' });
         }
     });
 
@@ -171,10 +261,7 @@ module.exports = (pool) => {
             const { service_id, quantity } = req.body;
 
             if (!service_id || !quantity) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Service ID and quantity are required'
-                });
+                return res.status(400).json({ success: false, message: 'Service ID and quantity are required' });
             }
 
             const [services] = await pool.execute(`
@@ -184,14 +271,10 @@ module.exports = (pool) => {
             `, [service_id]);
 
             if (services.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Service not found'
-                });
+                return res.status(404).json({ success: false, message: 'Service not found' });
             }
 
             const service = services[0];
-
             const pricePerUnit = parseFloat(service.service_price.replace(/,/g, '')) / 1000;
             let charge = pricePerUnit * quantity;
 
@@ -218,10 +301,7 @@ module.exports = (pool) => {
 
         } catch (error) {
             console.error('Error calculating price:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to calculate price'
-            });
+            res.status(500).json({ success: false, message: 'Failed to calculate price' });
         }
     });
 
@@ -249,14 +329,10 @@ module.exports = (pool) => {
             `, [service_id]);
 
             if (services.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Service not found'
-                });
+                return res.status(404).json({ success: false, message: 'Service not found' });
             }
 
             const service = services[0];
-
             const min = parseInt(service.service_min) || 0;
             const max = parseInt(service.service_max) === 2147483647 ? 10000000 : parseInt(service.service_max) || 0;
 
@@ -274,10 +350,7 @@ module.exports = (pool) => {
             }
 
             if ((service.service_package === '3' || service.service_package === '4') && !comments) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Comments are required for this service'
-                });
+                return res.status(400).json({ success: false, message: 'Comments are required for this service' });
             }
 
             const pricePerUnit = parseFloat(service.service_price.replace(/,/g, '')) / 1000;
@@ -289,7 +362,6 @@ module.exports = (pool) => {
 
             const profitPercentage = parseFloat(service.service_profit) || 0;
             let orderProfit = 0;
-
             if (profitPercentage > 0) {
                 const originalCost = charge / (1 + (profitPercentage / 100));
                 orderProfit = charge - originalCost;
@@ -300,34 +372,41 @@ module.exports = (pool) => {
             `, [user_id]);
 
             if (wallets.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Wallet not found'
-                });
+                return res.status(404).json({ success: false, message: 'Wallet not found' });
             }
 
             const userBalance = parseFloat(wallets[0].available_balance) || 0;
-
             if (userBalance < charge) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Insufficient balance'
-                });
+                return res.status(400).json({ success: false, message: 'Insufficient balance' });
             }
 
             let extras = '';
             if ((service.service_package === '3' || service.service_package === '4') && comments) {
                 const commentsArray = Array.isArray(comments) ? comments : comments.split('\n');
-                extras = JSON.stringify({
-                    comments: commentsArray.filter((c) => c.trim())
-                });
+                extras = JSON.stringify({ comments: commentsArray.filter((c) => c.trim()) });
             }
+
+            // ============================================================
+            // QUEUE CHECK — is there an active order for same link+service?
+            // ============================================================
+            const [activeOrders] = await connection.execute(`
+                SELECT order_id FROM orders 
+                WHERE user_id = ?
+                AND order_url = ?
+                AND service_id = ?
+                AND order_status IN ('pending', 'processing', 'inprogress', 'queued')
+                LIMIT 1
+            `, [user_id, link, service_id]);
+
+            const shouldQueue = activeOrders.length > 0;
+            // ============================================================
 
             let apiOrderId = 0;
             let apiResponse = null;
             let orderError = '-';
 
-            if (service.service_api > 0 && service.api_key && service.api_url) {
+            // Only call provider API if NOT queued
+            if (!shouldQueue && service.service_api > 0 && service.api_key && service.api_url) {
                 try {
                     const apiData = new URLSearchParams();
                     apiData.append('key', service.api_key);
@@ -366,6 +445,16 @@ module.exports = (pool) => {
                     orderError = apiError.message;
                     apiResponse = JSON.stringify({ error: apiError.message });
                 }
+            }
+
+            // Determine order status
+            let orderStatus;
+            if (shouldQueue) {
+                orderStatus = 'queued';
+            } else if (apiOrderId > 0) {
+                orderStatus = 'processing';
+            } else {
+                orderStatus = 'pending';
             }
 
             const [orderResult] = await connection.execute(`
@@ -412,7 +501,7 @@ module.exports = (pool) => {
                 charge,
                 orderProfit,
                 link,
-                apiOrderId > 0 ? 'processing' : 'pending',
+                orderStatus,
                 extras,
                 orderError,
                 req.body.dripfeed || '1',
@@ -450,24 +539,27 @@ module.exports = (pool) => {
                 SELECT available_balance FROM wallets WHERE user_id = ?
             `, [user_id]);
 
+            const message = shouldQueue
+                ? 'Order queued — will be sent after current order for this link completes'
+                : (apiOrderId > 0 ? 'Order placed successfully with API' : 'Order placed successfully (Manual)');
+
             res.json({
                 success: true,
-                message: apiOrderId > 0 ? 'Order placed successfully with API' : 'Order placed successfully (Manual)',
+                message,
                 order_id: orderId,
+                order_status: orderStatus,
+                queued: shouldQueue,
                 api_order_id: apiOrderId || null,
                 charge: charge.toFixed(2),
                 profit: orderProfit.toFixed(2),
                 balance: updatedWallet[0].available_balance,
-                api_status: apiOrderId > 0 ? 'success' : 'pending'
+                api_status: shouldQueue ? 'queued' : (apiOrderId > 0 ? 'success' : 'pending')
             });
 
         } catch (error) {
             await connection.rollback();
             console.error('Error placing order:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to place order'
-            });
+            res.status(500).json({ success: false, message: 'Failed to place order' });
         } finally {
             connection.release();
         }
@@ -566,10 +658,7 @@ module.exports = (pool) => {
 
         } catch (error) {
             console.error('Error fetching orders:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to fetch orders'
-            });
+            res.status(500).json({ success: false, message: 'Failed to fetch orders' });
         }
     });
 
@@ -593,14 +682,10 @@ module.exports = (pool) => {
             `, [id, user_id]);
 
             if (orders.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Order not found'
-                });
+                return res.status(404).json({ success: false, message: 'Order not found' });
             }
 
             const order = orders[0];
-
             const formattedOrder = {
                 ...order,
                 order_charge: parseFloat(order.order_charge).toFixed(2),
@@ -611,17 +696,11 @@ module.exports = (pool) => {
                 api_charge: parseFloat(order.api_charge).toFixed(2) || '0.00'
             };
 
-            res.json({
-                success: true,
-                order: formattedOrder
-            });
+            res.json({ success: true, order: formattedOrder });
 
         } catch (error) {
             console.error('Error fetching order:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to fetch order'
-            });
+            res.status(500).json({ success: false, message: 'Failed to fetch order' });
         }
     });
 
@@ -638,20 +717,26 @@ module.exports = (pool) => {
             `, [id, user_id]);
 
             if (orders.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Order not found'
-                });
+                return res.status(404).json({ success: false, message: 'Order not found' });
             }
 
             const order = orders[0];
+
+            // Queued orders can't be synced — they haven't been sent yet
+            if (order.order_status === 'queued') {
+                return res.json({
+                    success: true,
+                    message: 'Order is queued — waiting for previous order to complete',
+                    order
+                });
+            }
 
             const lockedStatuses = ['canceled', 'completed'];
             if (lockedStatuses.includes(order.order_status)) {
                 return res.json({
                     success: true,
                     message: `Order is ${order.order_status} — no sync needed`,
-                    order: order
+                    order
                 });
             }
 
@@ -669,6 +754,7 @@ module.exports = (pool) => {
                     if (response.data) {
                         const updateData = [];
                         const queryParams = [];
+                        let newStatus = null;
 
                         if (response.data.status) {
                             let status = response.data.status.toLowerCase();
@@ -678,6 +764,8 @@ module.exports = (pool) => {
                             else if (status.includes('partial')) status = 'partial';
                             else if (status.includes('cancel')) status = 'canceled';
                             else status = 'pending';
+
+                            newStatus = status;
 
                             if (!lockedStatuses.includes(order.order_status)) {
                                 updateData.push('order_status = ?');
@@ -705,15 +793,16 @@ module.exports = (pool) => {
                         if (updateData.length > 0) {
                             queryParams.push(id);
                             await pool.execute(`
-                                UPDATE orders 
-                                SET ${updateData.join(', ')} 
-                                WHERE order_id = ?
+                                UPDATE orders SET ${updateData.join(', ')} WHERE order_id = ?
                             `, queryParams);
                         }
 
-                        const [updatedOrders] = await pool.execute(`
-                            SELECT * FROM orders WHERE order_id = ?
-                        `, [id]);
+                        // ✅ Trigger queue if order completed/canceled/partial
+                        if (newStatus && ['completed', 'canceled', 'partial'].includes(newStatus)) {
+                            processQueue(order.order_url, order.service_id, order.user_id);
+                        }
+
+                        const [updatedOrders] = await pool.execute(`SELECT * FROM orders WHERE order_id = ?`, [id]);
 
                         return res.json({
                             success: true,
@@ -726,18 +815,11 @@ module.exports = (pool) => {
                 }
             }
 
-            res.json({
-                success: true,
-                message: 'No API sync needed',
-                order: order
-            });
+            res.json({ success: true, message: 'No API sync needed', order });
 
         } catch (error) {
             console.error('Error syncing order status:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to sync order status'
-            });
+            res.status(500).json({ success: false, message: 'Failed to sync order status' });
         }
     });
 
@@ -746,7 +828,7 @@ module.exports = (pool) => {
             const user_id = req.user.id;
 
             const [orders] = await pool.execute(`
-                SELECT o.order_id, o.api_orderid, o.order_status, sa.api_key, sa.api_url
+                SELECT o.order_id, o.order_url, o.service_id, o.user_id, o.api_orderid, o.order_status, sa.api_key, sa.api_url
                 FROM orders o
                 LEFT JOIN service_api sa ON o.order_api = sa.id
                 WHERE o.user_id = ? 
@@ -771,6 +853,7 @@ module.exports = (pool) => {
                         if (response.data) {
                             const updateData = [];
                             const queryParams = [];
+                            let newStatus = null;
 
                             if (response.data.status) {
                                 let status = response.data.status.toLowerCase();
@@ -781,6 +864,7 @@ module.exports = (pool) => {
                                 else if (status.includes('cancel')) status = 'canceled';
                                 else status = 'pending';
 
+                                newStatus = status;
                                 updateData.push('order_status = ?');
                                 queryParams.push(status);
                             }
@@ -805,49 +889,36 @@ module.exports = (pool) => {
                             if (updateData.length > 0) {
                                 queryParams.push(order.order_id);
                                 await pool.execute(`
-                                    UPDATE orders 
-                                    SET ${updateData.join(', ')} 
-                                    WHERE order_id = ?
+                                    UPDATE orders SET ${updateData.join(', ')} WHERE order_id = ?
                                 `, queryParams);
                             }
 
-                            results.push({
-                                order_id: order.order_id,
-                                success: true
-                            });
+                            // ✅ Trigger queue if order completed/canceled/partial
+                            if (newStatus && ['completed', 'canceled', 'partial'].includes(newStatus)) {
+                                processQueue(order.order_url, order.service_id, order.user_id);
+                            }
+
+                            results.push({ order_id: order.order_id, success: true });
                         }
                     } catch (error) {
-                        results.push({
-                            order_id: order.order_id,
-                            success: false,
-                            error: error.message
-                        });
+                        results.push({ order_id: order.order_id, success: false, error: error.message });
                     }
                 }
             }
 
-            res.json({
-                success: true,
-                message: `Synced ${results.length} orders`,
-                results
-            });
+            res.json({ success: true, message: `Synced ${results.length} orders`, results });
 
         } catch (error) {
             console.error('Error syncing all orders:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to sync orders'
-            });
+            res.status(500).json({ success: false, message: 'Failed to sync orders' });
         }
     });
-
 
     router.post('/:id/refill', authMiddleware, async (req, res) => {
         try {
             const { id } = req.params;
             const user_id = req.user.id;
 
-         
             const [orders] = await pool.execute(`
                 SELECT o.*, sa.api_key, sa.api_url
                 FROM orders o
@@ -861,17 +932,14 @@ module.exports = (pool) => {
 
             const order = orders[0];
 
-  
             if (order.is_refill !== '1' && order.refill !== '1') {
                 return res.status(400).json({ success: false, message: 'Refill is not available for this service' });
             }
 
-     
             if (!['completed', 'partial'].includes(order.order_status)) {
                 return res.status(400).json({ success: false, message: 'Refill is only available for completed or partial orders' });
             }
 
-     
             const orderDate = new Date(order.order_create).getTime();
             const hoursElapsed = (Date.now() - orderDate) / (1000 * 60 * 60);
             if (hoursElapsed < 24) {
@@ -882,14 +950,9 @@ module.exports = (pool) => {
                 });
             }
 
-        
             if (!order.api_orderid || !order.api_key || !order.api_url) {
                 return res.status(400).json({ success: false, message: 'No API order linked to this order' });
             }
-
-            console.log('Refill — api_url:', order.api_url);
-            console.log('Refill — api_key:', order.api_key ? 'present' : 'MISSING');
-            console.log('Refill — api_orderid:', order.api_orderid);
 
             const apiData = new URLSearchParams();
             apiData.append('key', order.api_key);
@@ -901,45 +964,26 @@ module.exports = (pool) => {
                 apiResponse = await axios.post(order.api_url, apiData, {
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 });
-                console.log('Refill API response:', JSON.stringify(apiResponse.data));
             } catch (apiError) {
-                console.error('Refill API call failed:', apiError.message);
-                return res.status(500).json({
-                    success: false,
-                    message: `Provider API error: ${apiError.message}`
-                });
+                return res.status(500).json({ success: false, message: `Provider API error: ${apiError.message}` });
             }
 
             if (apiResponse.data && apiResponse.data.error) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Provider rejected refill: ${apiResponse.data.error}`
-                });
+                return res.status(400).json({ success: false, message: `Provider rejected refill: ${apiResponse.data.error}` });
             }
 
             const refillId = apiResponse.data?.refill || 0;
 
- 
             await pool.execute(`
-                UPDATE orders
-                SET refill_status = 'Refilling',
-                    api_refillid = ?,
-                    last_check = NOW()
+                UPDATE orders SET refill_status = 'Refilling', api_refillid = ?, last_check = NOW()
                 WHERE order_id = ?
             `, [refillId, id]);
 
-            res.json({
-                success: true,
-                message: 'Refill request submitted successfully',
-                refill_id: refillId
-            });
+            res.json({ success: true, message: 'Refill request submitted successfully', refill_id: refillId });
 
         } catch (error) {
             console.error('Refill unexpected error:', error.message, error.stack);
-            res.status(500).json({
-                success: false,
-                message: error.message || 'Failed to request refill'
-            });
+            res.status(500).json({ success: false, message: error.message || 'Failed to request refill' });
         }
     });
 
@@ -948,7 +992,6 @@ module.exports = (pool) => {
             const { id } = req.params;
             const user_id = req.user.id;
 
-          
             const [orders] = await pool.execute(`
                 SELECT o.*, sa.api_key, sa.api_url
                 FROM orders o
@@ -957,34 +1000,27 @@ module.exports = (pool) => {
             `, [id, user_id]);
 
             if (orders.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Order not found'
-                });
+                return res.status(404).json({ success: false, message: 'Order not found' });
             }
 
             const order = orders[0];
 
-            const cancelableStatuses = ['pending', 'processing', 'inprogress'];
+            // Allow canceling queued orders too
+            const cancelableStatuses = ['pending', 'processing', 'inprogress', 'queued'];
             if (!cancelableStatuses.includes(order.order_status)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Order cannot be cancelled at this stage'
-                });
+                return res.status(400).json({ success: false, message: 'Order cannot be cancelled at this stage' });
             }
 
-            if (order.cancelbutton !== '1') {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Cancellation is not available for this service'
-                });
+            // Queued orders don't need cancelbutton check — they haven't been sent to provider
+            if (order.order_status !== 'queued' && order.cancelbutton !== '1') {
+                return res.status(400).json({ success: false, message: 'Cancellation is not available for this service' });
             }
 
-          
             let providerCancelled = false;
             let refundAmount = order.order_charge;
 
-            if (order.api_orderid && order.api_key && order.api_url) {
+            // Only call provider cancel if order was actually sent (not queued)
+            if (order.order_status !== 'queued' && order.api_orderid && order.api_key && order.api_url) {
                 try {
                     const apiData = new URLSearchParams();
                     apiData.append('key', order.api_key);
@@ -995,8 +1031,6 @@ module.exports = (pool) => {
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         timeout: 10000
                     });
-
-                    console.log('Cancel API response:', JSON.stringify(apiResponse.data));
 
                     if (apiResponse.data && !apiResponse.data.error) {
                         providerCancelled = true;
@@ -1016,35 +1050,22 @@ module.exports = (pool) => {
                                 const remains = parseInt(statusResponse.data.remains) || 0;
                                 const quantity = parseInt(order.order_quantity) || 1;
                                 const pricePerUnit = parseFloat(order.order_charge) / quantity;
-                            
                                 refundAmount = parseFloat((pricePerUnit * remains).toFixed(6));
-                                console.log(`Partial refund: ${remains} remains × ${pricePerUnit} = ${refundAmount}`);
                             }
                         } catch (statusErr) {
                             console.error('Status check after cancel failed:', statusErr.message);
-                         
                         }
                     } else {
                         const providerError = apiResponse.data?.error || 'Unknown provider error';
-                        console.error('Provider cancel rejected:', providerError);
-                        return res.status(400).json({
-                            success: false,
-                            message: `Provider rejected cancellation: ${providerError}`
-                        });
+                        return res.status(400).json({ success: false, message: `Provider rejected cancellation: ${providerError}` });
                     }
                 } catch (apiError) {
-                    console.error('Provider cancel API call failed:', apiError.message);
-             
                     providerCancelled = false;
                 }
             }
 
-     
             await pool.execute(`
-                UPDATE orders 
-                SET order_status = 'canceled',
-                    last_check = NOW()
-                WHERE order_id = ?
+                UPDATE orders SET order_status = 'canceled', last_check = NOW() WHERE order_id = ?
             `, [id]);
 
             if (refundAmount > 0) {
@@ -1056,11 +1077,16 @@ module.exports = (pool) => {
                 `, [refundAmount, refundAmount, user_id]);
             }
 
+            // ✅ Trigger queue processing after cancel (queued orders waiting can now proceed)
+            processQueue(order.order_url, order.service_id, user_id);
+
             const isFullRefund = Math.abs(refundAmount - order.order_charge) < 0.001;
 
             res.json({
                 success: true,
-                message: 'Order cancelled successfully',
+                message: order.order_status === 'queued' 
+                    ? 'Queued order cancelled with full refund' 
+                    : 'Order cancelled successfully',
                 refund_amount: refundAmount,
                 refund_type: isFullRefund ? 'full' : 'partial',
                 provider_cancelled: providerCancelled
@@ -1068,10 +1094,7 @@ module.exports = (pool) => {
 
         } catch (error) {
             console.error('Error cancelling order:', error);
-            res.status(500).json({
-                success: false,
-                message: error.message || 'Failed to cancel order'
-            });
+            res.status(500).json({ success: false, message: error.message || 'Failed to cancel order' });
         }
     });
 
