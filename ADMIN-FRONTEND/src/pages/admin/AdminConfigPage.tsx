@@ -105,6 +105,15 @@ interface Config {
   seo_norton_verification: string;
 }
 
+interface Provider {
+  id: number;
+  api_name: string;
+  api_url: string;
+  api_key: string;
+  currency: string;
+  status: string;
+}
+
 const AdminConfigPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -116,6 +125,15 @@ const AdminConfigPage: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [seoImagePreview, setSeoImagePreview] = useState<string | null>(null);
   const [seoTwitterImagePreview, setSeoTwitterImagePreview] = useState<string | null>(null);
+  const [providers, setProviders] = useState<Provider[]>([]);
+const [loadingProviders, setLoadingProviders] = useState(false);
+const [showProviderModal, setShowProviderModal] = useState(false);
+const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
+const [providerForm, setProviderForm] = useState({ api_name: '', api_url: '', api_key: '', currency: 'USD', status: '2' });
+const [savingProvider, setSavingProvider] = useState(false);
+const [testingProvider, setTestingProvider] = useState<number | null>(null);
+const [testResult, setTestResult] = useState<{id: number, success: boolean, message: string} | null>(null);
+const [showApiKey, setShowApiKey] = useState<number | null>(null);
   
   const [config, setConfig] = useState<Config>({
     maintenance_mode: '0',
@@ -208,6 +226,10 @@ const AdminConfigPage: React.FC = () => {
   useEffect(() => {
     fetchConfig();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'providers') fetchProviders();
+}, [activeTab]);
 
   useEffect(() => {
     if (saveSuccess) {
@@ -452,6 +474,87 @@ const AdminConfigPage: React.FC = () => {
     }
   };
 
+  const fetchProviders = async () => {
+    setLoadingProviders(true);
+    try {
+        const response = await axios.get(`${API_URL}/admin/services/providers`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        });
+        if (response.data.success) setProviders(response.data.providers);
+    } catch (error) {
+        console.error('Error fetching providers:', error);
+    } finally {
+        setLoadingProviders(false);
+    }
+};
+
+const handleSaveProvider = async () => {
+    if (!providerForm.api_name || !providerForm.api_url || !providerForm.api_key) {
+        alert('Name, URL and API Key are required');
+        return;
+    }
+    setSavingProvider(true);
+    try {
+        const token = localStorage.getItem('adminToken');
+        if (editingProvider) {
+            await axios.put(`${API_URL}/admin/services/providers/${editingProvider.id}`, providerForm, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        } else {
+            await axios.post(`${API_URL}/admin/services/providers`, providerForm, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+        }
+        setShowProviderModal(false);
+        setEditingProvider(null);
+        setProviderForm({ api_name: '', api_url: '', api_key: '', currency: 'USD', status: '2' });
+        fetchProviders();
+    } catch (error: any) {
+        alert(error.response?.data?.message || 'Failed to save provider');
+    } finally {
+        setSavingProvider(false);
+    }
+};
+
+const handleDeleteProvider = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this provider?')) return;
+    try {
+        await axios.delete(`${API_URL}/admin/services/providers/${id}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        });
+        fetchProviders();
+    } catch (error: any) {
+        alert(error.response?.data?.message || 'Failed to delete provider');
+    }
+};
+
+const handleTestProvider = async (id: number) => {
+    setTestingProvider(id);
+    setTestResult(null);
+    try {
+        const response = await axios.post(`${API_URL}/admin/services/providers/${id}/test`, {}, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        });
+        setTestResult({ id, success: true, message: `Connected! Balance: ${JSON.stringify(response.data.balance)}` });
+    } catch (error: any) {
+        setTestResult({ id, success: false, message: error.response?.data?.message || 'Connection failed' });
+    } finally {
+        setTestingProvider(null);
+    }
+};
+
+const openEditModal = (provider: Provider) => {
+    setEditingProvider(provider);
+    setProviderForm({
+        api_name: provider.api_name,
+        api_url: provider.api_url,
+        api_key: provider.api_key,
+        currency: provider.currency || 'USD',
+        status: provider.status || '2'
+    });
+    setShowProviderModal(true);
+};
+
   const tabs = [
     { id: 'maintenance', label: 'Maintenance', icon: WifiOff },
     { id: 'general', label: 'General', icon: Globe },
@@ -459,6 +562,7 @@ const AdminConfigPage: React.FC = () => {
     { id: 'contact', label: 'Contact', icon: Mail },
     { id: 'effects', label: 'Site Effects', icon: Sparkles },
     { id: 'seo', label: 'SEO Management', icon: Search },
+    { id: 'providers', label: 'API Providers', icon: Database },
   ];
 
   if (loading) {
@@ -991,6 +1095,237 @@ const AdminConfigPage: React.FC = () => {
                 </div>
               )}
 
+              {activeTab === 'providers' && (
+    <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+            <div>
+                <h2 className="text-lg font-bold text-white">API Providers</h2>
+                <p className="text-xs text-gray-400 mt-1">Manage your SMM service API providers</p>
+            </div>
+            <button
+                onClick={() => {
+                    setEditingProvider(null);
+                    setProviderForm({ api_name: '', api_url: '', api_key: '', currency: 'USD', status: '2' });
+                    setShowProviderModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand/90 text-white rounded-xl text-sm font-bold transition-colors"
+            >
+                <Database className="w-4 h-4" />
+                Add Provider
+            </button>
+        </div>
+
+        {/* Providers List */}
+        {loadingProviders ? (
+            <div className="flex items-center justify-center py-20">
+                <Loader className="w-6 h-6 animate-spin text-brand" />
+            </div>
+        ) : providers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-white/5 border border-white/10 rounded-2xl">
+                <Database className="w-12 h-12 text-gray-600 mb-3" />
+                <p className="text-gray-400 font-medium">No providers yet</p>
+                <p className="text-gray-600 text-sm mt-1">Add your first API provider to get started</p>
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 gap-4">
+                {providers.map((provider) => (
+                    <div key={provider.id} className="bg-gradient-to-br from-white/5 to-white/2 border border-white/10 rounded-2xl p-5">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            {/* Provider Info */}
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-brand/20 flex items-center justify-center shrink-0">
+                                    <Database className="w-6 h-6 text-brand" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-white">{provider.api_name}</h3>
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                            provider.status === '2' 
+                                                ? 'bg-green-500/20 text-green-400' 
+                                                : 'bg-gray-500/20 text-gray-400'
+                                        }`}>
+                                            {provider.status === '2' ? 'Active' : 'Inactive'}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400">
+                                            {provider.currency || 'USD'}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-0.5">{provider.api_url}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <p className="text-xs text-gray-600 font-mono">
+                                            {showApiKey === provider.id 
+                                                ? provider.api_key 
+                                                : provider.api_key.substring(0, 8) + '••••••••••••••••'}
+                                        </p>
+                                        <button
+                                            onClick={() => setShowApiKey(showApiKey === provider.id ? null : provider.id)}
+                                            className="text-gray-500 hover:text-gray-300 transition-colors"
+                                        >
+                                            {showApiKey === provider.id 
+                                                ? <EyeOff className="w-3 h-3" /> 
+                                                : <Eye className="w-3 h-3" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 shrink-0">
+                                {/* Test Result */}
+                                {testResult?.id === provider.id && (
+                                    <span className={`text-xs px-2 py-1 rounded-lg ${
+                                        testResult.success 
+                                            ? 'bg-green-500/20 text-green-400' 
+                                            : 'bg-red-500/20 text-red-400'
+                                    }`}>
+                                        {testResult.success ? '✓' : '✗'} {testResult.message}
+                                    </span>
+                                )}
+
+                                <button
+                                    onClick={() => handleTestProvider(provider.id)}
+                                    disabled={testingProvider === provider.id}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl text-xs font-medium transition-colors"
+                                >
+                                    {testingProvider === provider.id 
+                                        ? <Loader className="w-3.5 h-3.5 animate-spin" /> 
+                                        : <Wifi className="w-3.5 h-3.5" />}
+                                    Test
+                                </button>
+
+                                <button
+                                    onClick={() => openEditModal(provider)}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-medium transition-colors"
+                                >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                    Edit
+                                </button>
+
+                                <button
+                                    onClick={() => handleDeleteProvider(provider.id)}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl text-xs font-medium transition-colors"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        )}
+
+        {/* Add/Edit Modal */}
+        {showProviderModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-[#111] border border-white/10 rounded-2xl p-6 w-full max-w-lg"
+                >
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold text-white">
+                            {editingProvider ? 'Edit Provider' : 'Add New Provider'}
+                        </h3>
+                        <button
+                            onClick={() => setShowProviderModal(false)}
+                            className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                        >
+                            <X className="w-5 h-5 text-gray-400" />
+                        </button>
+                    </div>
+
+                    <div className="space-y-4">
+                        <InputField
+                            label="Provider Name *"
+                            value={providerForm.api_name}
+                            onChange={(v: string) => setProviderForm(p => ({ ...p, api_name: v }))}
+                            placeholder="e.g. SMMKings, PerfectPanel"
+                        />
+                        <InputField
+                            label="API URL *"
+                            value={providerForm.api_url}
+                            onChange={(v: string) => setProviderForm(p => ({ ...p, api_url: v }))}
+                            placeholder="https://provider.com/api/v2"
+                        />
+                        <div>
+                            <label className="block text-xs text-gray-400 mb-1">API Key *</label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={providerForm.api_key}
+                                    onChange={(e) => setProviderForm(p => ({ ...p, api_key: e.target.value }))}
+                                    className="w-full px-4 pr-10 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none font-mono"
+                                    placeholder="Your API key"
+                                />
+                                <button
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Currency</label>
+                                <select
+                                    value={providerForm.currency}
+                                    onChange={(e) => setProviderForm(p => ({ ...p, currency: e.target.value }))}
+                                    className="w-full px-4 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
+                                >
+                                    <option value="USD">🇺🇸 USD</option>
+                                    <option value="LKR">🇱🇰 LKR</option>
+                                    <option value="INR">🇮🇳 INR</option>
+                                    <option value="EUR">🇪🇺 EUR</option>
+                                    <option value="GBP">🇬🇧 GBP</option>
+                                    <option value="AED">🇦🇪 AED</option>
+                                    <option value="SGD">🇸🇬 SGD</option>
+                                    <option value="MYR">🇲🇾 MYR</option>
+                                    <option value="BDT">🇧🇩 BDT</option>
+                                    <option value="PKR">🇵🇰 PKR</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">Status</label>
+                                <select
+                                    value={providerForm.status}
+                                    onChange={(e) => setProviderForm(p => ({ ...p, status: e.target.value }))}
+                                    className="w-full px-4 py-2.5 bg-black/30 border border-white/10 rounded-xl text-sm text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
+                                >
+                                    <option value="2">Active</option>
+                                    <option value="1">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-6">
+                        <button
+                            onClick={() => setShowProviderModal(false)}
+                            className="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl text-sm font-medium transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSaveProvider}
+                            disabled={savingProvider}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-brand hover:bg-brand/90 text-white rounded-xl text-sm font-bold transition-colors"
+                        >
+                            {savingProvider 
+                                ? <Loader className="w-4 h-4 animate-spin" /> 
+                                : <Save className="w-4 h-4" />}
+                            {editingProvider ? 'Update Provider' : 'Add Provider'}
+                        </button>
+                    </div>
+                </motion.div>
+            </div>
+        )}
+    </div>
+)}
+
               {activeTab === 'seo' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1403,6 +1738,7 @@ const PreviewItem = ({ icon, label }: any) => (
 );
 
 export default AdminConfigPage;
+
 
 
 
