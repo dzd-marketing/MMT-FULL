@@ -32,7 +32,7 @@ interface Order {
   order_quantity: number;
   order_charge: number;
   order_url: string;
-  order_status: 'pending' | 'inprogress' | 'completed' | 'partial' | 'processing' | 'canceled';
+  order_status: 'pending' | 'inprogress' | 'completed' | 'partial' | 'processing' | 'canceled' | 'queued';
   order_create: string;
   order_date: string;
   order_start: number;
@@ -41,7 +41,6 @@ interface Order {
   dripfeed: '1' | '2' | '3';
   subscriptions_type: '1' | '2';
   refill_status: 'Pending' | 'Refilling' | 'Completed' | 'Rejected' | 'Error';
-  
   is_refill: '0' | '1';
   refill: '0' | '1';
   cancelbutton: '0' | '1';
@@ -316,11 +315,8 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
     return Number(amount).toFixed(2);
   };
 
-  
   const getRefillButton = (order: Order) => {
-
     if (order.is_refill !== '1' && order.refill !== '1') return null;
-    
     if (order.order_status !== 'completed' && order.order_status !== 'partial') return null;
 
     const hoursElapsed = hoursSinceOrder(order.order_date || order.order_create);
@@ -328,7 +324,6 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
     const hoursRemaining = Math.ceil(24 - hoursElapsed);
 
     if (!refillUnlocked) {
-     
       return (
         <button
           disabled
@@ -358,10 +353,9 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
     );
   };
 
- 
   const getCancelButton = (order: Order) => {
     if (order.cancelbutton !== '1') return null;
-    const cancelableStatuses = ['pending', 'processing', 'inprogress'];
+    const cancelableStatuses = ['pending', 'processing', 'inprogress', 'queued'];
     if (!cancelableStatuses.includes(order.order_status)) return null;
 
     return (
@@ -394,7 +388,6 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
       animate={{ opacity: 1, y: 0 }}
       className="w-full max-w-7xl mx-auto px-4"
     >
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white mb-2">
@@ -407,7 +400,6 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
         </div>
       </div>
 
-      {/* Desktop Status Tabs */}
       <div className="hidden md:block mb-6 overflow-x-auto scrollbar-hide">
         <div className="flex space-x-2 min-w-max p-1 bg-white/5 rounded-2xl">
           {statusTabs.map((tab) => {
@@ -430,7 +422,6 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
         </div>
       </div>
 
-      {/* Mobile Filter Dropdown */}
       <div className="md:hidden mb-6 relative" ref={mobileFilterRef}>
         <button
           onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
@@ -492,7 +483,6 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
         </AnimatePresence>
       </div>
 
-   
       <div className="mb-6">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -506,7 +496,6 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
         </div>
       </div>
 
-    
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoaderIcon className="w-8 h-8 text-brand animate-spin" />
@@ -534,14 +523,12 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
         </div>
       ) : (
         <>
-          {/* Desktop Table */}
           <div className="hidden lg:block bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
             <div className="w-full">
               <table className="w-full table-auto">
                 <thead className="bg-white/5 border-b border-white/10">
                   <tr>
                     <th className="px-2 py-4 text-left text-xs font-bold uppercase tracking-widest text-gray-400 w-[90px]">ORDER ID</th>
-                    <th className="px-2 py-4 text-left text-xs font-bold uppercase tracking-widest text-gray-400 w-[70px]">LOCAL</th>
                     <th className="px-2 py-4 text-left text-xs font-bold uppercase tracking-widest text-gray-400 w-[140px]">DATE</th>
                     <th className="px-2 py-4 text-left text-xs font-bold uppercase tracking-widest text-gray-400 w-[150px]">LINK</th>
                     <th className="px-2 py-4 text-left text-xs font-bold uppercase tracking-widest text-gray-400 w-[80px]">CHARGE</th>
@@ -558,16 +545,11 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
                     <tr key={order.order_id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                       <td className="px-2 py-3 align-top">
                         <div className="flex items-center space-x-1 flex-wrap">
-                          <span className="text-sm font-mono text-brand font-bold break-all">#{order.api_orderid || '—'}</span>
-                          {order.api_orderid > 0 && (
-                            <button onClick={() => handleCopyRow(order)} className="text-gray-400 hover:text-brand transition-colors flex-shrink-0">
-                              {copiedId === order.order_id ? <CheckCircle className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                            </button>
-                          )}
+                          <span className="text-sm font-mono text-brand font-bold break-all">#{order.order_id}</span>
+                          <button onClick={() => handleCopyRow(order)} className="text-gray-400 hover:text-brand transition-colors flex-shrink-0">
+                            {copiedId === order.order_id ? <CheckCircle className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
                         </div>
-                      </td>
-                      <td className="px-2 py-3 align-top">
-                        <span className="text-sm text-gray-400 break-all">#{order.order_id}</span>
                       </td>
                       <td className="px-2 py-3 align-top">
                         <span className="text-sm text-gray-300 break-words">{formatDate(order.order_date)}</span>
@@ -594,7 +576,6 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
                         </span>
                       </td>
                       <td className="px-2 py-3 align-top">
-                        {/* Service name — always shows from order_service_name fallback */}
                         <div className="text-sm text-gray-300 break-words whitespace-normal">{order.service_name}</div>
                       </td>
                       <td className="px-2 py-3 align-top">
@@ -629,7 +610,6 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
             </div>
           </div>
 
-       
           <div className="lg:hidden space-y-4">
             {orders.map((order) => (
               <motion.div 
@@ -641,14 +621,11 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1 flex-wrap gap-1">
-                      <span className="text-lg font-mono text-brand font-bold break-all">ID #{order.api_orderid || '—'}</span>
-                      {order.api_orderid > 0 && (
-                        <button onClick={() => handleCopyRow(order)} className="text-gray-400 hover:text-brand transition-colors flex-shrink-0">
-                          {copiedId === order.order_id ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      )}
+                      <span className="text-lg font-mono text-brand font-bold break-all">#{order.order_id}</span>
+                      <button onClick={() => handleCopyRow(order)} className="text-gray-400 hover:text-brand transition-colors flex-shrink-0">
+                        {copiedId === order.order_id ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
                     </div>
-                    <span className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded-full inline-block">Local #{order.order_id}</span>
                   </div>
                   <div className="flex items-center space-x-2 flex-shrink-0">
                     <button
@@ -707,7 +684,6 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
             ))}
           </div>
 
-          {/* Pagination */}
           {pagination.pages > 1 && (
             <div className="mt-6 flex items-center justify-center space-x-2">
               <button
