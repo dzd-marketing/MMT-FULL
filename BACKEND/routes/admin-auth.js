@@ -499,6 +499,7 @@ module.exports = (pool) => {
             res.status(500).json({ success: false, message: '2FA verification failed' });
         }
     });
+    
 
     router.post('/logout', adminAuthMiddleware, async (req, res) => {
         try {
