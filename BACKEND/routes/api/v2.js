@@ -222,8 +222,7 @@ module.exports = (pool) => {
                 status: 'success',
                 balance: parseFloat(wallet.available_balance),
                 spent: parseFloat(wallet.spent_balance),
-                currency: 'LKR',
-                user_id: req.user.id
+                currency: 'LKR'
             });
         } catch (error) {
             console.error('Balance error:', error);
@@ -300,7 +299,6 @@ module.exports = (pool) => {
                     currency: 'LKR',
                     price_per_unit: parseFloat((basePrice / 1000).toFixed(6)),
                     price_for_min: parseFloat(((basePrice / 1000) * (s.service_min || 1)).toFixed(4)),
-                    original_price: parseFloat(basePrice.toFixed(4)),
                     min: parseInt(s.service_min) || 0,
                     max: parseInt(s.service_max) || 0,
                     type: s.service_type === '1' ? 'manual' : 'auto',
@@ -321,7 +319,6 @@ module.exports = (pool) => {
                 status: 'success',
                 total: formattedServices.length,
                 currency: 'LKR',
-                user_currency: 'LKR',
                 services: formattedServices
             });
         } catch (error) {
@@ -403,7 +400,6 @@ module.exports = (pool) => {
                     runs: runs
                 });
             }
-
 
             const [activeOrders] = await pool.execute(`
                 SELECT order_id FROM orders 
@@ -491,7 +487,6 @@ module.exports = (pool) => {
                 }
             }
 
-            // Determine order status
             let orderStatus;
             if (shouldQueue) {
                 orderStatus = 'queued';
@@ -585,10 +580,7 @@ module.exports = (pool) => {
                     JSON.stringify({
                         service_name: cleanName,
                         service_id: service_id,
-                        base_price: basePrice,
                         api_sent: hasApi && !shouldQueue,
-                        api_order_id: apiOrderId || null,
-                        api_error: apiError || null,
                         queued: shouldQueue
                     }),
                     service.service_api || 0,
@@ -634,16 +626,12 @@ module.exports = (pool) => {
                         runs: runs,
                         price: parseFloat(totalPrice.toFixed(4)),
                         currency: 'LKR',
-                        profit: parseFloat(orderProfit.toFixed(4)),
-                        price_per_1000: basePrice,
-                        balance_after: (req.user.balance - totalPrice).toFixed(4),
+                        balance_after: parseFloat((req.user.balance - totalPrice).toFixed(4)),
                         created_at: new Date().toISOString(),
                         order_status: orderStatus,
                         queued: shouldQueue,
-                        provider_status: shouldQueue ? 'queued' : (apiOrderId > 0 ? 'sent_to_provider' : 'pending_provider'),
-                        provider_order_id: apiOrderId || null
-                    },
-                    provider_response: apiResponse ? JSON.parse(apiResponse) : null
+                        provider_status: shouldQueue ? 'queued' : (apiOrderId > 0 ? 'sent_to_provider' : 'pending_provider')
+                    }
                 });
 
             } catch (error) {
@@ -679,7 +667,6 @@ module.exports = (pool) => {
                     o.order_status,
                     o.order_create,
                     o.order_start,
-                    o.order_finish,
                     o.order_remains,
                     o.dripfeed,
                     o.refill_status,
@@ -752,7 +739,6 @@ module.exports = (pool) => {
                     o.order_url,
                     o.order_status,
                     o.order_start,
-                    o.order_finish,
                     o.order_remains,
                     o.order_create,
                     o.refill_status,
@@ -810,9 +796,8 @@ module.exports = (pool) => {
             }
 
             const [orders] = await pool.execute(`
-                SELECT o.*, s.show_refill 
+                SELECT o.order_id, o.order_status, o.show_refill
                 FROM orders o
-                LEFT JOIN services s ON o.service_id = s.service_id
                 WHERE o.order_id = ? AND o.user_id = ?
             `, [orderId, req.user.id]);
 
@@ -862,13 +847,11 @@ module.exports = (pool) => {
                     u.profile_picture,
                     u.created_at,
                     u.last_login,
-                    u.login_ip,
                     u.lang,
                     u.client_type,
                     u.admin_type,
                     w.available_balance,
                     w.spent_balance,
-                    w.currency,
                     (SELECT COUNT(*) FROM orders WHERE user_id = u.id) as total_orders,
                     (SELECT SUM(order_charge) FROM orders WHERE user_id = u.id) as total_spent
                 FROM users u
@@ -899,7 +882,6 @@ module.exports = (pool) => {
                     language: user.lang || 'en',
                     member_since: user.created_at,
                     last_login: user.last_login,
-                    last_ip: user.login_ip,
                     type: user.client_type === '1' ? 'demo' : 'regular',
                     is_admin: user.admin_type === '1'
                 }
@@ -910,102 +892,6 @@ module.exports = (pool) => {
             res.status(500).json({ error: "Failed to fetch profile" });
         }
     }
-
-    router.get('/provider-status', validateApiKey, async (req, res) => {
-        try {
-            const orderId = req.query.order_id;
-
-            if (!orderId) {
-                return res.status(400).json({ error: "order_id is required" });
-            }
-
-            const [orders] = await pool.execute(`
-                SELECT o.*, s.service_api, sa.api_url, sa.api_key
-                FROM orders o
-                LEFT JOIN services s ON o.service_id = s.service_id
-                LEFT JOIN service_api sa ON s.service_api = sa.id
-                WHERE o.order_id = ? AND o.user_id = ?
-            `, [orderId, req.user.id]);
-
-            if (orders.length === 0) {
-                return res.status(404).json({ error: "Order not found" });
-            }
-
-            const order = orders[0];
-
-            if (order.api_orderid > 0 && order.api_url && order.api_key) {
-                try {
-                    const axios = require('axios');
-
-                    const apiData = new URLSearchParams();
-                    apiData.append('key', order.api_key);
-                    apiData.append('action', 'status');
-                    apiData.append('order', order.api_orderid);
-
-                    const providerResponse = await axios.post(order.api_url, apiData, {
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        timeout: 30000
-                    });
-
-                    if (providerResponse.data) {
-                        let status = providerResponse.data.status?.toLowerCase() || order.order_status;
-
-                        if (status.includes('completed')) status = 'completed';
-                        else if (status.includes('processing')) status = 'processing';
-                        else if (status.includes('inprogress')) status = 'inprogress';
-                        else if (status.includes('partial')) status = 'partial';
-                        else if (status.includes('cancel')) status = 'canceled';
-
-                        await pool.execute(`
-                            UPDATE orders 
-                            SET order_status = ?,
-                                order_remains = ?,
-                                last_check = NOW()
-                            WHERE order_id = ?
-                        `, [
-                            status,
-                            providerResponse.data.remains || order.order_remains,
-                            orderId
-                        ]);
-
-                        res.json({
-                            status: 'success',
-                            order: {
-                                id: order.order_id,
-                                provider_order_id: order.api_orderid,
-                                provider_status: providerResponse.data,
-                                local_status: status,
-                                remains: providerResponse.data.remains || order.order_remains
-                            }
-                        });
-                    }
-                } catch (error) {
-                    console.error('Provider status check error:', error);
-                    res.json({
-                        status: 'error',
-                        message: 'Failed to fetch from provider',
-                        local_order: {
-                            id: order.order_id,
-                            status: order.order_status
-                        }
-                    });
-                }
-            } else {
-                res.json({
-                    status: 'success',
-                    message: 'Order is local only (no provider API)',
-                    order: {
-                        id: order.order_id,
-                        status: order.order_status
-                    }
-                });
-            }
-
-        } catch (error) {
-            console.error('Provider status error:', error);
-            res.status(500).json({ error: "Failed to check provider status" });
-        }
-    });
 
     return router;
 };
