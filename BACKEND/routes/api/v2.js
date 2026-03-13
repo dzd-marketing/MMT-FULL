@@ -299,6 +299,7 @@ module.exports = (pool) => {
                     name: sanitizeText(s.service_name),
                     description: sanitizeText(s.service_description || ''),
                     price_per_1000: parseFloat(basePrice.toFixed(4)),
+                    currency: 'LKR',
                     price_per_unit: parseFloat((basePrice / 1000).toFixed(6)),
                     price_for_min: parseFloat(((basePrice / 1000) * (s.service_min || 1)).toFixed(4)),
                     original_price: parseFloat(basePrice.toFixed(4)),
@@ -321,7 +322,8 @@ module.exports = (pool) => {
             res.json({
                 status: 'success',
                 total: formattedServices.length,
-                user_currency: req.user.currency,
+                currency: 'LKR',
+                user_currency: 'LKR',
                 services: formattedServices
             });
         } catch (error) {
@@ -600,7 +602,7 @@ module.exports = (pool) => {
 
                 await connection.commit();
 
-                logRequest(req, req.user, `Order placed: #${orderId} for ${req.user.currency} ${totalPrice.toFixed(4)}`);
+                logRequest(req, req.user, `Order placed: #${orderId} for LKR ${totalPrice.toFixed(4)}`);
 
                 res.json({
                     status: 'success',
@@ -613,9 +615,9 @@ module.exports = (pool) => {
                         total_quantity: totalQuantity,
                         runs: runs,
                         price: parseFloat(totalPrice.toFixed(4)),
+                        currency: 'LKR',
                         profit: parseFloat(orderProfit.toFixed(4)),
                         price_per_1000: basePrice,
-                        currency: req.user.currency,
                         balance_after: (req.user.balance - totalPrice).toFixed(4),
                         created_at: new Date().toISOString(),
                         provider_status: apiOrderId > 0 ? 'sent_to_provider' : 'pending_provider',
