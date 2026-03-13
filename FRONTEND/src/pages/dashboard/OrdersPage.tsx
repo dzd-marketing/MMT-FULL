@@ -113,6 +113,7 @@ const OrdersPage: React.FC = () => {
     { id: 'inprogress', label: 'In Progress', icon: Play, color: 'text-purple-400', bgColor: 'from-purple-500/20 to-purple-600/20' },
     { id: 'completed', label: 'Completed', icon: CheckCircle, color: 'text-green-400', bgColor: 'from-green-500/20 to-green-600/20' },
     { id: 'partial', label: 'Partial', icon: AlertCircle, color: 'text-orange-400', bgColor: 'from-orange-500/20 to-orange-600/20' },
+    { id: 'queued', label: 'Queued', icon: ClockIcon, color: 'text-cyan-400', bgColor: 'from-cyan-500/20 to-cyan-600/20' },
     { id: 'canceled', label: 'Canceled', icon: Ban, color: 'text-red-400', bgColor: 'from-red-500/20 to-red-600/20' }
   ];
 
@@ -124,6 +125,7 @@ const OrdersPage: React.FC = () => {
         case 'processing': return { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: LoaderIcon, label: 'Processing' };
         case 'inprogress': return { bg: 'bg-purple-500/20', text: 'text-purple-400', icon: Play, label: 'In Progress' };
         case 'partial': return { bg: 'bg-orange-500/20', text: 'text-orange-400', icon: AlertCircle, label: 'Partial' };
+        case 'queued': return { bg: 'bg-cyan-500/20', text: 'text-cyan-400', icon: ClockIcon, label: 'Queued' };
         case 'canceled': return { bg: 'bg-red-500/20', text: 'text-red-400', icon: Ban, label: 'Canceled' };
         default: return { bg: 'bg-gray-500/20', text: 'text-gray-400', icon: ClockIcon, label: status };
       }
