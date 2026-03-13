@@ -920,21 +920,53 @@ const handleImportServices = async () => {
         alert('Please select at least one service to import');
         return;
     }
-
     if (!autoCreateCategories && !importCategory) {
         alert('Please select a category or enable auto-create categories');
         return;
     }
+
+    // ✅ Fetch fresh rates right before converting
+    let rates = exchangeRates;
+
+    if (Object.keys(rates).length === 0) {
+        try {
+            const ratesResponse = await axios.get(
+                'https://v6.exchangerate-api.com/v6/589b3a17cd9c92626adef6dc/latest/USD'
+            );
+            if (ratesResponse.data.result === 'success') {
+                rates = ratesResponse.data.conversion_rates;
+                setExchangeRates(rates);
+            }
+        } catch (error) {
+            console.error('Failed to fetch exchange rates:', error);
+            alert('Failed to fetch exchange rates. Please try again.');
+            return;
+        }
+    }
+
+    // ✅ Use local rates variable (not stale state)
+    const convertPrice = (price: number, fromCurrency: string): number => {
+        if (fromCurrency === 'LKR') return price;
+        if (!rates['LKR'] || !rates[fromCurrency]) return price;
+        const priceInUSD = price / rates[fromCurrency];
+        return priceInUSD * rates['LKR'];
+    };
 
     // ✅ Convert prices to LKR before importing
     const servicesToImport = providerServices
         .filter(s => selectedImportServices[s.service])
         .map(s => ({
             ...s,
-            rate: convertToLKR(s.rate, providerCurrency), // 💱 Convert here
+            rate: convertPrice(s.rate, providerCurrency),
             original_rate: s.rate,
             original_currency: providerCurrency
         }));
+
+    // Debug log - remove after confirming it works
+    console.log('Currency:', providerCurrency);
+    console.log('Rates loaded:', Object.keys(rates).length > 0);
+    console.log('Sample conversion (1.4):', convertPrice(1.4, providerCurrency));
+    console.log('First service rate before/after:', providerServices[0]?.rate, '->', convertPrice(providerServices[0]?.rate, providerCurrency));
 
     setActionLoading(0);
     try {
@@ -946,7 +978,7 @@ const handleImportServices = async () => {
                 category_id: autoCreateCategories ? null : parseInt(importCategory),
                 profit_percentage: importProfitPercentage,
                 auto_create_categories: autoCreateCategories,
-                source_currency: providerCurrency // ✅ Send currency info to backend
+                source_currency: providerCurrency
             },
             { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -962,7 +994,6 @@ const handleImportServices = async () => {
             await loadServices();
             fetchStats();
             fetchCategories();
-
             alert(`Successfully imported ${selectedIds.length} services! Prices converted from ${providerCurrency} to LKR.`);
         }
     } catch (error) {
