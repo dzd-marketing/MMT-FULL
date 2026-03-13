@@ -542,7 +542,7 @@ export default function HomePage() {
             {/* Bottom Section: Copyright */}
             <div className="mt-16 pt-12 border-t border-white/5 flex flex-col md:flex-row justify-center items-center gap-8">
               <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 break-words text-center">
-                {t('© 2024 Make Me Trend. All rights reserved.')}
+                {t('© 2026 Make Me Trend. All rights reserved.')}
               </div>
             </div>
           </div>
