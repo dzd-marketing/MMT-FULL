@@ -797,10 +797,6 @@ module.exports = (pool) => {
                             `, queryParams);
                         }
 
-                        // ✅ Trigger queue if order completed/canceled/partial
-                        if (newStatus && ['completed', 'canceled', 'partial'].includes(newStatus)) {
-                            processQueue(order.order_url, order.service_id, order.user_id);
-                        }
 
                         const [updatedOrders] = await pool.execute(`SELECT * FROM orders WHERE order_id = ?`, [id]);
 
@@ -893,10 +889,6 @@ module.exports = (pool) => {
                                 `, queryParams);
                             }
 
-                            // ✅ Trigger queue if order completed/canceled/partial
-                            if (newStatus && ['completed', 'canceled', 'partial'].includes(newStatus)) {
-                                processQueue(order.order_url, order.service_id, order.user_id);
-                            }
 
                             results.push({ order_id: order.order_id, success: true });
                         }
@@ -1077,8 +1069,6 @@ module.exports = (pool) => {
                 `, [refundAmount, refundAmount, user_id]);
             }
 
-            // ✅ Trigger queue processing after cancel (queued orders waiting can now proceed)
-            processQueue(order.order_url, order.service_id, user_id);
 
             const isFullRefund = Math.abs(refundAmount - order.order_charge) < 0.001;
 
