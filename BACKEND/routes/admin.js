@@ -168,30 +168,29 @@ module.exports = (pool) => {
         }
     });
 
-    router.get('/orders/stats', adminAuth, async (req, res) => {
-        try {
-            const [stats] = await pool.execute(`
-                SELECT 
-                    COUNT(*) as total,
-                    SUM(CASE WHEN order_status = 'pending' THEN 1 ELSE 0 END) as pending,
-                    SUM(CASE WHEN order_status = 'processing' THEN 1 ELSE 0 END) as processing,
-                    SUM(CASE WHEN order_status = 'inprogress' THEN 1 ELSE 0 END) as inprogress,
-                    SUM(CASE WHEN order_status = 'completed' THEN 1 ELSE 0 END) as completed,
-                    SUM(CASE WHEN order_status = 'partial' THEN 1 ELSE 0 END) as partial,
-                    SUM(CASE WHEN order_status = 'canceled' THEN 1 ELSE 0 END) as canceled,
-                    SUM(CASE WHEN order_error IS NOT NULL AND order_error != '-' THEN 1 ELSE 0 END) as failed
-                FROM orders
-            `);
+router.get('/orders/stats', adminAuth, async (req, res) => {
+    try {
+        const [stats] = await pool.execute(`
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN order_status = 'pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN order_status = 'processing' THEN 1 ELSE 0 END) as processing,
+                SUM(CASE WHEN order_status = 'inprogress' THEN 1 ELSE 0 END) as inprogress,
+                SUM(CASE WHEN order_status = 'completed' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN order_status = 'partial' THEN 1 ELSE 0 END) as partial,
+                SUM(CASE WHEN order_status = 'canceled' THEN 1 ELSE 0 END) as canceled,
+                SUM(CASE WHEN order_status = 'fail' THEN 1 ELSE 0 END) as fail,
+                SUM(CASE WHEN order_status = 'cronpending' THEN 1 ELSE 0 END) as cronpending,
+                SUM(CASE WHEN order_status = 'queued' THEN 1 ELSE 0 END) as queued
+            FROM orders
+        `);
 
-            res.json({
-                success: true,
-                stats: stats[0]
-            });
-        } catch (error) {
-            console.error('Error fetching order stats:', error);
-            res.status(500).json({ success: false, message: 'Failed to fetch order stats' });
-        }
-    });
+        res.json({ success: true, stats: stats[0] });
+    } catch (error) {
+        console.error('Error fetching order stats:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch order stats' });
+    }
+});
 
     router.get('/orders/recent', adminAuth, async (req, res) => {
         try {
@@ -422,55 +421,138 @@ module.exports = (pool) => {
         }
     });
 
-    router.post('/orders/:id/resend', adminAuth, async (req, res) => {
-        try {
-            const { id } = req.params;
+    router.post('/orders/:id/cancel-queued', adminAuth, async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
 
-            const [orders] = await pool.execute(`
-                SELECT o.*, s.service_api, s.api_service, sa.api_key, sa.api_url 
-                FROM orders o
-                LEFT JOIN services s ON o.service_id = s.service_id
-                LEFT JOIN service_api sa ON s.service_api = sa.id
-                WHERE o.order_id = ?
-            `, [id]);
+        const { id } = req.params;
 
-            if (orders.length === 0) {
-                return res.status(404).json({ success: false, message: 'Order not found' });
-            }
+        const [orders] = await connection.execute(
+            'SELECT * FROM orders WHERE order_id = ?', [id]
+        );
 
-            const order = orders[0];
-
-            if (!order.api_key || !order.api_url) {
-                return res.status(400).json({ success: false, message: 'API configuration not found' });
-            }
-
-            const axios = require('axios');
-            const formData = new URLSearchParams();
-            formData.append('key', order.api_key);
-            formData.append('action', 'add');
-            formData.append('service', order.api_service);
-            formData.append('link', order.order_url);
-            formData.append('quantity', order.order_quantity);
-
-            const response = await axios.post(order.api_url, formData, {
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            });
-
-            if (response.data && response.data.order) {
-                await pool.execute(
-                    'UPDATE orders SET api_orderid = ?, order_detail = ?, order_error = ? WHERE order_id = ?',
-                    [response.data.order, JSON.stringify(response.data), '-', id]
-                );
-
-                res.json({ success: true, message: 'Order resent successfully' });
-            } else {
-                throw new Error(response.data.error || 'API error');
-            }
-        } catch (error) {
-            console.error('Error resending order:', error);
-            res.status(500).json({ success: false, message: 'Failed to resend order' });
+        if (orders.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: 'Order not found' });
         }
-    });
+
+        const order = orders[0];
+
+        if (order.order_status !== 'queued') {
+            await connection.rollback();
+            return res.status(400).json({ success: false, message: 'Order is not in queued status' });
+        }
+
+        // Full refund since order was never sent to provider
+        await connection.execute(
+            'UPDATE wallets SET available_balance = available_balance + ?, spent_balance = GREATEST(0, spent_balance - ?) WHERE user_id = ?',
+            [order.order_charge, order.order_charge, order.user_id]
+        );
+
+        await connection.execute(
+            'UPDATE users SET balance = balance + ? WHERE id = ?',
+            [order.order_charge, order.user_id]
+        );
+
+        await connection.execute(
+            'UPDATE orders SET order_status = "canceled", order_remains = 0, last_check = NOW() WHERE order_id = ?',
+            [id]
+        );
+
+        await connection.commit();
+
+        res.json({
+            success: true,
+            message: `Order #${id} cancelled. Rs ${parseFloat(order.order_charge).toFixed(2)} refunded to user.`,
+            refund_amount: order.order_charge
+        });
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error cancelling queued order:', error);
+        res.status(500).json({ success: false, message: 'Failed to cancel order' });
+    } finally {
+        connection.release();
+    }
+});
+
+router.post('/orders/:id/resend', adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [orders] = await pool.execute(`
+            SELECT o.*, s.service_api, s.api_service, sa.api_key, sa.api_url 
+            FROM orders o
+            LEFT JOIN services s ON o.service_id = s.service_id
+            LEFT JOIN service_api sa ON s.service_api = sa.id
+            WHERE o.order_id = ?
+        `, [id]);
+
+        if (orders.length === 0)
+            return res.status(404).json({ success: false, message: 'Order not found' });
+
+        const order = orders[0];
+
+        if (!order.api_key || !order.api_url)
+            return res.status(400).json({ success: false, message: 'API configuration not found for this service' });
+
+        const axios = require('axios');
+        const formData = new URLSearchParams();
+        formData.append('key', order.api_key);
+        formData.append('action', 'add');
+        formData.append('service', order.api_service);
+        formData.append('link', order.order_url);
+
+        if (order.dripfeed === '2') {
+            formData.append('quantity', order.order_quantity);
+            if (order.dripfeed_runs) formData.append('runs', order.dripfeed_runs);
+            if (order.dripfeed_interval) formData.append('interval', order.dripfeed_interval);
+        } else {
+            formData.append('quantity', order.order_quantity);
+        }
+
+        if (order.order_extras) {
+            try {
+                const extras = JSON.parse(order.order_extras);
+                if (extras.comments && extras.comments.length > 0) {
+                    formData.append('comments', extras.comments.join("\n"));
+                }
+            } catch (e) {}
+        }
+
+        const response = await axios.post(order.api_url, formData, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            timeout: 30000
+        });
+
+        if (response.data && response.data.order) {
+            await pool.execute(
+                `UPDATE orders SET 
+                    api_orderid = ?, 
+                    order_detail = ?, 
+                    order_error = '-',
+                    order_status = 'processing',
+                    last_check = NOW()
+                WHERE order_id = ?`,
+                [response.data.order, JSON.stringify(response.data), id]
+            );
+
+            res.json({ success: true, message: 'Order sent to provider successfully', api_order_id: response.data.order });
+        } else {
+            const errMsg = response.data?.error || 'No order ID returned from provider';
+
+            await pool.execute(
+                `UPDATE orders SET order_error = ?, order_detail = ?, last_check = NOW() WHERE order_id = ?`,
+                [errMsg, JSON.stringify(response.data), id]
+            );
+
+            res.status(400).json({ success: false, message: `Provider error: ${errMsg}` });
+        }
+    } catch (error) {
+        console.error('Error resending order:', error);
+        res.status(500).json({ success: false, message: 'Failed to resend order: ' + error.message });
+    }
+});
 
     router.post('/orders/bulk-action', adminAuth, async (req, res) => {
         const connection = await pool.getConnection();
