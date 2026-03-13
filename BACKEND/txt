@@ -61,7 +61,6 @@ SMTP_USER=makemetrendweb@gmail.com
 SMTP_PASS=fpvfcsjnugxvaajf
 VITE_ADMIN_NAME=Iflaj
 
-
 password generate code
 node -e "const b=require('bcryptjs'); console.log(b.hashSync('YourNewPassword123',12))"
 
