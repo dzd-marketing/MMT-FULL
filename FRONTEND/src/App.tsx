@@ -176,6 +176,7 @@ function AppContent() {
               <Route path="add-funds" element={<AddFundsView />} /> 
               <Route path="new-order" element={<NewOrderPage />} /> 
               <Route path="orders" element={<OrdersPage />} />
+              <Route path="orders/:id" element={<Navigate to="/dashboard/orders" replace />} />
               <Route path="tickets" element={<TicketsPage />} />              
               <Route path="api" element={<ApiView />} /> 
               <Route path="child-panel" element={<ChildPanelsPage />} />
