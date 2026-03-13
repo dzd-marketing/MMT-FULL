@@ -281,7 +281,7 @@ const Login: React.FC = () => {
           </p>
 
           <div className="mt-12 pt-8 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-400 border-t border-zinc-100 dark:border-zinc-900">
-            <span>© 2025 Make Me Trend.</span>
+            <span>© 2026 Make Me Trend.</span>
             <div className="space-x-4">
               <Link to="/privacy" className="hover:text-brand transition-colors">Privacy Policy</Link>
             </div>
