@@ -692,6 +692,81 @@ module.exports = (pool) => {
         }
     });
 
+router.post('/services/providers', adminAuth, async (req, res) => {
+    try {
+        const { api_name, api_url, api_key, currency, status } = req.body;
+        if (!api_name || !api_url || !api_key) {
+            return res.status(400).json({ success: false, message: 'Name, URL and API key are required' });
+        }
+        const [result] = await pool.execute(
+            'INSERT INTO service_api (api_name, api_url, api_key, currency, status) VALUES (?, ?, ?, ?, ?)',
+            [api_name, api_url, api_key, currency || 'USD', status || '2']
+        );
+        res.json({ success: true, message: 'Provider added successfully', id: result.insertId });
+    } catch (error) {
+        console.error('Error adding provider:', error);
+        res.status(500).json({ success: false, message: 'Failed to add provider' });
+    }
+});
+
+router.put('/services/providers/:id', adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { api_name, api_url, api_key, currency, status } = req.body;
+        await pool.execute(
+            'UPDATE service_api SET api_name = ?, api_url = ?, api_key = ?, currency = ?, status = ? WHERE id = ?',
+            [api_name, api_url, api_key, currency || 'USD', status || '2', id]
+        );
+        res.json({ success: true, message: 'Provider updated successfully' });
+    } catch (error) {
+        console.error('Error updating provider:', error);
+        res.status(500).json({ success: false, message: 'Failed to update provider' });
+    }
+});
+
+router.delete('/services/providers/:id', adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [services] = await pool.execute(
+            'SELECT COUNT(*) as count FROM services WHERE service_api = ? AND service_deleted = "0"',
+            [id]
+        );
+        if (services[0].count > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Cannot delete — ${services[0].count} active services use this provider` 
+            });
+        }
+        await pool.execute('DELETE FROM service_api WHERE id = ?', [id]);
+        res.json({ success: true, message: 'Provider deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting provider:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete provider' });
+    }
+});
+
+router.post('/services/providers/:id/test', adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const axios = require('axios');
+        const [providers] = await pool.execute('SELECT * FROM service_api WHERE id = ?', [id]);
+        if (providers.length === 0) {
+            return res.status(404).json({ success: false, message: 'Provider not found' });
+        }
+        const provider = providers[0];
+        const formData = new URLSearchParams();
+        formData.append('key', provider.api_key);
+        formData.append('action', 'balance');
+        const response = await axios.post(provider.api_url, formData, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            timeout: 10000
+        });
+        res.json({ success: true, message: 'Connection successful', balance: response.data.balance || response.data });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Connection failed: ' + error.message });
+    }
+});
+
     router.get('/services/providers/:id/fetch-services', adminAuth, async (req, res) => {
         try {
             const { id } = req.params;
