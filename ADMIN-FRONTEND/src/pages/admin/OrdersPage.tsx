@@ -727,6 +727,8 @@ const AdminOrdersPage: React.FC = () => {
         return <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-medium"><CheckCircle className="w-3 h-3" /> Completed</span>;
       case 'partial':
         return <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-500/20 text-orange-400 rounded-full text-xs font-medium"><AlertCircle className="w-3 h-3" /> Partial</span>;
+      case 'queued':
+        return <span className="inline-flex items-center gap-1 px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-xs font-medium"><ClockIcon className="w-3 h-3" /> Queued</span>;
       case 'canceled':
         return <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-medium"><Ban className="w-3 h-3" /> Canceled</span>;
       case 'fail':
