@@ -176,6 +176,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
     </div>
   );
 };
+
 interface ProfitRangeProps {
   min: string;
   max: string;
@@ -183,12 +184,7 @@ interface ProfitRangeProps {
   onMaxChange: (value: string) => void;
 }
 
-const ProfitRange: React.FC<ProfitRangeProps> = ({
-  min,
-  max,
-  onMinChange,
-  onMaxChange
-}) => {
+const ProfitRange: React.FC<ProfitRangeProps> = ({ min, max, onMinChange, onMaxChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -263,7 +259,7 @@ interface Order {
   order_charge: number;
   order_profit: number;
   order_url: string;
-  order_status: 'pending' | 'processing' | 'inprogress' | 'completed' | 'partial' | 'canceled' | 'fail' | 'cronpending';
+  order_status: 'pending' | 'processing' | 'inprogress' | 'completed' | 'partial' | 'canceled' | 'fail' | 'cronpending' | 'queued';
   order_start: number;
   order_remains: number;
   order_create: string;
@@ -291,6 +287,7 @@ interface OrderStats {
   canceled: number;
   fail: number;
   cronpending: number;
+  queued: number;
 }
 
 interface Pagination {
@@ -302,17 +299,6 @@ interface Pagination {
 
 interface UnitsPerPage {
   [key: string]: number;
-}
-
-interface FilterParams {
-  status: string;
-  type: string;
-  search: string;
-  searchField: string;
-  dateFrom: string;
-  dateTo: string;
-  profitMin: string;
-  profitMax: string;
 }
 
 const AdminOrdersPage: React.FC = () => {
@@ -328,23 +314,11 @@ const AdminOrdersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchField, setSearchField] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pagination, setPagination] = useState<Pagination>({
-    total: 0,
-    page: 1,
-    limit: 20,
-    pages: 1
-  });
+  const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 20, pages: 1 });
   const [unitsPerPage, setUnitsPerPage] = useState<UnitsPerPage>({ orders: 20 });
   const [stats, setStats] = useState<OrderStats>({
-    total: 0,
-    pending: 0,
-    processing: 0,
-    inprogress: 0,
-    completed: 0,
-    partial: 0,
-    canceled: 0,
-    fail: 0,
-    cronpending: 0
+    total: 0, pending: 0, processing: 0, inprogress: 0,
+    completed: 0, partial: 0, canceled: 0, fail: 0, cronpending: 0, queued: 0
   });
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -359,12 +333,10 @@ const AdminOrdersPage: React.FC = () => {
   const [partialQuantity, setPartialQuantity] = useState<number>(0);
   const [bulkAction, setBulkAction] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
-  
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [profitMin, setProfitMin] = useState('');
   const [profitMax, setProfitMax] = useState('');
-  
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
@@ -378,19 +350,17 @@ const AdminOrdersPage: React.FC = () => {
     const status = params.get('status');
     const page = params.get('page');
     const type = params.get('type');
-    const dateFrom = params.get('dateFrom');
-    const dateTo = params.get('dateTo');
-    const profitMin = params.get('profitMin');
-    const profitMax = params.get('profitMax');
-    
+    const df = params.get('dateFrom');
+    const dt = params.get('dateTo');
+    const pmin = params.get('profitMin');
+    const pmax = params.get('profitMax');
     if (status) setSelectedStatus(status);
     if (page) setCurrentPage(parseInt(page));
     if (type) setOrderType(type);
-    if (dateFrom) setDateFrom(dateFrom);
-    if (dateTo) setDateTo(dateTo);
-    if (profitMin) setProfitMin(profitMin);
-    if (profitMax) setProfitMax(profitMax);
-    
+    if (df) setDateFrom(df);
+    if (dt) setDateTo(dt);
+    if (pmin) setProfitMin(pmin);
+    if (pmax) setProfitMax(pmax);
     fetchUnitsPerPage();
   }, []);
 
@@ -446,7 +416,6 @@ const AdminOrdersPage: React.FC = () => {
         setUnitsPerPage({ orders: 20 });
       }
     } catch (error) {
-      console.error('Error fetching units per page:', error);
       setUnitsPerPage({ orders: 20 });
     }
   };
@@ -465,11 +434,9 @@ const AdminOrdersPage: React.FC = () => {
         ...(profitMin && { profitMin }),
         ...(profitMax && { profitMax })
       });
-
       const response = await axios.get(`${API_URL}/admin/orders?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       if (response.data.success) {
         setOrders(response.data.orders);
         setFilteredOrders(response.data.orders);
@@ -488,7 +455,6 @@ const AdminOrdersPage: React.FC = () => {
       const response = await axios.get(`${API_URL}/admin/orders/stats`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       if (response.data.success) {
         setStats(response.data.stats);
       }
@@ -498,20 +464,14 @@ const AdminOrdersPage: React.FC = () => {
   };
 
   const filterOrders = () => {
-    if (!searchQuery) {
-      setFilteredOrders(orders);
-      return;
-    }
-
+    if (!searchQuery) { setFilteredOrders(orders); return; }
     const query = searchQuery.toLowerCase();
     const filtered = orders.filter(order => {
       switch(searchField) {
         case 'username':
-          return order.user_name?.toLowerCase().includes(query) || 
-                 order.user_email?.toLowerCase().includes(query);
+          return order.user_name?.toLowerCase().includes(query) || order.user_email?.toLowerCase().includes(query);
         case 'order_id':
-          return order.order_id.toString().includes(query) || 
-                 order.api_orderid.toString().includes(query);
+          return order.order_id.toString().includes(query) || order.api_orderid.toString().includes(query);
         case 'url':
           return order.order_url?.toLowerCase().includes(query);
         default:
@@ -525,18 +485,13 @@ const AdminOrdersPage: React.FC = () => {
 
   const handleBulkAction = async () => {
     if (!bulkAction || selectedOrders.length === 0) return;
-
     setActionLoading(0);
     try {
       const token = localStorage.getItem('adminToken');
       const response = await axios.post(`${API_URL}/admin/orders/bulk-action`, 
-        { 
-          action: bulkAction,
-          order_ids: selectedOrders 
-        },
+        { action: bulkAction, order_ids: selectedOrders },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       if (response.data.success) {
         fetchOrders();
         fetchOrderStats();
@@ -572,7 +527,6 @@ const AdminOrdersPage: React.FC = () => {
 
   const handleUpdateUrl = async () => {
     if (!selectedOrder) return;
-    
     setActionLoading(selectedOrder.order_id);
     try {
       const token = localStorage.getItem('adminToken');
@@ -591,7 +545,6 @@ const AdminOrdersPage: React.FC = () => {
 
   const handleUpdateStartCount = async () => {
     if (!selectedOrder) return;
-    
     setActionLoading(selectedOrder.order_id);
     try {
       const token = localStorage.getItem('adminToken');
@@ -610,18 +563,13 @@ const AdminOrdersPage: React.FC = () => {
 
   const handlePartial = async () => {
     if (!selectedOrder) return;
-    
     setActionLoading(selectedOrder.order_id);
     try {
       const token = localStorage.getItem('adminToken');
       const response = await axios.post(`${API_URL}/admin/orders/${selectedOrder.order_id}/partial`,
-        { 
-          quantity: partialQuantity,
-          remains: selectedOrder.order_remains - partialQuantity
-        },
+        { quantity: partialQuantity, remains: selectedOrder.order_remains - partialQuantity },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       if (response.data.success) {
         setShowPartialModal(false);
         fetchOrders();
@@ -653,6 +601,34 @@ const AdminOrdersPage: React.FC = () => {
     }
   };
 
+  // Cancel queued order with full refund
+  const handleCancelQueuedOrder = async (orderId: number) => {
+    if (!confirm('Cancel this queued order and refund the full amount to the user?')) return;
+    setActionLoading(orderId);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.post(`${API_URL}/admin/orders/${orderId}/cancel-queued`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.data.success) {
+        alert(response.data.message);
+        fetchOrders();
+        fetchOrderStats();
+        setShowDetails(false);
+      } else {
+        alert(response.data.message || 'Failed to cancel order');
+      }
+      setActiveDropdown(null);
+      setDropdownPosition(null);
+    } catch (error) {
+      console.error('Error cancelling queued order:', error);
+      alert('Failed to cancel order');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleResendOrder = async (orderId: number) => {
     setActionLoading(orderId);
     try {
@@ -661,19 +637,21 @@ const AdminOrdersPage: React.FC = () => {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       if (response.data.success) {
         setResendSuccess(orderId);
         setTimeout(() => setResendSuccess(null), 3000);
-        
+        alert(response.data.message);
         fetchOrders();
         fetchOrderStats();
+        setShowDetails(false);
+      } else {
+        alert(response.data.message || 'Failed to resend order');
       }
-      
       setActiveDropdown(null);
       setDropdownPosition(null);
     } catch (error) {
       console.error('Error resending order:', error);
+      alert('Failed to resend order');
     } finally {
       setActionLoading(null);
     }
@@ -690,28 +668,17 @@ const AdminOrdersPage: React.FC = () => {
     const button = e.currentTarget as HTMLButtonElement;
     const rect = button.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
-    
     const isMobile = window.innerWidth < 768;
-    
     let top = rect.bottom + window.scrollY;
-    const dropdownHeight = 320; 
-    
+    const dropdownHeight = 320;
     if (top + dropdownHeight > viewportHeight + window.scrollY) {
       top = rect.top + window.scrollY - dropdownHeight;
     }
-    
     if (isMobile) {
-      setDropdownPosition({
-        top: Math.max(10, top), 
-        left: window.innerWidth / 2 - 112,
-      });
+      setDropdownPosition({ top: Math.max(10, top), left: window.innerWidth / 2 - 112 });
     } else {
-      setDropdownPosition({
-        top: top,
-        left: rect.right - 200, 
-      });
+      setDropdownPosition({ top, left: rect.right - 200 });
     }
-    
     setActiveDropdown(orderId);
   };
 
@@ -740,13 +707,8 @@ const AdminOrdersPage: React.FC = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return amount.toFixed(2);
-  };
-
-const formatProfit = (profit: number) => {
-  return profit.toFixed(2);
-};
+  const formatCurrency = (amount: number) => Number(amount).toFixed(2);
+  const formatProfit = (profit: number) => Number(profit).toFixed(2);
 
   const StatCard = ({ label, count, color, icon: Icon, onClick, active }: any) => (
     <motion.div
@@ -796,19 +758,16 @@ const formatProfit = (profit: number) => {
         activeTickets={0}
       />
 
-      {/* Main Content */}
       <div className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-80' : 'md:ml-0'} ml-0 h-screen flex flex-col overflow-hidden`}>
-        {/* Header */}
-<AdminHeader
-  title="Orders Management"
-  onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-  onMobileMenuClick={() => setMobileSidebarOpen(true)}
-  activeTickets={0} 
-/>
+        <AdminHeader
+          title="Orders Management"
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          onMobileMenuClick={() => setMobileSidebarOpen(true)}
+          activeTickets={0} 
+        />
 
-        {/* Main Scrollable Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
-          {/* Header with Refresh Button */}
+          {/* Page Header */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-black text-white mb-1">Orders Management</h1>
@@ -816,14 +775,7 @@ const formatProfit = (profit: number) => {
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={async () => {
-                  setLoading(true);
-                  await Promise.all([
-                    fetchOrders(),
-                    fetchOrderStats()
-                  ]);
-                  setLoading(false);
-                }}
+                onClick={async () => { setLoading(true); await Promise.all([fetchOrders(), fetchOrderStats()]); setLoading(false); }}
                 className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-sm transition-colors"
                 disabled={loading}
               >
@@ -840,80 +792,18 @@ const formatProfit = (profit: number) => {
             </div>
           </div>
 
-          {/* Status Stats Cards */}
-          <div className="grid grid-cols-3 md:grid-cols-7 lg:grid-cols-9 gap-2 mb-6">
-            <StatCard 
-              label="All" 
-              count={stats.total} 
-              color="from-gray-600/20 to-gray-700/20"
-              icon={ShoppingBag}
-              onClick={() => setSelectedStatus('all')}
-              active={selectedStatus === 'all'}
-            />
-            <StatCard 
-              label="Pending" 
-              count={stats.pending} 
-              color="from-yellow-600/20 to-yellow-700/20"
-              icon={Clock}
-              onClick={() => setSelectedStatus('pending')}
-              active={selectedStatus === 'pending'}
-            />
-            <StatCard 
-              label="Processing" 
-              count={stats.processing} 
-              color="from-blue-600/20 to-blue-700/20"
-              icon={Loader}
-              onClick={() => setSelectedStatus('processing')}
-              active={selectedStatus === 'processing'}
-            />
-            <StatCard 
-              label="In Progress" 
-              count={stats.inprogress} 
-              color="from-purple-600/20 to-purple-700/20"
-              icon={Play}
-              onClick={() => setSelectedStatus('inprogress')}
-              active={selectedStatus === 'inprogress'}
-            />
-            <StatCard 
-              label="Completed" 
-              count={stats.completed} 
-              color="from-green-600/20 to-green-700/20"
-              icon={CheckCircle}
-              onClick={() => setSelectedStatus('completed')}
-              active={selectedStatus === 'completed'}
-            />
-            <StatCard 
-              label="Partial" 
-              count={stats.partial} 
-              color="from-orange-600/20 to-orange-700/20"
-              icon={AlertCircle}
-              onClick={() => setSelectedStatus('partial')}
-              active={selectedStatus === 'partial'}
-            />
-            <StatCard 
-              label="Canceled" 
-              count={stats.canceled} 
-              color="from-red-600/20 to-red-700/20"
-              icon={Ban}
-              onClick={() => setSelectedStatus('canceled')}
-              active={selectedStatus === 'canceled'}
-            />
-            <StatCard 
-              label="Fail" 
-              count={stats.fail} 
-              color="from-gray-600/20 to-gray-700/20"
-              icon={XCircle}
-              onClick={() => setSelectedStatus('fail')}
-              active={selectedStatus === 'fail'}
-            />
-            <StatCard 
-              label="Cron" 
-              count={stats.cronpending} 
-              color="from-indigo-600/20 to-indigo-700/20"
-              icon={RefreshCw}
-              onClick={() => setSelectedStatus('cronpending')}
-              active={selectedStatus === 'cronpending'}
-            />
+          {/* Stats Cards */}
+          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-2 mb-6">
+            <StatCard label="All" count={stats.total} color="from-gray-600/20 to-gray-700/20" icon={ShoppingBag} onClick={() => setSelectedStatus('all')} active={selectedStatus === 'all'} />
+            <StatCard label="Pending" count={stats.pending} color="from-yellow-600/20 to-yellow-700/20" icon={Clock} onClick={() => setSelectedStatus('pending')} active={selectedStatus === 'pending'} />
+            <StatCard label="Processing" count={stats.processing} color="from-blue-600/20 to-blue-700/20" icon={Loader} onClick={() => setSelectedStatus('processing')} active={selectedStatus === 'processing'} />
+            <StatCard label="In Progress" count={stats.inprogress} color="from-purple-600/20 to-purple-700/20" icon={Play} onClick={() => setSelectedStatus('inprogress')} active={selectedStatus === 'inprogress'} />
+            <StatCard label="Completed" count={stats.completed} color="from-green-600/20 to-green-700/20" icon={CheckCircle} onClick={() => setSelectedStatus('completed')} active={selectedStatus === 'completed'} />
+            <StatCard label="Partial" count={stats.partial} color="from-orange-600/20 to-orange-700/20" icon={AlertCircle} onClick={() => setSelectedStatus('partial')} active={selectedStatus === 'partial'} />
+            <StatCard label="Queued" count={stats.queued || 0} color="from-cyan-600/20 to-cyan-700/20" icon={ClockIcon} onClick={() => setSelectedStatus('queued')} active={selectedStatus === 'queued'} />
+            <StatCard label="Canceled" count={stats.canceled} color="from-red-600/20 to-red-700/20" icon={Ban} onClick={() => setSelectedStatus('canceled')} active={selectedStatus === 'canceled'} />
+            <StatCard label="Fail" count={stats.fail} color="from-gray-600/20 to-gray-700/20" icon={XCircle} onClick={() => setSelectedStatus('fail')} active={selectedStatus === 'fail'} />
+            <StatCard label="Cron" count={stats.cronpending} color="from-indigo-600/20 to-indigo-700/20" icon={RefreshCw} onClick={() => setSelectedStatus('cronpending')} active={selectedStatus === 'cronpending'} />
           </div>
 
           {/* Search and Filters */}
@@ -929,27 +819,10 @@ const formatProfit = (profit: number) => {
                   className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
                 />
               </div>
-              
-              {/* Custom Search Field Dropdown */}
-              <CustomSelect
-                value={searchField}
-                onChange={setSearchField}
-                options={searchFieldOptions}
-                icon={<Search className="w-4 h-4 text-gray-400" />}
-                className="w-full md:w-48"
-              />
-              
-              {/* Custom Order Type Dropdown */}
-              <CustomSelect
-                value={orderType}
-                onChange={setOrderType}
-                options={orderTypeOptions}
-                icon={<ShoppingBag className="w-4 h-4 text-gray-400" />}
-                className="w-full md:w-48"
-              />
+              <CustomSelect value={searchField} onChange={setSearchField} options={searchFieldOptions} icon={<Search className="w-4 h-4 text-gray-400" />} className="w-full md:w-48" />
+              <CustomSelect value={orderType} onChange={setOrderType} options={orderTypeOptions} icon={<ShoppingBag className="w-4 h-4 text-gray-400" />} className="w-full md:w-48" />
             </div>
 
-            {/* Advanced Filters */}
             <AnimatePresence>
               {showFilters && (
                 <motion.div
@@ -961,52 +834,25 @@ const formatProfit = (profit: number) => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs text-gray-400 mb-1">Date Range</label>
-                      <DateRangePicker
-                        startDate={dateFrom}
-                        endDate={dateTo}
-                        onStartDateChange={setDateFrom}
-                        onEndDateChange={setDateTo}
-                      />
+                      <DateRangePicker startDate={dateFrom} endDate={dateTo} onStartDateChange={setDateFrom} onEndDateChange={setDateTo} />
                     </div>
                     <div>
                       <label className="block text-xs text-gray-400 mb-1">Order Type</label>
-                      <CustomSelect
-                        value={orderType}
-                        onChange={setOrderType}
-                        options={orderTypeOptions}
-                        className="w-full"
-                      />
+                      <CustomSelect value={orderType} onChange={setOrderType} options={orderTypeOptions} className="w-full" />
                     </div>
                     <div>
                       <label className="block text-xs text-gray-400 mb-1">Profit Range (Rs)</label>
-                      <ProfitRange
-                        min={profitMin}
-                        max={profitMax}
-                        onMinChange={setProfitMin}
-                        onMaxChange={setProfitMax}
-                      />
+                      <ProfitRange min={profitMin} max={profitMax} onMinChange={setProfitMin} onMaxChange={setProfitMax} />
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 mt-4">
                     <button
-                      onClick={() => {
-                        setDateFrom('');
-                        setDateTo('');
-                        setProfitMin('');
-                        setProfitMax('');
-                        setShowFilters(false);
-                      }}
+                      onClick={() => { setDateFrom(''); setDateTo(''); setProfitMin(''); setProfitMax(''); setShowFilters(false); }}
                       className="px-4 py-2 bg-white/5 text-white rounded-lg text-sm hover:bg-white/10 transition-colors"
                     >
                       Clear All
                     </button>
-                    <button 
-                      onClick={() => {
-                        fetchOrders();
-                        setShowFilters(false);
-                      }}
-                      className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand/90 transition-colors"
-                    >
+                    <button onClick={() => { fetchOrders(); setShowFilters(false); }} className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand/90 transition-colors">
                       Apply Filters
                     </button>
                   </div>
@@ -1023,18 +869,8 @@ const formatProfit = (profit: number) => {
               className="mb-4 p-3 bg-brand/20 border border-brand/30 rounded-xl flex flex-wrap items-center justify-between gap-3"
             >
               <div className="flex items-center gap-3">
-                <span className="text-sm text-white">
-                  {selectedOrders.length} order(s) selected
-                </span>
-                <button
-                  onClick={() => {
-                    setSelectedOrders([]);
-                    setSelectAll(false);
-                  }}
-                  className="text-xs text-gray-400 hover:text-white"
-                >
-                  Clear
-                </button>
+                <span className="text-sm text-white">{selectedOrders.length} order(s) selected</span>
+                <button onClick={() => { setSelectedOrders([]); setSelectAll(false); }} className="text-xs text-gray-400 hover:text-white">Clear</button>
               </div>
               <div className="flex items-center gap-2">
                 <CustomSelect
@@ -1061,19 +897,13 @@ const formatProfit = (profit: number) => {
             </motion.div>
           )}
 
-          {/* Orders Table Container */}
-          <div 
-            className="bg-black/30 border border-white/10 rounded-xl overflow-auto relative"
-            style={{ maxHeight: 'calc(100vh - 350px)' }}
-          >
+          {/* Orders Table */}
+          <div className="bg-black/30 border border-white/10 rounded-xl overflow-auto relative" style={{ maxHeight: 'calc(100vh - 350px)' }}>
             <table className="w-full min-w-[1600px]">
               <thead className="bg-white/5 sticky top-0 z-20">
                 <tr>
                   <th className="w-8 py-3 px-2">
-                    <button
-                      onClick={() => setSelectAll(!selectAll)}
-                      className="text-gray-400 hover:text-white"
-                    >
+                    <button onClick={() => setSelectAll(!selectAll)} className="text-gray-400 hover:text-white">
                       {selectAll ? <CheckSquare className="w-4 h-4 text-brand" /> : <Square className="w-4 h-4" />}
                     </button>
                   </th>
@@ -1100,7 +930,7 @@ const formatProfit = (profit: number) => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.02 }}
-                    className="border-t border-white/5 hover:bg-white/5 transition-colors relative"
+                    className={`border-t border-white/5 hover:bg-white/5 transition-colors relative ${order.order_status === 'queued' ? 'bg-cyan-500/5' : ''}`}
                   >
                     <td className="py-2 px-2">
                       <button
@@ -1113,10 +943,7 @@ const formatProfit = (profit: number) => {
                         }}
                         className="text-gray-400 hover:text-white"
                       >
-                        {selectedOrders.includes(order.order_id) ? 
-                          <CheckSquare className="w-4 h-4 text-brand" /> : 
-                          <Square className="w-4 h-4" />
-                        }
+                        {selectedOrders.includes(order.order_id) ? <CheckSquare className="w-4 h-4 text-brand" /> : <Square className="w-4 h-4" />}
                       </button>
                     </td>
                     <td className="py-2 px-3">
@@ -1133,106 +960,62 @@ const formatProfit = (profit: number) => {
                       </div>
                     </td>
                     <td className="py-2 px-3">
-                      <span className="text-sm font-bold text-green-400">
-                        Rs {formatCurrency(order.order_charge)}
-                      </span>
+                      <span className="text-sm font-bold text-green-400">Rs {formatCurrency(order.order_charge)}</span>
                     </td>
                     <td className="py-2 px-3">
-                      <span className="text-sm text-purple-400">
-                        Rs {formatProfit(order.order_profit)}
-                      </span>
+                      <span className="text-sm text-purple-400">Rs {formatProfit(order.order_profit)}</span>
                     </td>
                     <td className="py-2 px-3">
-                      <a
-                        href={order.order_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-brand hover:underline flex items-center gap-1"
-                      >
+                      <a href={order.order_url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand hover:underline flex items-center gap-1">
                         <LinkIcon className="w-3 h-3" />
                         <span className="truncate max-w-[80px]">Link</span>
                       </a>
                     </td>
-                    <td className="py-2 px-3">
-                      <span className="text-sm text-gray-300">{order.order_start}</span>
-                    </td>
-                    <td className="py-2 px-3">
-                      <span className="text-sm text-gray-300">{order.order_quantity}</span>
-                    </td>
+                    <td className="py-2 px-3"><span className="text-sm text-gray-300">{order.order_start}</span></td>
+                    <td className="py-2 px-3"><span className="text-sm text-gray-300">{order.order_quantity}</span></td>
                     <td className="py-2 px-3">
                       <div className="text-sm text-gray-300 truncate max-w-[150px]" title={order.service_name}>
                         {order.service_name || `Service #${order.service_id}`}
                       </div>
                     </td>
+                    <td className="py-2 px-3">{getStatusBadge(order.order_status)}</td>
                     <td className="py-2 px-3">
-                      {getStatusBadge(order.order_status)}
+                      <span className={`text-sm ${order.order_remains === 0 ? 'text-green-400' : 'text-gray-300'}`}>{order.order_remains}</span>
                     </td>
                     <td className="py-2 px-3">
-                      <span className={`text-sm ${order.order_remains === 0 ? 'text-green-400' : 'text-gray-300'}`}>
-                        {order.order_remains}
-                      </span>
+                      <span className="text-sm text-gray-400 whitespace-nowrap">{format(new Date(order.order_create), 'yyyy-MM-dd HH:mm')}</span>
                     </td>
                     <td className="py-2 px-3">
-                      <span className="text-sm text-gray-400 whitespace-nowrap">
-                        {format(new Date(order.order_create), 'yyyy-MM-dd HH:mm')}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        order.order_where === 'api' 
-                          ? 'bg-blue-500/20 text-blue-400' 
-                          : 'bg-gray-500/20 text-gray-400'
-                      }`}>
+                      <span className={`text-xs px-2 py-1 rounded-full ${order.order_where === 'api' ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'}`}>
                         {order.order_where === 'api' ? 'Auto' : 'Manual'}
                       </span>
                     </td>
                     <td className="py-2 px-3">
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setShowDetails(true);
-                          }}
-                          className="p-1.5 hover:bg-brand/20 rounded-lg transition-colors group"
-                          title="View Details"
+                          onClick={() => { setSelectedOrder(order); setShowDetails(true); }}
+                          className="p-1.5 hover:bg-brand/20 rounded-lg transition-colors group" title="View Details"
                         >
                           <Eye className="w-4 h-4 text-gray-400 group-hover:text-brand" />
                         </button>
                         <button
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setEditStartCount(order.order_start);
-                            setEditRemainsCount(order.order_remains);
-                            setEditStatus(order.order_status);
-                            setEditUrl(order.order_url);
-                            setShowEditModal(true);
-                          }}
-                          className="p-1.5 hover:bg-brand/20 rounded-lg transition-colors group"
-                          title="Edit Order"
+                          onClick={() => { setSelectedOrder(order); setEditStartCount(order.order_start); setEditRemainsCount(order.order_remains); setEditStatus(order.order_status); setEditUrl(order.order_url); setShowEditModal(true); }}
+                          className="p-1.5 hover:bg-brand/20 rounded-lg transition-colors group" title="Edit Order"
                         >
                           <Edit className="w-4 h-4 text-gray-400 group-hover:text-brand" />
                         </button>
                         <button
-                          onClick={() => {
-                            setSelectedOrder(order);
-                            setPartialQuantity(order.order_remains);
-                            setShowPartialModal(true);
-                          }}
-                          className="p-1.5 hover:bg-brand/20 rounded-lg transition-colors group"
-                          title="Mark Partial"
+                          onClick={() => { setSelectedOrder(order); setPartialQuantity(order.order_remains); setShowPartialModal(true); }}
+                          className="p-1.5 hover:bg-brand/20 rounded-lg transition-colors group" title="Mark Partial"
                         >
                           <AlertCircle className="w-4 h-4 text-gray-400 group-hover:text-brand" />
                         </button>
-                        
-                        {/* Dropdown Trigger Button */}
                         <button
                           onClick={(e) => openDropdown(e, order.order_id)}
                           className="p-1.5 hover:bg-brand/20 rounded-lg transition-colors group relative"
                         >
                           <MoreVertical className="w-4 h-4 text-gray-400 group-hover:text-brand" />
                         </button>
-                        
-                        {/* Success message for resend */}
                         {resendSuccess === order.order_id && (
                           <motion.div
                             initial={{ opacity: 0, scale: 0.8 }}
@@ -1240,7 +1023,7 @@ const formatProfit = (profit: number) => {
                             exit={{ opacity: 0 }}
                             className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-lg whitespace-nowrap"
                           >
-                            Resent successfully!
+                            Sent to provider!
                           </motion.div>
                         )}
                       </div>
@@ -1258,21 +1041,11 @@ const formatProfit = (profit: number) => {
                 Showing {((currentPage - 1) * pagination.limit) + 1} to {Math.min(currentPage * pagination.limit, pagination.total)} of {pagination.total} orders
               </p>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
+                <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="px-3 py-1 bg-brand/20 text-brand rounded-lg text-sm">
-                  {currentPage} / {pagination.pages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(pagination.pages, prev + 1))}
-                  disabled={currentPage === pagination.pages}
-                  className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
+                <span className="px-3 py-1 bg-brand/20 text-brand rounded-lg text-sm">{currentPage} / {pagination.pages}</span>
+                <button onClick={() => setCurrentPage(prev => Math.min(pagination.pages, prev + 1))} disabled={currentPage === pagination.pages} className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -1284,97 +1057,106 @@ const formatProfit = (profit: number) => {
       {/* Portal Dropdown Menu */}
       {activeDropdown && dropdownPosition && ReactDOM.createPortal(
         <>
-          {/* Backdrop for mobile */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 z-[9998] md:hidden"
-            onClick={() => {
-              setActiveDropdown(null);
-              setDropdownPosition(null);
-            }}
+            onClick={() => { setActiveDropdown(null); setDropdownPosition(null); }}
           />
-          
           <div
             ref={dropdownRef}
-            style={{
-              position: 'fixed',
-              top: dropdownPosition.top,
-              left: dropdownPosition.left,
-              zIndex: 9999
-            }}
+            style={{ position: 'fixed', top: dropdownPosition.top, left: dropdownPosition.left, zIndex: 9999 }}
             onClick={(e) => e.stopPropagation()}
-            className="md:left-auto"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-56 bg-gradient-to-b from-[#1F1F1F] to-[#141414] border border-white/10 rounded-xl shadow-2xl overflow-hidden md:ml-0"
+              className="w-56 bg-gradient-to-b from-[#1F1F1F] to-[#141414] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
             >
               <div className="px-3 py-2 bg-white/5 border-b border-white/10">
                 <p className="text-xs font-medium text-gray-400">
                   Actions for #{filteredOrders.find(o => o.order_id === activeDropdown)?.order_id}
                 </p>
+                {filteredOrders.find(o => o.order_id === activeDropdown)?.order_status === 'queued' && (
+                  <p className="text-[10px] text-cyan-400 mt-0.5">⏳ Awaiting admin action</p>
+                )}
               </div>
-              
+
               <div className="p-1">
-                <button
-                  onClick={() => handleStatusChange(activeDropdown, 'completed')}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-green-500/20 rounded-lg transition-colors group"
-                >
-                  <div className="w-6 h-6 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:bg-green-500/20">
-                    <CheckCircle className="w-3 h-3 text-green-400" />
-                  </div>
-                  <span className="flex-1 text-left">Mark Completed</span>
-                  {actionLoading === activeDropdown && (
-                    <Loader className="w-3 h-3 animate-spin text-gray-400" />
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => handleStatusChange(activeDropdown, 'inprogress')}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-purple-500/20 rounded-lg transition-colors group"
-                >
-                  <div className="w-6 h-6 bg-purple-500/10 rounded-lg flex items-center justify-center group-hover:bg-purple-500/20">
-                    <Play className="w-3 h-3 text-purple-400" />
-                  </div>
-                  <span className="flex-1 text-left">Mark In Progress</span>
-                </button>
-                
+                {/* Queued-specific actions — shown ONLY for queued orders */}
+                {filteredOrders.find(o => o.order_id === activeDropdown)?.order_status === 'queued' ? (
+                  <>
+                    <button
+                      onClick={() => handleResendOrder(activeDropdown)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-green-400 hover:bg-green-500/20 rounded-lg transition-colors group"
+                    >
+                      <div className="w-6 h-6 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:bg-green-500/20">
+                        <RefreshCw className="w-3 h-3 text-green-400" />
+                      </div>
+                      <span className="flex-1 text-left">Send to API Provider</span>
+                      {actionLoading === activeDropdown && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                    </button>
+                    <button
+                      onClick={() => handleCancelQueuedOrder(activeDropdown)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 rounded-lg transition-colors group"
+                    >
+                      <div className="w-6 h-6 bg-red-500/10 rounded-lg flex items-center justify-center group-hover:bg-red-500/20">
+                        <Ban className="w-3 h-3 text-red-400" />
+                      </div>
+                      <span className="flex-1 text-left">Cancel & Full Refund</span>
+                      {actionLoading === activeDropdown && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                    </button>
+                  </>
+                ) : (
+                  // Normal order actions
+                  <>
+                    <button
+                      onClick={() => handleStatusChange(activeDropdown, 'completed')}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-green-500/20 rounded-lg transition-colors group"
+                    >
+                      <div className="w-6 h-6 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:bg-green-500/20">
+                        <CheckCircle className="w-3 h-3 text-green-400" />
+                      </div>
+                      <span className="flex-1 text-left">Mark Completed</span>
+                      {actionLoading === activeDropdown && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange(activeDropdown, 'inprogress')}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-purple-500/20 rounded-lg transition-colors group"
+                    >
+                      <div className="w-6 h-6 bg-purple-500/10 rounded-lg flex items-center justify-center group-hover:bg-purple-500/20">
+                        <Play className="w-3 h-3 text-purple-400" />
+                      </div>
+                      <span className="flex-1 text-left">Mark In Progress</span>
+                    </button>
+                    <div className="h-px bg-white/10 my-1" />
+                    <button
+                      onClick={() => handleCancelOrder(activeDropdown, true)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 rounded-lg transition-colors group"
+                    >
+                      <div className="w-6 h-6 bg-red-500/10 rounded-lg flex items-center justify-center group-hover:bg-red-500/20">
+                        <Ban className="w-3 h-3 text-red-400" />
+                      </div>
+                      <span className="flex-1 text-left">Cancel (Refund)</span>
+                    </button>
+                    <button
+                      onClick={() => handleResendOrder(activeDropdown)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors group"
+                    >
+                      <div className="w-6 h-6 bg-blue-500/10 rounded-lg flex items-center justify-center group-hover:bg-blue-500/20">
+                        <RefreshCw className="w-3 h-3 text-blue-400" />
+                      </div>
+                      <span className="flex-1 text-left">Resend to API</span>
+                      {actionLoading === activeDropdown && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                    </button>
+                  </>
+                )}
+
                 <div className="h-px bg-white/10 my-1" />
-                
                 <button
-                  onClick={() => handleCancelOrder(activeDropdown, true)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 rounded-lg transition-colors group"
-                >
-                  <div className="w-6 h-6 bg-red-500/10 rounded-lg flex items-center justify-center group-hover:bg-red-500/20">
-                    <Ban className="w-3 h-3 text-red-400" />
-                  </div>
-                  <span className="flex-1 text-left">Cancel (Refund)</span>
-                </button>
-                
-                <button
-                  onClick={() => handleResendOrder(activeDropdown)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors group"
-                >
-                  <div className="w-6 h-6 bg-blue-500/10 rounded-lg flex items-center justify-center group-hover:bg-blue-500/20">
-                    <RefreshCw className="w-3 h-3 text-blue-400" />
-                  </div>
-                  <span className="flex-1 text-left">Resend to API</span>
-                  {actionLoading === activeDropdown && (
-                    <Loader className="w-3 h-3 animate-spin text-gray-400" />
-                  )}
-                </button>
-                
-                <div className="h-px bg-white/10 my-1" />
-                
-                <button
-                  onClick={() => {
-                    const order = filteredOrders.find(o => o.order_id === activeDropdown);
-                    if (order) handleCopyLink(order.order_url);
-                  }}
+                  onClick={() => { const order = filteredOrders.find(o => o.order_id === activeDropdown); if (order) handleCopyLink(order.order_url); }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-white/10 rounded-lg transition-colors group"
                 >
                   <div className="w-6 h-6 bg-white/5 rounded-lg flex items-center justify-center group-hover:bg-white/10">
@@ -1383,11 +1165,9 @@ const formatProfit = (profit: number) => {
                   <span className="flex-1 text-left">Copy Link</span>
                 </button>
               </div>
-              
+
               <div className="px-3 py-2 bg-white/5 border-t border-white/10">
-                <p className="text-[10px] text-gray-500">
-                  Updated: {format(new Date(), 'HH:mm')}
-                </p>
+                <p className="text-[10px] text-gray-500">Updated: {format(new Date(), 'HH:mm')}</p>
               </div>
             </motion.div>
           </div>
@@ -1414,18 +1194,19 @@ const formatProfit = (profit: number) => {
             >
               <div className="p-6 border-b border-white/10">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-white">Order Details #{selectedOrder.order_id}</h2>
-                  <button
-                    onClick={() => setShowDetails(false)}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                  >
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Order Details #{selectedOrder.order_id}</h2>
+                    {selectedOrder.order_status === 'queued' && (
+                      <p className="text-sm text-cyan-400 mt-1">⏳ This order is queued — waiting for admin to send to provider</p>
+                    )}
+                  </div>
+                  <button onClick={() => setShowDetails(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                     <XCircle className="w-5 h-5 text-gray-400" />
                   </button>
                 </div>
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Order Info Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-white/5 rounded-lg p-3">
                     <p className="text-xs text-gray-400 mb-1">Order ID</p>
@@ -1446,7 +1227,6 @@ const formatProfit = (profit: number) => {
                   </div>
                 </div>
 
-                {/* Financial Info */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-white/5 rounded-lg p-3">
                     <p className="text-xs text-gray-400 mb-1">Charge</p>
@@ -1454,52 +1234,40 @@ const formatProfit = (profit: number) => {
                   </div>
                   <div className="bg-white/5 rounded-lg p-3">
                     <p className="text-xs text-gray-400 mb-1">Profit</p>
-                    <p className="text-lg font-bold text-purple-400">Rs {formatProfit(selectedOrder.order_charge, selectedOrder.order_profit)}</p>
+                    <p className="text-lg font-bold text-purple-400">Rs {formatProfit(selectedOrder.order_profit)}</p>
                   </div>
                   <div className="bg-white/5 rounded-lg p-3">
-                    <p className="text-xs text-gray-400 mb-1">API Charge</p>
-                    <p className="text-lg font-bold text-blue-400">Rs {formatCurrency(selectedOrder.api_charge)}</p>
+                    <p className="text-xs text-gray-400 mb-1">API Charge (Provider)</p>
+                    <p className="text-lg font-bold text-blue-400">
+                      {selectedOrder.api_charge > 0 ? selectedOrder.api_charge : '—'}
+                    </p>
+                    <p className="text-xs text-gray-500">Provider's currency</p>
                   </div>
                   <div className="bg-white/5 rounded-lg p-3">
                     <p className="text-xs text-gray-400 mb-1">Mode</p>
-                    <span className={`text-sm px-3 py-1.5 rounded-full ${
-                      selectedOrder.order_where === 'api' 
-                        ? 'bg-blue-500/20 text-blue-400' 
-                        : 'bg-gray-500/20 text-gray-400'
-                    }`}>
+                    <span className={`text-sm px-3 py-1.5 rounded-full ${selectedOrder.order_where === 'api' ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'}`}>
                       {selectedOrder.order_where === 'api' ? 'Auto' : 'Manual'}
                     </span>
                   </div>
                 </div>
 
-                {/* Order Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h3 className="text-sm font-bold text-white mb-3">Order Information</h3>
                     <div className="space-y-2">
-                      <div className="flex justify-between py-2 border-b border-white/5">
-                        <span className="text-sm text-gray-400">Quantity</span>
-                        <span className="text-sm text-white">{selectedOrder.order_quantity}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-white/5">
-                        <span className="text-sm text-gray-400">Start Count</span>
-                        <span className="text-sm text-white">{selectedOrder.order_start}</span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-white/5">
-                        <span className="text-sm text-gray-400">Remains</span>
-                        <span className={`text-sm ${selectedOrder.order_remains === 0 ? 'text-green-400' : 'text-white'}`}>
-                          {selectedOrder.order_remains}
-                        </span>
-                      </div>
-                      <div className="flex justify-between py-2 border-b border-white/5">
-                        <span className="text-sm text-gray-400">Created</span>
-                        <span className="text-sm text-white">
-                          {format(new Date(selectedOrder.order_create), 'yyyy-MM-dd HH:mm:ss')}
-                        </span>
-                      </div>
+                      {[
+                        { label: 'Quantity', value: selectedOrder.order_quantity },
+                        { label: 'Start Count', value: selectedOrder.order_start },
+                        { label: 'Remains', value: selectedOrder.order_remains, green: selectedOrder.order_remains === 0 },
+                        { label: 'Created', value: format(new Date(selectedOrder.order_create), 'yyyy-MM-dd HH:mm:ss') },
+                      ].map(({ label, value, green }) => (
+                        <div key={label} className="flex justify-between py-2 border-b border-white/5">
+                          <span className="text-sm text-gray-400">{label}</span>
+                          <span className={`text-sm ${green ? 'text-green-400' : 'text-white'}`}>{value}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-
                   <div>
                     <h3 className="text-sm font-bold text-white mb-3">Service Information</h3>
                     <div className="space-y-2">
@@ -1513,12 +1281,7 @@ const formatProfit = (profit: number) => {
                       </div>
                       <div className="py-2 border-b border-white/5">
                         <span className="text-sm text-gray-400 block mb-1">Link</span>
-                        <a
-                          href={selectedOrder.order_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-brand hover:underline flex items-center gap-1 break-all"
-                        >
+                        <a href={selectedOrder.order_url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand hover:underline flex items-center gap-1 break-all">
                           {selectedOrder.order_url}
                           <ExternalLink className="w-3 h-3 shrink-0" />
                         </a>
@@ -1527,17 +1290,15 @@ const formatProfit = (profit: number) => {
                   </div>
                 </div>
 
-                {/* API Response - Fixed with proper text wrapping */}
                 {selectedOrder.order_detail && (
                   <div>
                     <h3 className="text-sm font-bold text-white mb-3">API Response</h3>
                     <pre className="bg-black/30 rounded-lg p-3 text-xs text-gray-400 overflow-x-auto whitespace-pre-wrap break-words max-h-60 overflow-y-auto">
-                      {JSON.stringify(JSON.parse(selectedOrder.order_detail), null, 2)}
+                      {(() => { try { return JSON.stringify(JSON.parse(selectedOrder.order_detail), null, 2); } catch { return selectedOrder.order_detail; } })()}
                     </pre>
                   </div>
                 )}
 
-                {/* Error Message if any */}
                 {selectedOrder.order_error && selectedOrder.order_error !== '-' && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
                     <p className="text-xs text-red-400 font-medium mb-1">Error</p>
@@ -1545,49 +1306,58 @@ const formatProfit = (profit: number) => {
                   </div>
                 )}
 
-                {/* Action Buttons */}
+                {/* Action Buttons — different for queued vs normal */}
                 <div className="flex flex-wrap gap-3 pt-4 border-t border-white/10">
                   <button
-                    onClick={() => {
-                      setShowDetails(false);
-                      setSelectedOrder(selectedOrder);
-                      setEditStartCount(selectedOrder.order_start);
-                      setEditRemainsCount(selectedOrder.order_remains);
-                      setEditStatus(selectedOrder.order_status);
-                      setEditUrl(selectedOrder.order_url);
-                      setShowEditModal(true);
-                    }}
+                    onClick={() => { setShowDetails(false); setEditStartCount(selectedOrder.order_start); setEditRemainsCount(selectedOrder.order_remains); setEditStatus(selectedOrder.order_status); setEditUrl(selectedOrder.order_url); setShowEditModal(true); }}
                     className="px-4 py-2 bg-brand/20 hover:bg-brand/30 text-brand rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                   >
-                    <Edit3 className="w-4 h-4" />
-                    Edit Order
+                    <Edit3 className="w-4 h-4" /> Edit Order
                   </button>
-                  <button
-                    onClick={() => {
-                      setShowDetails(false);
-                      setSelectedOrder(selectedOrder);
-                      setPartialQuantity(selectedOrder.order_remains);
-                      setShowPartialModal(true);
-                    }}
-                    className="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                  >
-                    <AlertCircle className="w-4 h-4" />
-                    Mark Partial
-                  </button>
-                  <button
-                    onClick={() => handleCancelOrder(selectedOrder.order_id, true)}
-                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                  >
-                    <Ban className="w-4 h-4" />
-                    Cancel (Refund)
-                  </button>
-                  <button
-                    onClick={() => handleResendOrder(selectedOrder.order_id)}
-                    className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Resend to API
-                  </button>
+
+                  {selectedOrder.order_status === 'queued' ? (
+                    // Queued order actions
+                    <>
+                      <button
+                        onClick={() => handleResendOrder(selectedOrder.order_id)}
+                        disabled={actionLoading === selectedOrder.order_id}
+                        className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {actionLoading === selectedOrder.order_id ? <Loader className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                        Send to API Provider
+                      </button>
+                      <button
+                        onClick={() => handleCancelQueuedOrder(selectedOrder.order_id)}
+                        disabled={actionLoading === selectedOrder.order_id}
+                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {actionLoading === selectedOrder.order_id ? <Loader className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                        Cancel & Full Refund
+                      </button>
+                    </>
+                  ) : (
+                    // Normal order actions
+                    <>
+                      <button
+                        onClick={() => { setShowDetails(false); setPartialQuantity(selectedOrder.order_remains); setShowPartialModal(true); }}
+                        className="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      >
+                        <AlertCircle className="w-4 h-4" /> Mark Partial
+                      </button>
+                      <button
+                        onClick={() => handleCancelOrder(selectedOrder.order_id, true)}
+                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      >
+                        <Ban className="w-4 h-4" /> Cancel (Refund)
+                      </button>
+                      <button
+                        onClick={() => handleResendOrder(selectedOrder.order_id)}
+                        className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      >
+                        <RefreshCw className="w-4 h-4" /> Resend to API
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -1599,90 +1369,50 @@ const formatProfit = (profit: number) => {
       <AnimatePresence>
         {showEditModal && selectedOrder && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
             onClick={() => setShowEditModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-gradient-to-b from-[#1A1A1A] to-[#0F0F0F] border border-white/10 rounded-2xl max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b border-white/10">
                 <h2 className="text-xl font-bold text-white">Edit Order #{selectedOrder.order_id}</h2>
               </div>
-
               <div className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Order URL</label>
-                  <input
-                    type="text"
-                    value={editUrl}
-                    onChange={(e) => setEditUrl(e.target.value)}
-                    className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
-                    placeholder="https://..."
-                  />
+                  <input type="text" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none" placeholder="https://..." />
                 </div>
-
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Start Count</label>
-                  <input
-                    type="number"
-                    value={editStartCount}
-                    onChange={(e) => setEditStartCount(parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
-                  />
+                  <input type="number" value={editStartCount} onChange={(e) => setEditStartCount(parseInt(e.target.value) || 0)} className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none" />
                 </div>
-
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Remains Count</label>
-                  <input
-                    type="number"
-                    value={editRemainsCount}
-                    onChange={(e) => setEditRemainsCount(parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
-                  />
+                  <input type="number" value={editRemainsCount} onChange={(e) => setEditRemainsCount(parseInt(e.target.value) || 0)} className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none" />
                 </div>
-
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Status</label>
-                  <select
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value)}
-                    className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
-                  >
+                  <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none">
                     <option value="pending">Pending</option>
                     <option value="processing">Processing</option>
                     <option value="inprogress">In Progress</option>
                     <option value="completed">Completed</option>
                     <option value="partial">Partial</option>
                     <option value="canceled">Canceled</option>
+                    <option value="queued">Queued</option>
                     <option value="fail">Fail</option>
                   </select>
                 </div>
-
                 <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handleUpdateUrl}
-                    disabled={actionLoading === selectedOrder.order_id}
-                    className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {actionLoading === selectedOrder.order_id ? (
-                      <Loader className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
+                  <button onClick={handleUpdateUrl} disabled={actionLoading === selectedOrder.order_id} className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                    {actionLoading === selectedOrder.order_id ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Update URL
                   </button>
-                  <button
-                    onClick={handleUpdateStartCount}
-                    disabled={actionLoading === selectedOrder.order_id}
-                    className="flex-1 px-4 py-2 bg-purple-600/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-600/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
+                  <button onClick={handleUpdateStartCount} disabled={actionLoading === selectedOrder.order_id} className="flex-1 px-4 py-2 bg-purple-600/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-600/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
                     Update Start
                   </button>
                 </div>
@@ -1696,62 +1426,33 @@ const formatProfit = (profit: number) => {
       <AnimatePresence>
         {showPartialModal && selectedOrder && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
             onClick={() => setShowPartialModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-gradient-to-b from-[#1A1A1A] to-[#0F0F0F] border border-white/10 rounded-2xl max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6 border-b border-white/10">
                 <h2 className="text-xl font-bold text-white">Mark Partial - Order #{selectedOrder.order_id}</h2>
               </div>
-
               <div className="p-6 space-y-4">
                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-orange-400">
-                    Current Remains: <span className="font-bold">{selectedOrder.order_remains}</span>
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Enter the quantity to mark as delivered. Remaining will be refunded.
-                  </p>
+                  <p className="text-sm text-orange-400">Current Remains: <span className="font-bold">{selectedOrder.order_remains}</span></p>
+                  <p className="text-xs text-gray-400 mt-1">Enter the quantity to mark as delivered. Remaining will be refunded.</p>
                 </div>
-
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Quantity to Deliver</label>
-                  <input
-                    type="number"
-                    value={partialQuantity}
-                    onChange={(e) => setPartialQuantity(parseInt(e.target.value) || 0)}
-                    max={selectedOrder.order_remains}
-                    min={0}
-                    className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none"
-                  />
+                  <input type="number" value={partialQuantity} onChange={(e) => setPartialQuantity(parseInt(e.target.value) || 0)} max={selectedOrder.order_remains} min={0} className="w-full px-4 py-2 bg-black/30 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-brand focus:border-transparent outline-none" />
                 </div>
-
                 <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handlePartial}
-                    disabled={actionLoading === selectedOrder.order_id || partialQuantity <= 0 || partialQuantity > selectedOrder.order_remains}
-                    className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {actionLoading === selectedOrder.order_id ? (
-                      <Loader className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4" />
-                    )}
+                  <button onClick={handlePartial} disabled={actionLoading === selectedOrder.order_id || partialQuantity <= 0 || partialQuantity > selectedOrder.order_remains} className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                    {actionLoading === selectedOrder.order_id ? <Loader className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                     Process Partial
                   </button>
-                  <button
-                    onClick={() => setShowPartialModal(false)}
-                    className="flex-1 px-4 py-2 bg-white/5 text-white rounded-lg text-sm font-medium hover:bg-white/10 transition-colors"
-                  >
+                  <button onClick={() => setShowPartialModal(false)} className="flex-1 px-4 py-2 bg-white/5 text-white rounded-lg text-sm font-medium hover:bg-white/10 transition-colors">
                     Cancel
                   </button>
                 </div>
@@ -1762,21 +1463,10 @@ const formatProfit = (profit: number) => {
       </AnimatePresence>
 
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-          height: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #1F2937;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #4B5563;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #6B7280;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1F2937; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6B7280; }
       `}</style>
     </div>
   );
