@@ -1042,7 +1042,8 @@ module.exports = (pool) => {
                     targetCategoryId = categoryMap.get(apiService.category);
                 }
 
-                let price = parseFloat(apiService.rate) * (1 + profit_percentage / 100);
+                const baseRate = parseFloat(apiService.converted_rate ?? apiService.rate);
+let price = baseRate * (1 + profit_percentage / 100);
 
                 const [lastService] = await connection.execute(
                     'SELECT MAX(service_line) as max_line FROM services WHERE category_id = ?',
