@@ -415,7 +415,7 @@ module.exports = (pool) => {
                     apiData.append('link', link);
 
                     if (isDripfeed) {
-                        apiData.append('quantity', totalQuantity);
+                        apiData.append('quantity', quantity);
                         apiData.append('runs', req.body.dripfeed_runs);
                         apiData.append('interval', req.body.dripfeed_interval);
                     } else {
