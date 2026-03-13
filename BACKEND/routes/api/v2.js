@@ -222,7 +222,7 @@ module.exports = (pool) => {
                 status: 'success',
                 balance: parseFloat(wallet.available_balance),
                 spent: parseFloat(wallet.spent_balance),
-                currency: wallet.currency,
+                currency: 'LKR',
                 user_id: req.user.id
             });
         } catch (error) {
@@ -289,8 +289,6 @@ module.exports = (pool) => {
                 } else {
                     basePrice = parseFloat(s.service_price);
                 }
-
-                const userPrice = basePrice * req.discountMultiplier;
 
                 return {
                     id: s.service_id,
@@ -380,12 +378,10 @@ module.exports = (pool) => {
             const pricePerUnit = basePrice / 1000;
             const discountedPricePerUnit = pricePerUnit * req.discountMultiplier;
 
-            // FIX: calculate total quantity — for dripfeed, multiply quantity per run by runs
             const isDripfeed = dripfeed === '2';
             const runs = isDripfeed ? (parseInt(dripfeed_runs) || 1) : 1;
             const totalQuantity = isDripfeed ? quantity * runs : quantity;
 
-            // FIX: charge based on total quantity, not per-run quantity
             const totalPrice = discountedPricePerUnit * totalQuantity;
 
             const profitPercentage = parseFloat(service.service_profit) || 0;
@@ -401,12 +397,24 @@ module.exports = (pool) => {
                     error: "Insufficient balance",
                     required: totalPrice.toFixed(4),
                     available: req.user.balance.toFixed(4),
-                    currency: req.user.currency,
+                    currency: 'LKR',
                     quantity_per_run: parseInt(quantity),
                     total_quantity: totalQuantity,
                     runs: runs
                 });
             }
+
+
+            const [activeOrders] = await pool.execute(`
+                SELECT order_id FROM orders 
+                WHERE user_id = ?
+                AND order_url = ?
+                AND service_id = ?
+                AND order_status IN ('pending', 'processing', 'inprogress', 'queued')
+                LIMIT 1
+            `, [req.user.id, link, service_id]);
+
+            const shouldQueue = activeOrders.length > 0;
 
             const [serviceApi] = await pool.execute(`
                 SELECT 
@@ -427,7 +435,7 @@ module.exports = (pool) => {
             let apiResponse = null;
             let apiError = null;
 
-            if (hasApi) {
+            if (!shouldQueue && hasApi) {
                 try {
                     const axios = require('axios');
 
@@ -438,8 +446,7 @@ module.exports = (pool) => {
                     apiData.append('link', link);
 
                     if (isDripfeed) {
-                        // FIX: send total quantity to provider, plus runs and interval
-                        apiData.append('quantity', totalQuantity);
+                        apiData.append('quantity', quantity);
                         apiData.append('runs', dripfeed_runs);
                         apiData.append('interval', dripfeed_interval);
                     } else {
@@ -482,6 +489,16 @@ module.exports = (pool) => {
                     apiError = error.message;
                     apiResponse = JSON.stringify({ error: error.message });
                 }
+            }
+
+            // Determine order status
+            let orderStatus;
+            if (shouldQueue) {
+                orderStatus = 'queued';
+            } else if (apiOrderId > 0) {
+                orderStatus = 'processing';
+            } else {
+                orderStatus = 'pending';
             }
 
             const connection = await pool.getConnection();
@@ -569,9 +586,10 @@ module.exports = (pool) => {
                         service_name: cleanName,
                         service_id: service_id,
                         base_price: basePrice,
-                        api_sent: hasApi,
+                        api_sent: hasApi && !shouldQueue,
                         api_order_id: apiOrderId || null,
-                        api_error: apiError || null
+                        api_error: apiError || null,
+                        queued: shouldQueue
                     }),
                     service.service_api || 0,
                     (api && api.api_service) ? api.api_service : 0,
@@ -581,7 +599,7 @@ module.exports = (pool) => {
                     totalPrice,
                     dripfeed || '1',
                     sanitizeInput(link),
-                    apiOrderId > 0 ? 'processing' : 'pending'
+                    orderStatus
                 ]);
 
                 await connection.execute(`
@@ -620,7 +638,9 @@ module.exports = (pool) => {
                         price_per_1000: basePrice,
                         balance_after: (req.user.balance - totalPrice).toFixed(4),
                         created_at: new Date().toISOString(),
-                        provider_status: apiOrderId > 0 ? 'sent_to_provider' : 'pending_provider',
+                        order_status: orderStatus,
+                        queued: shouldQueue,
+                        provider_status: shouldQueue ? 'queued' : (apiOrderId > 0 ? 'sent_to_provider' : 'pending_provider'),
                         provider_order_id: apiOrderId || null
                     },
                     provider_response: apiResponse ? JSON.parse(apiResponse) : null
@@ -683,6 +703,7 @@ module.exports = (pool) => {
                 service_name: sanitizeText(o.service_name || 'Unknown Service'),
                 quantity: parseInt(o.order_quantity),
                 price: parseFloat(o.order_charge),
+                currency: 'LKR',
                 link: o.order_url,
                 status: o.order_status,
                 start_count: parseInt(o.order_start) || 0,
@@ -759,6 +780,7 @@ module.exports = (pool) => {
                     service_name: sanitizeText(order.service_name || 'Unknown Service'),
                     quantity: parseInt(order.order_quantity),
                     price: parseFloat(order.order_charge),
+                    currency: 'LKR',
                     link: order.order_url,
                     status: order.order_status,
                     start_count: parseInt(order.order_start) || 0,
@@ -871,9 +893,9 @@ module.exports = (pool) => {
                     avatar: user.profile_picture,
                     balance: parseFloat(user.available_balance || 0),
                     spent: parseFloat(user.spent_balance || 0),
+                    currency: 'LKR',
                     total_orders: parseInt(user.total_orders || 0),
                     total_spent: parseFloat(user.total_spent || 0),
-                    currency: user.currency || 'USD',
                     language: user.lang || 'en',
                     member_since: user.created_at,
                     last_login: user.last_login,
