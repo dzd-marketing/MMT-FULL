@@ -50,13 +50,51 @@ module.exports = (pool) => {
     };
 
     // ============================================================
-    // QUEUE PROCESSOR — called when an order completes/cancels
-    // Finds the next queued order for the same link+service+user
-    // and sends it to the provider
+    // SANITIZER — strips all sensitive/internal fields
+    // before returning order data to the user
+    // Fields removed: api_key, api_url, api_charge, api_serviceid,
+    //   api_currencycharge, order_profit, order_api, order_detail,
+    //   dripfeed_totalcharges, subscriptions_*, avg_done, order_increase
+    // ============================================================
+    const sanitizeOrderResponse = (order) => {
+        if (!order) return null;
+        return {
+            order_id: order.order_id,
+            service_id: order.service_id,
+            order_service_name: order.order_service_name || order.service_name || null,
+            order_quantity: parseInt(order.order_quantity) || 0,
+            order_charge: parseFloat(order.order_charge),
+            order_url: order.order_url,
+            order_status: order.order_status,
+            order_create: order.order_create,
+            order_date: order.order_date || order.order_create,
+            order_start: parseInt(order.order_start) || 0,
+            order_remains: parseInt(order.order_remains) || 0,
+            order_error: (order.order_error === '-' || !order.order_error) ? null : order.order_error,
+            order_extras: order.order_extras || null,
+            dripfeed: order.dripfeed,
+            dripfeed_runs: order.dripfeed_runs,
+            dripfeed_interval: order.dripfeed_interval,
+            dripfeed_totalquantity: parseInt(order.dripfeed_totalquantity) || 0,
+            refill_status: order.refill_status || 'Pending',
+            is_refill: order.is_refill || '0',
+            refill: order.refill || '0',
+            cancelbutton: order.cancelbutton || '0',
+            show_refill: order.show_refill || 'false',
+            last_check: order.last_check
+            // EXCLUDED: api_key, api_url, api_charge, api_serviceid,
+            //           api_currencycharge, order_profit, order_api,
+            //           order_detail, dripfeed_totalcharges, order_increase,
+            //           avg_done, subscriptions_*, user_id
+        };
+    };
+
+    // ============================================================
+    // QUEUE PROCESSOR — kept for reference but NOT called anywhere
+    // Queue is now managed manually by admin only
     // ============================================================
     const processQueue = async (completedOrderUrl, completedServiceId, userId) => {
         try {
-            // Find next queued order for same link + service + user
             const [queuedOrders] = await pool.execute(`
                 SELECT o.*, sa.api_key, sa.api_url
                 FROM orders o
@@ -69,19 +107,13 @@ module.exports = (pool) => {
                 LIMIT 1
             `, [completedOrderUrl, completedServiceId, userId]);
 
-            if (queuedOrders.length === 0) {
-                console.log(`Queue: No queued orders for ${completedOrderUrl}`);
-                return;
-            }
+            if (queuedOrders.length === 0) return;
 
             const nextOrder = queuedOrders[0];
             let apiOrderId = 0;
             let apiResponse = null;
             let orderError = '-';
 
-            console.log(`Queue: Processing queued order #${nextOrder.order_id}`);
-
-            // Send to provider API
             if (nextOrder.order_api > 0 && nextOrder.api_key && nextOrder.api_url) {
                 try {
                     const apiData = new URLSearchParams();
@@ -90,23 +122,21 @@ module.exports = (pool) => {
                     apiData.append('service', nextOrder.api_serviceid);
                     apiData.append('link', nextOrder.order_url);
 
-                    // Handle dripfeed
                     if (nextOrder.dripfeed === '2') {
-                        apiData.append('quantity', nextOrder.dripfeed_totalquantity || nextOrder.order_quantity);
+                        apiData.append('quantity', nextOrder.order_quantity);
                         if (nextOrder.dripfeed_runs) apiData.append('runs', nextOrder.dripfeed_runs);
                         if (nextOrder.dripfeed_interval) apiData.append('interval', nextOrder.dripfeed_interval);
                     } else {
                         apiData.append('quantity', nextOrder.order_quantity);
                     }
 
-                    // Handle comments if stored in extras
                     if (nextOrder.order_extras) {
                         try {
                             const extras = JSON.parse(nextOrder.order_extras);
                             if (extras.comments && extras.comments.length > 0) {
                                 apiData.append('comments', extras.comments.join("\n"));
                             }
-                        } catch (e) { /* ignore parse errors */ }
+                        } catch (e) {}
                     }
 
                     const response = await axios.post(nextOrder.api_url, apiData, {
@@ -115,23 +145,15 @@ module.exports = (pool) => {
                     });
 
                     apiResponse = JSON.stringify(response.data);
-
-                    if (response.data?.order) {
-                        apiOrderId = response.data.order;
-                    } else if (response.data?.error) {
-                        orderError = response.data.error;
-                    }
-
-                    console.log(`Queue: Order #${nextOrder.order_id} sent to provider, API order ID: ${apiOrderId}`);
+                    if (response.data?.order) apiOrderId = response.data.order;
+                    else if (response.data?.error) orderError = response.data.error;
 
                 } catch (apiErr) {
-                    console.error(`Queue: API error for order #${nextOrder.order_id}:`, apiErr.message);
                     orderError = apiErr.message;
                     apiResponse = JSON.stringify({ error: apiErr.message });
                 }
             }
 
-            // Update queued order to active status
             await pool.execute(`
                 UPDATE orders 
                 SET order_status = ?,
@@ -147,8 +169,6 @@ module.exports = (pool) => {
                 orderError,
                 nextOrder.order_id
             ]);
-
-            console.log(`Queue: Order #${nextOrder.order_id} status updated to ${apiOrderId > 0 ? 'processing' : 'pending'}`);
 
         } catch (err) {
             console.error('Queue processor error:', err.message);
@@ -386,9 +406,7 @@ module.exports = (pool) => {
                 extras = JSON.stringify({ comments: commentsArray.filter((c) => c.trim()) });
             }
 
-            // ============================================================
             // QUEUE CHECK — is there an active order for same link+service?
-            // ============================================================
             const [activeOrders] = await connection.execute(`
                 SELECT order_id FROM orders 
                 WHERE user_id = ?
@@ -399,7 +417,6 @@ module.exports = (pool) => {
             `, [user_id, link, service_id]);
 
             const shouldQueue = activeOrders.length > 0;
-            // ============================================================
 
             let apiOrderId = 0;
             let apiResponse = null;
@@ -549,11 +566,10 @@ module.exports = (pool) => {
                 order_id: orderId,
                 order_status: orderStatus,
                 queued: shouldQueue,
-                api_order_id: apiOrderId || null,
                 charge: charge.toFixed(2),
-                profit: orderProfit.toFixed(2),
                 balance: updatedWallet[0].available_balance,
                 api_status: shouldQueue ? 'queued' : (apiOrderId > 0 ? 'success' : 'pending')
+                // EXCLUDED: api_order_id, profit — internal fields
             });
 
         } catch (error) {
@@ -574,25 +590,27 @@ module.exports = (pool) => {
             let query = `
                 SELECT 
                     o.order_id,
-                    o.user_id,
                     o.service_id,
                     COALESCE(o.order_service_name, s.service_name, 'Service Unavailable') as service_name,
                     o.order_quantity,
                     o.order_charge,
-                    o.order_profit,
                     o.order_url,
                     o.order_status,
                     o.order_create,
                     o.order_start,
                     o.order_remains,
                     o.order_extras,
-                    o.dripfeed,
-                    o.api_orderid,
                     o.order_error,
+                    o.dripfeed,
+                    o.dripfeed_runs,
+                    o.dripfeed_interval,
+                    o.dripfeed_totalquantity,
                     o.is_refill,
                     o.refill,
                     o.cancelbutton,
                     o.refill_status,
+                    o.show_refill,
+                    o.last_check,
                     DATE_FORMAT(o.order_create, '%Y-%m-%d %H:%i:%s') as order_date
                 FROM orders o
                 LEFT JOIN services s ON o.service_id = s.service_id
@@ -621,28 +639,10 @@ module.exports = (pool) => {
 
             const [totalCount] = await pool.execute(countQuery, countParams);
 
-            const formattedOrders = orders.map(order => ({
-                order_id: order.order_id,
-                user_id: order.user_id,
-                service_id: order.service_id,
-                service_name: order.service_name,
-                order_quantity: parseInt(order.order_quantity) || 0,
-                order_charge: parseFloat(order.order_charge),
-                order_profit: parseFloat(order.order_profit) || 0,
-                order_url: order.order_url,
-                order_status: order.order_status,
-                order_create: order.order_create,
-                order_date: order.order_date,
-                order_start: parseInt(order.order_start) || 0,
-                order_remains: parseInt(order.order_remains) || 0,
-                order_extras: order.order_extras,
-                dripfeed: order.dripfeed,
-                api_orderid: order.api_orderid,
-                order_error: order.order_error,
-                is_refill: order.is_refill || '0',
-                refill: order.refill || '0',
-                cancelbutton: order.cancelbutton || '0',
-                refill_status: order.refill_status || 'Pending'
+            // Use sanitizer to ensure no sensitive fields leak
+            const formattedOrders = orders.map(order => sanitizeOrderResponse({
+                ...order,
+                order_service_name: order.service_name
             }));
 
             res.json({
@@ -669,11 +669,31 @@ module.exports = (pool) => {
 
             const [orders] = await pool.execute(`
                 SELECT 
-                    o.*,
+                    o.order_id,
+                    o.service_id,
+                    o.order_service_name,
+                    o.order_quantity,
+                    o.order_charge,
+                    o.order_url,
+                    o.order_status,
+                    o.order_create,
+                    o.order_start,
+                    o.order_remains,
+                    o.order_extras,
+                    o.order_error,
+                    o.dripfeed,
+                    o.dripfeed_runs,
+                    o.dripfeed_interval,
+                    o.dripfeed_totalquantity,
+                    o.is_refill,
+                    o.refill,
+                    o.cancelbutton,
+                    o.refill_status,
+                    o.show_refill,
+                    o.last_check,
                     s.service_name,
                     s.service_package,
                     s.service_description,
-                    s.service_price,
                     s.service_min,
                     s.service_max
                 FROM orders o
@@ -685,18 +705,7 @@ module.exports = (pool) => {
                 return res.status(404).json({ success: false, message: 'Order not found' });
             }
 
-            const order = orders[0];
-            const formattedOrder = {
-                ...order,
-                order_charge: parseFloat(order.order_charge).toFixed(2),
-                order_profit: parseFloat(order.order_profit).toFixed(2) || '0.00',
-                order_quantity: parseInt(order.order_quantity) || 0,
-                order_start: parseInt(order.order_start) || 0,
-                order_remains: parseInt(order.order_remains) || 0,
-                api_charge: parseFloat(order.api_charge).toFixed(2) || '0.00'
-            };
-
-            res.json({ success: true, order: formattedOrder });
+            res.json({ success: true, order: sanitizeOrderResponse(orders[0]) });
 
         } catch (error) {
             console.error('Error fetching order:', error);
@@ -709,6 +718,7 @@ module.exports = (pool) => {
             const { id } = req.params;
             const user_id = req.user.id;
 
+            // Fetch with api_key/api_url for internal use only — never returned to user
             const [orders] = await pool.execute(`
                 SELECT o.*, sa.api_key, sa.api_url
                 FROM orders o
@@ -726,8 +736,8 @@ module.exports = (pool) => {
             if (order.order_status === 'queued') {
                 return res.json({
                     success: true,
-                    message: 'Order is queued — waiting for previous order to complete',
-                    order
+                    message: 'Order is queued — waiting for admin to send to provider',
+                    order: sanitizeOrderResponse(order)
                 });
             }
 
@@ -736,7 +746,7 @@ module.exports = (pool) => {
                 return res.json({
                     success: true,
                     message: `Order is ${order.order_status} — no sync needed`,
-                    order
+                    order: sanitizeOrderResponse(order)
                 });
             }
 
@@ -754,7 +764,6 @@ module.exports = (pool) => {
                     if (response.data) {
                         const updateData = [];
                         const queryParams = [];
-                        let newStatus = null;
 
                         if (response.data.status) {
                             let status = response.data.status.toLowerCase();
@@ -764,8 +773,6 @@ module.exports = (pool) => {
                             else if (status.includes('partial')) status = 'partial';
                             else if (status.includes('cancel')) status = 'canceled';
                             else status = 'pending';
-
-                            newStatus = status;
 
                             if (!lockedStatuses.includes(order.order_status)) {
                                 updateData.push('order_status = ?');
@@ -797,13 +804,21 @@ module.exports = (pool) => {
                             `, queryParams);
                         }
 
-
-                        const [updatedOrders] = await pool.execute(`SELECT * FROM orders WHERE order_id = ?`, [id]);
+                        // Re-fetch only safe fields for response
+                        const [updatedOrders] = await pool.execute(`
+                            SELECT 
+                                order_id, service_id, order_service_name, order_quantity,
+                                order_charge, order_url, order_status, order_create,
+                                order_start, order_remains, order_extras, order_error,
+                                dripfeed, dripfeed_runs, dripfeed_interval, dripfeed_totalquantity,
+                                is_refill, refill, cancelbutton, refill_status, show_refill, last_check
+                            FROM orders WHERE order_id = ?
+                        `, [id]);
 
                         return res.json({
                             success: true,
                             message: 'Status synced successfully',
-                            order: updatedOrders[0]
+                            order: sanitizeOrderResponse(updatedOrders[0])
                         });
                     }
                 } catch (apiError) {
@@ -811,7 +826,11 @@ module.exports = (pool) => {
                 }
             }
 
-            res.json({ success: true, message: 'No API sync needed', order });
+            return res.json({
+                success: true,
+                message: 'No API sync needed',
+                order: sanitizeOrderResponse(order)
+            });
 
         } catch (error) {
             console.error('Error syncing order status:', error);
@@ -849,7 +868,6 @@ module.exports = (pool) => {
                         if (response.data) {
                             const updateData = [];
                             const queryParams = [];
-                            let newStatus = null;
 
                             if (response.data.status) {
                                 let status = response.data.status.toLowerCase();
@@ -860,7 +878,6 @@ module.exports = (pool) => {
                                 else if (status.includes('cancel')) status = 'canceled';
                                 else status = 'pending';
 
-                                newStatus = status;
                                 updateData.push('order_status = ?');
                                 queryParams.push(status);
                             }
@@ -889,7 +906,6 @@ module.exports = (pool) => {
                                 `, queryParams);
                             }
 
-
                             results.push({ order_id: order.order_id, success: true });
                         }
                     } catch (error) {
@@ -912,7 +928,8 @@ module.exports = (pool) => {
             const user_id = req.user.id;
 
             const [orders] = await pool.execute(`
-                SELECT o.*, sa.api_key, sa.api_url
+                SELECT o.order_id, o.is_refill, o.refill, o.order_status, o.order_create,
+                       o.api_orderid, sa.api_key, sa.api_url
                 FROM orders o
                 LEFT JOIN service_api sa ON o.order_api = sa.id
                 WHERE o.order_id = ? AND o.user_id = ?
@@ -971,7 +988,7 @@ module.exports = (pool) => {
                 WHERE order_id = ?
             `, [refillId, id]);
 
-            res.json({ success: true, message: 'Refill request submitted successfully', refill_id: refillId });
+            res.json({ success: true, message: 'Refill request submitted successfully' });
 
         } catch (error) {
             console.error('Refill unexpected error:', error.message, error.stack);
@@ -985,7 +1002,9 @@ module.exports = (pool) => {
             const user_id = req.user.id;
 
             const [orders] = await pool.execute(`
-                SELECT o.*, sa.api_key, sa.api_url
+                SELECT o.order_id, o.order_status, o.order_charge, o.order_quantity,
+                       o.cancelbutton, o.api_orderid, o.order_url, o.service_id,
+                       sa.api_key, sa.api_url
                 FROM orders o
                 LEFT JOIN service_api sa ON o.order_api = sa.id
                 WHERE o.order_id = ? AND o.user_id = ?
@@ -997,13 +1016,11 @@ module.exports = (pool) => {
 
             const order = orders[0];
 
-            // Allow canceling queued orders too
             const cancelableStatuses = ['pending', 'processing', 'inprogress', 'queued'];
             if (!cancelableStatuses.includes(order.order_status)) {
                 return res.status(400).json({ success: false, message: 'Order cannot be cancelled at this stage' });
             }
 
-            // Queued orders don't need cancelbutton check — they haven't been sent to provider
             if (order.order_status !== 'queued' && order.cancelbutton !== '1') {
                 return res.status(400).json({ success: false, message: 'Cancellation is not available for this service' });
             }
@@ -1069,13 +1086,12 @@ module.exports = (pool) => {
                 `, [refundAmount, refundAmount, user_id]);
             }
 
-
             const isFullRefund = Math.abs(refundAmount - order.order_charge) < 0.001;
 
             res.json({
                 success: true,
-                message: order.order_status === 'queued' 
-                    ? 'Queued order cancelled with full refund' 
+                message: order.order_status === 'queued'
+                    ? 'Queued order cancelled with full refund'
                     : 'Order cancelled successfully',
                 refund_amount: refundAmount,
                 refund_type: isFullRefund ? 'full' : 'partial',
