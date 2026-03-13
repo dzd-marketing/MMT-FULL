@@ -28,7 +28,7 @@ import authService from '../../services/auth';
 interface Order {
   order_id: number;
   service_id: number;
-  service_name: string;
+  order_service_name: string;
   order_quantity: number;
   order_charge: number;
   order_url: string;
@@ -247,7 +247,7 @@ Charge: Rs ${formatCurrency(order.order_charge)}
 Start: ${order.order_start || 0}
 Quantity: ${order.order_quantity}
 Remains: ${order.order_remains}
-Service: ${order.service_name}
+Service: ${order.order_service_name}
 Status: ${order.order_status}
 ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}` : ''}`;
       await navigator.clipboard.writeText(rowText);
@@ -576,7 +576,7 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
                         </span>
                       </td>
                       <td className="px-2 py-3 align-top">
-                        <div className="text-sm text-gray-300 break-words whitespace-normal">{order.service_name}</div>
+                        <div className="text-sm text-gray-300 break-words whitespace-normal">{order.order_service_name}</div>
                       </td>
                       <td className="px-2 py-3 align-top">
                         <StatusBadge status={order.order_status} />
@@ -666,7 +666,7 @@ ${order.order_error && order.order_error !== '-' ? `Error: ${order.order_error}`
 
                   <div className="bg-white/5 rounded-xl p-3">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">SERVICE</p>
-                    <p className="text-sm text-gray-300 break-words">{order.service_name}</p>
+                    <p className="text-sm text-gray-300 break-words">{order.order_service_name}</p>
                   </div>
 
                   {order.order_error && order.order_error !== '-' && (
